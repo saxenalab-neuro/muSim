@@ -1,0 +1,6 @@
+free-mujoco-py
+matplotlib
+scipy
+gym==0.13
+torch
+PyYaml
