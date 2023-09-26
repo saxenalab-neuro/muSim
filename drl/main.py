@@ -6,17 +6,15 @@ import scipy.io
 import torch
 import matplotlib.pyplot as plt
 import gym
-import model_utils_snn as model_utils
-from model_utils_snn import get_speed
-from SAC.replay_memory_snn import PolicyReplayMemorySNN, PolicyReplayMemoryANN
-from SAC.sac import SAC, SACSNN, SACANN
+from SAC.replay_memory_snn import PolicyReplayMemorySNN, PolicyReplayMemoryANN, PolicyReplayMemoryRNN
+from SAC.sac import SAC, SACSNN, SACANN, SACRNN
 import warmup  # noqa
 
-def train_episode(env, agent, policy_memory, episode_reward, episode_steps, args):
+def train_episode(env, agent, policy_memory, episode_reward, episode_steps, i_episode, args):
 
     done = False
     state = env.reset()
-    policy_loss_tracker = []
+    policy_loss = -500
     ep_trajectory = []
 
     mem2_rec_policy = {}
@@ -27,6 +25,10 @@ def train_episode(env, agent, policy_memory, episode_reward, episode_steps, args
             if "lif" in name[0]:
                     spk2_rec_policy[name[0]], mem2_rec_policy[name[0]] = name[1].init_rleaky()
 
+    if args.model == 'rnn':
+        #num_layers specified in the policy model 
+        h_prev = torch.zeros(size=(1, 1, args.hidden_size))
+
     ### STEPS PER EPISODE ###
     for i in range(env._max_episode_steps):
 
@@ -35,32 +37,42 @@ def train_episode(env, agent, policy_memory, episode_reward, episode_steps, args
                 action, mem2_rec_policy, spk2_rec_policy = agent.select_action(state, spk2_rec_policy, mem2_rec_policy, evaluate=False)  # Sample action from policy
             elif args.model == 'ann':
                 action = agent.select_action(state, evaluate=False)  # Sample action from policy
+            elif args.model == 'rnn':
+                action, h_prev = agent.select_action(state, h_prev, evaluate=False)  # Sample action from policy
 
         ### TRACKING REWARD + EXPERIENCE TUPLE###
         next_state, reward, done, info = env.step(action)
         episode_reward += reward
+        episode_steps += 1
 
         if args.visualize == True:
              env.render()
 
         mask = 0 if done else 1
 
-        ep_trajectory.append([list(state), list(action), reward, list(next_state), mask])
+        if args.model == 'snn':
+            if done:
+                ep_trajectory.append([list(state), list(action), reward, list(next_state), mask, episode_steps])
+            else:
+                ep_trajectory.append([list(state), list(action), reward, list(next_state), mask])
+        elif args.model == 'ann':
+            policy_memory.push([list(state), list(action), reward, list(next_state), mask])
 
         state = next_state
-        episode_steps += 1
 
         ### EARLY TERMINATION OF EPISODE
         if done:
             break
 
-    policy_memory.push(ep_trajectory)
+    if args.model == 'snn':
+        policy_memory.push(ep_trajectory)
 
     ### SIMULATION ###
-    if len(policy_memory.buffer) > args.policy_batch_size:
-        critic_1_loss, critic_2_loss, policy_loss = agent.update_parameters(policy_memory, args.policy_batch_size)
+    if i_episode % 1000 == 0:
+        for batch in range(30):
+            critic_1_loss, critic_2_loss, policy_loss = agent.update_parameters(policy_memory, args.policy_batch_size)
 
-    return episode_reward, episode_steps, policy_loss_tracker
+    return episode_reward, episode_steps, policy_loss
 
 def test(mouseEnv, agent, episode_reward, episode_steps, args):
 
@@ -96,15 +108,15 @@ def main():
 
     ### PARAMETERS ###
     parser = argparse.ArgumentParser(description='PyTorch Soft Actor-Critic Args')
-    parser.add_argument('--env_name', type=str, default="humanreacher-v0",
+    parser.add_argument('--env_name', type=str, default="muscle_arm-v0",
                         help='humanreacher-v0, muscle_arm-v0, torque_arm-v0')
     parser.add_argument('--model', type=str, default="snn",
                         help='snn, ann')
-    parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
+    parser.add_argument('--gamma', type=float, default=0.9, metavar='G',
                         help='discount factor for reward (default: 0.99)')
     parser.add_argument('--tau', type=float, default=0.005, metavar='G',
                         help='target smoothing coefficient(τ) (default: 0.005)')
-    parser.add_argument('--lr', type=float, default=0.001, metavar='G',
+    parser.add_argument('--lr', type=float, default=0.00005, metavar='G',
                         help='learning rate (default: 0.001)')
     parser.add_argument('--alpha', type=float, default=0.2, metavar='G',
                         help='Temperature parameter α determines the relative importance of the entropy\
@@ -113,7 +125,7 @@ def main():
                         help='Automaically adjust α (default: False)')
     parser.add_argument('--seed', type=int, default=123456, metavar='N',
                         help='random seed (default: 123456)')
-    parser.add_argument('--policy_batch_size', type=int, default=6, metavar='N',
+    parser.add_argument('--policy_batch_size', type=int, default=256, metavar='N',
                         help='batch size (default: 6)')
     parser.add_argument('--hidden_size', type=int, default=512, metavar='N',
                         help='hidden size (default: 1000)')
@@ -125,18 +137,12 @@ def main():
                         help='run on CUDA (default: False)')
     parser.add_argument('--visualize', type=bool, default=False,
                         help='visualize mouse')
-    parser.add_argument('--env_type', type=str, default='kin',
-                        help='type of environment (kin, sim)')
     parser.add_argument('--test_model', type=bool, default=False,
                         help='test kinematics and get activities')
     parser.add_argument('--save_model', type=bool, default=False,
                         help='save models and optimizer during training')
     parser.add_argument('--model_save_name', type=str, default='',
                         help='name used to save the model with')
-    parser.add_argument('--type', type=str, default='rnn',
-                        help='There are two types: rnn or lstm. RNN uses multiple losses, LSTM is original implementation')
-    parser.add_argument('--cost_scale', type=float, default=0.0, metavar='G',
-                        help='scaling of the cost, default: 0.0')
     args = parser.parse_args()
 
     env = gym.make(args.env_name)
@@ -147,6 +153,9 @@ def main():
     elif args.model == 'ann':
         policy_memory = PolicyReplayMemoryANN(args.policy_replay_size, args.seed)
         agent = SACANN(env.observation_space.shape[0], env.action_space.shape[0], args)
+    elif args.model == 'rnn':
+        policy_memory = PolicyReplayMemoryRNN(args.policy_replay_size, args.seed)
+        agent = SACRNN(env.observation_space.shape[0], env.action_space.shape[0], args)
 
     if args.test_model:
         agent.critic.load_state_dict(torch.load(f'models/value_net_{args.model_save_name}.pth'))
@@ -170,7 +179,9 @@ def main():
         if not args.test_model:
 
             # Run the episode
-            episode_reward, episode_steps, policy_loss = train_episode(env, agent, policy_memory, episode_reward, episode_steps, args)
+            episode_reward, episode_steps, policy_loss = train_episode(env, agent, policy_memory, episode_reward, episode_steps, i_episode, args)
+            reward_tracker.append(episode_reward)
+            policy_loss_tracker.append(policy_loss)
 
             ### SAVING MODELS + TRACKING VARIABLES ###
             if episode_reward > highest_reward:
@@ -184,6 +195,9 @@ def main():
             # Printing rewards
             print('Iteration: {} | reward {} | timesteps completed: {}'.format(i_episode, episode_reward, episode_steps))
             print('highest reward so far: {}'.format(highest_reward))
+
+            #np.savetxt('drl/tracking/episode_rewards', reward_tracker)
+            #np.savetxt('drl/tracking/policy_loss', policy_loss_tracker)
 
         # Testing, i.e. getting kinematics and activities
         else:
