@@ -1,10 +1,11 @@
 import os
 import torch
 import torch.nn.functional as F
-from torch.optim import Adam, AdamW, RMSprop
-from .utils1_snn import soft_update, hard_update
-from .model_snn import CriticSNN, PolicySNN
-from .model_ann import CriticANN, PolicyANN
+from torch.optim import Adam, AdamW, RMSprop, SGD
+from .utils1 import soft_update, hard_update
+from .model import CriticSNN, PolicySNN
+from .model import CriticANN, PolicyANN
+from .model import CriticRNN, PolicyRNN
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, pad_sequence
 
 class SAC(object):
@@ -62,6 +63,7 @@ class SAC(object):
                 out_t = torch.cat((out_t, t[k]), dim=0)
         return out_t
 
+
 class SACSNN(SAC):
     def __init__(self, num_inputs, action_space, args):
         super(SACSNN, self).__init__(num_inputs, action_space, args)
@@ -69,10 +71,10 @@ class SACSNN(SAC):
         self.critic = CriticSNN(num_inputs+action_space, action_space, args.hidden_size).to(self.device)
         self.critic_target = CriticSNN(num_inputs+action_space, action_space, args.hidden_size).to(self.device)
         hard_update(self.critic_target, self.critic)
-        self.critic_optim = Adam(self.critic.parameters(), lr=args.lr)
+        self.critic_optim = SGD(self.critic.parameters(), lr=args.lr)
 
         self.policy = PolicySNN(num_inputs, action_space, args.hidden_size).to(self.device)
-        self.policy_optim = Adam(self.policy.parameters(), lr=args.lr)
+        self.policy_optim = SGD(self.policy.parameters(), lr=args.lr)
 
     def select_action(self, state, spks, mem, evaluate=False):
 
@@ -96,7 +98,7 @@ class SACSNN(SAC):
                     mem_dict[name[0]] = name[1].init_leaky()
         return mem_dict, spk_dict
     
-    def update_step(self, optim, loss):
+    def _update_step(self, optim, loss):
         optim.zero_grad()
         loss.backward()
         optim.step()
@@ -112,7 +114,7 @@ class SACSNN(SAC):
 
     def update_parameters(self, policy_memory, policy_batch_size):
         # Sample a batch from memory
-        state_batch, action_batch, reward_batch, next_state_batch, mask_batch = policy_memory.sample(batch_size=policy_batch_size)
+        state_batch, action_batch, reward_batch, next_state_batch, mask_batch, max_len = policy_memory.sample(batch_size=policy_batch_size)
 
         state_batch = torch.stack(state_batch).to(self.device)
         next_state_batch = torch.stack(next_state_batch).to(self.device)
@@ -124,15 +126,15 @@ class SACSNN(SAC):
         with torch.no_grad():
             policy_mems, policy_spks = self.init_leakys(self.policy, recurrent=True)
             next_state_action = torch.empty_like(action_batch).to(self.device)
-            next_state_log_pi = torch.empty([policy_batch_size, 300, 1]).to(self.device)
+            next_state_log_pi = torch.empty([policy_batch_size, max_len, 1]).to(self.device)
             for i in range(next_state_batch.shape[1]):
                 next_state_action[:, i, :], next_state_log_pi[:, i, :], _, policy_mems, policy_spks = self.policy.sample(next_state_batch[:, i, :].unsqueeze(1), spks=policy_spks, mem=policy_mems, sampling=False, training=True)
 
             # pass sequency through Q network
             critic_target_mems, critic_target_spks = self.init_leakys(self.critic_target, recurrent=True)
 
-            qf1_next_target = torch.empty([policy_batch_size, 300, 1]).to(self.device)
-            qf2_next_target = torch.empty([policy_batch_size, 300, 1]).to(self.device)
+            qf1_next_target = torch.empty([policy_batch_size, max_len, 1]).to(self.device)
+            qf2_next_target = torch.empty([policy_batch_size, max_len, 1]).to(self.device)
             for i in range(next_state_batch.shape[1]):
                 qf1_next_target[:, i, :], qf2_next_target[:, i, :], critic_target_mems, critic_target_spks = self.critic_target(next_state_batch[:, i, :], next_state_action[:, i, :], spk=critic_target_spks, mem=critic_target_mems, training=True)
 
@@ -141,27 +143,27 @@ class SACSNN(SAC):
 
         critic_mems, critic_spks = self.init_leakys(self.critic, recurrent=True)
 
-        qf1 = torch.empty([policy_batch_size, 300, 1]).to(self.device)
-        qf2 = torch.empty([policy_batch_size, 300, 1]).to(self.device)
+        qf1 = torch.empty([policy_batch_size, max_len, 1]).to(self.device)
+        qf2 = torch.empty([policy_batch_size, max_len, 1]).to(self.device)
         for i in range(state_batch.shape[1]):
             qf1[:, i, :], qf2[:, i, :], critic_mems, critic_spks = self.critic(state_batch[:, i, :], action_batch[:, i, :], spk=critic_spks, mem=critic_mems, training=True)  # Two Q-functions to mitigate positive bias in the policy improvement step
 
         qf1_loss = F.mse_loss(qf1, next_q_value)  # JQ = 𝔼(st,at)~D[0.5(Q1(st,at) - r(st,at) - γ(𝔼st+1~p[V(st+1)]))^2]
         qf2_loss = F.mse_loss(qf2, next_q_value)  # JQ = 𝔼(st,at)~D[0.5(Q1(st,at) - r(st,at) - γ(𝔼st+1~p[V(st+1)]))^2]
-        qf_loss = qf1_loss + qf2_loss
+        qf_loss = (qf1_loss + qf2_loss)
 
         self.update_step(self.critic_optim, qf_loss)
 
         policy_mems, policy_spks = self.init_leakys(self.policy, recurrent=True)
         pi_action_bat = torch.empty_like(action_batch).to(self.device)
-        log_prob_bat = torch.empty(policy_batch_size, 300, 1).to(self.device)
+        log_prob_bat = torch.empty(policy_batch_size, max_len, 1).to(self.device)
         for i in range(state_batch.shape[1]):
             pi_action_bat[:, i, :], log_prob_bat[:, i, :], _, policy_mems, policy_spks = self.policy.sample(state_batch[:, i, :].unsqueeze(1), spks=policy_spks, mem=policy_mems, sampling=False, training=True)
 
         critic_mems, critic_spks = self.init_leakys(self.critic, recurrent=True)
 
-        qf1_pi = torch.empty([policy_batch_size, 300, 1]).to(self.device)
-        qf2_pi = torch.empty([policy_batch_size, 300, 1]).to(self.device)
+        qf1_pi = torch.empty([policy_batch_size, max_len, 1]).to(self.device)
+        qf2_pi = torch.empty([policy_batch_size, max_len, 1]).to(self.device)
         for i in range(state_batch.shape[1]):
             qf1_pi[:, i, :], qf2_pi[:, i, :], critic_mems, critic_spks = self.critic(state_batch[:, i, :], pi_action_bat[:, i, :], spk=critic_spks, mem=critic_mems, training=True)
         min_qf_pi = torch.min(qf1_pi, qf2_pi)
@@ -169,9 +171,11 @@ class SACSNN(SAC):
         policy_loss = ((self.alpha * log_prob_bat) - min_qf_pi).mean() # Jπ = 𝔼st∼D,εt∼N[α * logπ(f(εt;st)|st) − Q(st,f(εt;st))]
 
         self.update_step(self.policy_optim, policy_loss)
+
         soft_update(self.critic_target, self.critic, self.tau)
 
         return qf1_loss.item(), qf2_loss.item(), policy_loss.item()
+
 
 class SACANN(SAC):
     def __init__(self, num_inputs, action_space, args):
@@ -227,6 +231,7 @@ class SACANN(SAC):
         min_qf_pi = torch.min(qf1_pi, qf2_pi)
 
         policy_loss = ((self.alpha * log_prob_bat) - min_qf_pi).mean() # Jπ = 𝔼st∼D,εt∼N[α * logπ(f(εt;st)|st) − Q(st,f(εt;st))]
+        print(policy_loss)
 
         self.policy_optim.zero_grad()
         policy_loss.backward()
@@ -235,3 +240,90 @@ class SACANN(SAC):
         soft_update(self.critic_target, self.critic, self.tau)
 
         return qf1_loss.item(), qf2_loss.item(), policy_loss.item()
+
+
+class SACRNN(SAC):
+    def __init__(self, num_inputs, action_space, args):
+        super(SACRNN, self).__init__(num_inputs, action_space, args)
+
+        self.critic = CriticRNN(num_inputs+action_space, action_space, args.hidden_size).to(self.device)
+        self.critic_target = CriticRNN(num_inputs+action_space, action_space, args.hidden_size).to(self.device)
+        hard_update(self.critic_target, self.critic)
+        self.critic_optim = Adam(self.critic.parameters(), lr=args.lr)
+
+        self.policy = PolicyRNN(num_inputs, action_space, args.hidden_size).to(self.device)
+        self.policy_optim = Adam(self.policy.parameters(), lr=args.lr)
+
+    def select_action(self, state, h_prev, evaluate=False):
+
+        state = torch.FloatTensor(state).to(self.device)
+
+        if evaluate == False: 
+            action, _, _, h_current = self.policy.sample(state, h_prev, sampling=True, len_seq=None)
+        else:
+            _, _, action, h_current = self.policy.sample(state, h_prev, sampling=True, len_seq=None)
+
+        return action.detach().cpu().numpy()[0], h_current.detach()
+
+    def update_parameters(self, policy_memory, policy_batch_size):
+        # Sample a batch from memory
+        state_batch, action_batch, reward_batch, next_state_batch, mask_batch, policy_state_batch = policy_memory.sample(batch_size=policy_batch_size)
+
+        state_batch = torch.FloatTensor(state_batch).to(self.device)
+        next_state_batch = torch.FloatTensor(next_state_batch).to(self.device)
+        action_batch = torch.FloatTensor(action_batch).to(self.device)
+        reward_batch = torch.FloatTensor(reward_batch).to(self.device).unsqueeze(1)
+        mask_batch = torch.FloatTensor(mask_batch).to(self.device).unsqueeze(1)
+
+        with torch.no_grad():
+            h0 = torch.zeros(size=(1, len(policy_state_batch), self.hidden_size)).to(self.device)
+            next_state_action, next_state_log_pi, _, _, _, _, _ = self.policy.sample(next_state_batch.unsqueeze(1), h0, sampling=True)
+            qf1_next_target, qf2_next_target = self.critic_target(next_state_batch, next_state_action)
+            min_qf_next_target = torch.min(qf1_next_target, qf2_next_target) - self.alpha * next_state_log_pi
+            next_q_value = reward_batch + mask_batch * self.gamma * (min_qf_next_target)
+
+        qf1, qf2 = self.critic(state_batch, action_batch)  # Two Q-functions to mitigate positive bias in the policy improvement step
+        qf1_loss = F.mse_loss(qf1, next_q_value)  # JQ = 𝔼(st,at)~D[0.5(Q1(st,at) - r(st,at) - γ(𝔼st+1~p[V(st+1)]))^2]
+        qf2_loss = F.mse_loss(qf2, next_q_value)  # JQ = 𝔼(st,at)~D[0.5(Q1(st,at) - r(st,at) - γ(𝔼st+1~p[V(st+1)]))^2]
+        qf_loss = qf1_loss + qf2_loss
+
+        self.critic_optim.zero_grad()
+        qf_loss.backward()
+        self.critic_optim.step()
+
+        # Update the policy network using the newly proposed method
+        h0 = torch.zeros(size=(1, len(policy_state_batch), self.hidden_size)).to(self.device)
+
+        len_seq = list(map(len, policy_state_batch))
+        policy_state_batch = torch.FloatTensor(pad_sequence(policy_state_batch, batch_first= True)).to(self.device)
+        pi_action_bat, log_prob_bat, _, _, _, mask_seq, _  = self.policy.sample(policy_state_batch, h0, sampling= False, len_seq= len_seq)
+
+        #Now mask the policy_state_batch according to the mask seq
+        policy_state_batch_pi= policy_state_batch.reshape(-1, policy_state_batch.size()[-1])[mask_seq]
+
+        qf1_pi, qf2_pi = self.critic(policy_state_batch_pi, pi_action_bat)
+        min_qf_pi = torch.min(qf1_pi, qf2_pi)
+
+        policy_loss = ((self.alpha * log_prob_bat) - min_qf_pi).mean() # Jπ = 𝔼st∼D,εt∼N[α * logπ(f(εt;st)|st) − Q(st,f(εt;st))]
+
+        self.policy_optim.zero_grad()
+        policy_loss.backward()
+        self.policy_optim.step()
+
+        log_pi = log_prob_bat
+        if self.automatic_entropy_tuning:
+            alpha_loss = -(self.log_alpha * (log_pi + self.target_entropy).detach()).mean()
+
+            self.alpha_optim.zero_grad()
+            alpha_loss.backward()
+            self.alpha_optim.step()
+
+            self.alpha = self.log_alpha.exp()
+            alpha_tlogs = self.alpha.clone() # For TensorboardX logs
+        else:
+            alpha_loss = torch.tensor(0.).to(self.device)
+            alpha_tlogs = torch.tensor(self.alpha) # For TensorboardX logs
+
+        soft_update(self.critic_target, self.critic, self.tau)
+
+        return qf1_loss.item(), qf2_loss.item(), policy_loss.item(), alpha_loss.item(), alpha_tlogs.item()

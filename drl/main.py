@@ -6,103 +6,10 @@ import scipy.io
 import torch
 import matplotlib.pyplot as plt
 import gym
-from SAC.replay_memory_snn import PolicyReplayMemorySNN, PolicyReplayMemoryANN, PolicyReplayMemoryRNN
+from SAC.replay_memory import PolicyReplayMemorySNN, PolicyReplayMemoryANN, PolicyReplayMemoryRNN
 from SAC.sac import SAC, SACSNN, SACANN, SACRNN
+from simulation import Simulate_ANN, Simulate_RNN, Simulate_SNN
 import warmup  # noqa
-
-def train_episode(env, agent, policy_memory, episode_reward, episode_steps, i_episode, args):
-
-    done = False
-    state = env.reset()
-    policy_loss = -500
-    ep_trajectory = []
-
-    mem2_rec_policy = {}
-    spk2_rec_policy = {}
-
-    if args.model == 'snn':
-        for name in agent.policy.named_children():
-            if "lif" in name[0]:
-                    spk2_rec_policy[name[0]], mem2_rec_policy[name[0]] = name[1].init_rleaky()
-
-    if args.model == 'rnn':
-        #num_layers specified in the policy model 
-        h_prev = torch.zeros(size=(1, 1, args.hidden_size))
-
-    ### STEPS PER EPISODE ###
-    for i in range(env._max_episode_steps):
-
-        with torch.no_grad():
-            if args.model == 'snn':
-                action, mem2_rec_policy, spk2_rec_policy = agent.select_action(state, spk2_rec_policy, mem2_rec_policy, evaluate=False)  # Sample action from policy
-            elif args.model == 'ann':
-                action = agent.select_action(state, evaluate=False)  # Sample action from policy
-            elif args.model == 'rnn':
-                action, h_prev = agent.select_action(state, h_prev, evaluate=False)  # Sample action from policy
-
-        ### TRACKING REWARD + EXPERIENCE TUPLE###
-        next_state, reward, done, info = env.step(action)
-        episode_reward += reward
-        episode_steps += 1
-
-        if args.visualize == True:
-             env.render()
-
-        mask = 0 if done else 1
-
-        if args.model == 'snn':
-            if done:
-                ep_trajectory.append([list(state), list(action), reward, list(next_state), mask, episode_steps])
-            else:
-                ep_trajectory.append([list(state), list(action), reward, list(next_state), mask])
-        elif args.model == 'ann':
-            policy_memory.push([list(state), list(action), reward, list(next_state), mask])
-
-        state = next_state
-
-        ### EARLY TERMINATION OF EPISODE
-        if done:
-            break
-
-    if args.model == 'snn':
-        policy_memory.push(ep_trajectory)
-
-    ### SIMULATION ###
-    if i_episode % 1000 == 0:
-        for batch in range(30):
-            critic_1_loss, critic_2_loss, policy_loss = agent.update_parameters(policy_memory, args.policy_batch_size)
-
-    return episode_reward, episode_steps, policy_loss
-
-def test(mouseEnv, agent, episode_reward, episode_steps, args):
-
-    episode_reward = 0
-    done = False
-
-    x_kinematics = []
-    lstm_activity = []
-
-    ### GET INITAL STATE + RESET MODEL BY POSE
-    state = mouseEnv.get_cur_state()
-
-    ### STEPS PER EPISODE ###
-    for i in range(mouseEnv._max_episode_steps):
-
-        with torch.no_grad():
-            action = agent.select_action(state, evaluate=True)  # Sample action from policy
-
-        ### TRACKING REWARD + EXPERIENCE TUPLE###
-        next_state, reward, done = mouseEnv.step(action, i)
-        episode_reward += reward
-
-        state = next_state
-        episode_steps += 1
-        
-        ### EARLY TERMINATION OF EPISODE
-        if done:
-            break
-    
-    return episode_reward, x_kinematics, lstm_activity
 
 def main():
 
@@ -133,6 +40,8 @@ def main():
                         help='model updates per simulator step (default: 1)')
     parser.add_argument('--policy_replay_size', type=int, default=1000000, metavar='N',
                         help='size of replay buffer (default: 2800)')
+    parser.add_argument('--batch_iters', type=int, default=30, metavar='N',
+                        help='iterations to apply update')
     parser.add_argument('--cuda', action="store_true",
                         help='run on CUDA (default: False)')
     parser.add_argument('--visualize', type=bool, default=False,
@@ -150,13 +59,17 @@ def main():
     if args.model == 'snn':
         policy_memory = PolicyReplayMemorySNN(args.policy_replay_size, args.seed)
         agent = SACSNN(env.observation_space.shape[0], env.action_space.shape[0], args)
+        simulator = Simulate_SNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize)
     elif args.model == 'ann':
         policy_memory = PolicyReplayMemoryANN(args.policy_replay_size, args.seed)
         agent = SACANN(env.observation_space.shape[0], env.action_space.shape[0], args)
+        simulator = Simulate_ANN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize)
     elif args.model == 'rnn':
         policy_memory = PolicyReplayMemoryRNN(args.policy_replay_size, args.seed)
         agent = SACRNN(env.observation_space.shape[0], env.action_space.shape[0], args)
+        simulator = Simulate_RNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize)
 
+    # TODO checkpoints
     if args.test_model:
         agent.critic.load_state_dict(torch.load(f'models/value_net_{args.model_save_name}.pth'))
         agent.policy.load_state_dict(torch.load(f'models/policy_net_{args.model_save_name}.pth'))
@@ -179,9 +92,8 @@ def main():
         if not args.test_model:
 
             # Run the episode
-            episode_reward, episode_steps, policy_loss = train_episode(env, agent, policy_memory, episode_reward, episode_steps, i_episode, args)
+            episode_reward, episode_steps = simulator.train(i_episode, args.batch_iters)
             reward_tracker.append(episode_reward)
-            policy_loss_tracker.append(policy_loss)
 
             ### SAVING MODELS + TRACKING VARIABLES ###
             if episode_reward > highest_reward:
@@ -203,7 +115,7 @@ def main():
         else:
 
             # Run the episode for testing
-            episode_reward, x_kinematics, lstm_activity = test(env, agent, episode_reward, episode_steps, args)
+            episode_reward, x_kinematics, lstm_activity = simulator.test(env, agent, episode_reward, episode_steps, args)
 
     env.close() #disconnects server
 
