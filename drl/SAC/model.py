@@ -5,7 +5,7 @@ from torch.distributions import Normal
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, pad_sequence
 import numpy as np
 import snntorch as snn
-from snntorch import spikegen
+from snntorch import spikegen, surrogate
 
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
@@ -13,25 +13,156 @@ epsilon = 1e-6
 
 # Define Policy SNN Network
 class PolicySNN(nn.Module):
-    def __init__(self, num_inputs=45, num_outputs=18, num_hidden=512, beta=.95):
+    def __init__(self, num_inputs, num_outputs, num_hidden, beta=.95):
         super(PolicySNN, self).__init__()
         self.action_scale = .5
         self.action_bias = .5
 
         # initialize layers
         self.fc1 = nn.Linear(num_inputs, num_hidden)
-        self.lif1 = snn.RLeaky(beta=beta, learn_threshold=True, linear_features=num_hidden)
+        self.lif1 = snn.Leaky(beta=beta, spike_grad=surrogate.atan(alpha=2))
         self.fc2 = nn.Linear(num_hidden, num_hidden)
-        self.lif2 = snn.RLeaky(beta=beta, learn_threshold=True, linear_features=num_hidden)
+        self.lif2 = snn.Leaky(beta=beta, spike_grad=surrogate.atan(alpha=2))
 
         self.mean_linear = nn.Linear(num_hidden, num_hidden)
-        self.mean_linear_lif = snn.RLeaky(beta=beta, learn_threshold=True, linear_features=num_hidden)
+        self.mean_linear_lif = snn.Leaky(beta=beta, spike_grad=surrogate.atan(alpha=2))
         self.mean_decoder = nn.Linear(num_hidden, num_outputs)
 
         self.log_std_linear = nn.Linear(num_hidden, num_hidden)
-        self.log_std_linear_lif = snn.RLeaky(beta=beta, learn_threshold=True, linear_features=num_hidden)
+        self.log_std_linear_lif = snn.Leaky(beta=beta, spike_grad=surrogate.atan(alpha=2))
         self.log_std_decoder = nn.Linear(num_hidden, num_outputs)
 
+
+    def forward(self, x, mems=None):
+
+        # time-loop
+        cur1 = self.fc1(x)
+        spk1, mems['lif1'] = self.lif1(cur1, mems['lif1'])
+        cur2 = self.fc2(spk1)
+        spk2, mems['lif2'] = self.lif2(cur2, mems['lif2'])
+
+        cur_mean = self.mean_linear(spk2)
+        spk_mean, mems['mean_linear_lif'] = self.mean_linear_lif(cur_mean, mems['mean_linear_lif'])
+
+        cur_std = self.log_std_linear(spk2)
+        spk_std, mems['log_std_linear_lif'] = self.log_std_linear_lif(cur_std, mems['log_std_linear_lif'])
+
+        spk_mean_decoded = self.mean_decoder(spk_mean)
+        spk_std_decoded = self.log_std_decoder(spk_std)
+        spk_std_decoded = torch.clamp(spk_std_decoded, min=LOG_SIG_MIN, max=LOG_SIG_MAX)
+
+        return spk_mean_decoded, spk_std_decoded, mems
+    
+    def sample(self, state, sampling, mem=None, training=False):
+
+        if sampling == True:
+            state = state.unsqueeze(0)
+
+        spk_mean_decoded, spk_std_decoded, next_mem2_rec = self.forward(state, mems=mem) 
+
+        spk_std_decoded = spk_std_decoded.exp()
+
+        # white noise
+        normal = Normal(spk_mean_decoded, spk_std_decoded)
+        noise = normal.rsample()
+
+        y_t = torch.tanh(noise) # reparameterization trick
+        action = y_t * self.action_scale + self.action_bias
+        log_prob = normal.log_prob(noise)
+        # Enforce the action_bounds
+        log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + epsilon)
+        log_prob = log_prob.sum(-1, keepdim=True)
+        mean = torch.tanh(spk_mean_decoded) * self.action_scale + self.action_bias
+        
+        if training:
+            action = action.squeeze()
+            log_prob = log_prob.squeeze(-1)
+
+        return action, log_prob, mean, next_mem2_rec
+
+
+# Define critic SNN Network
+class CriticSNN(nn.Module):
+    def __init__(self, num_inputs=63, num_outputs=18, num_hidden=512, num_steps=10, beta=.95):
+        super(CriticSNN, self).__init__()
+        self.num_steps = num_steps
+
+        # QNet 1
+        self.fc1 = nn.Linear(num_inputs, num_hidden)
+        self.lif1 = snn.Leaky(beta=beta)
+        self.fc2 = nn.Linear(num_hidden, num_hidden)
+        self.lif2 = snn.Leaky(beta=beta)
+        self.output_decoder_1 = nn.Linear(num_hidden, 1)
+
+        # QNet 2
+        self.fc1_2 = nn.Linear(num_inputs, num_hidden)
+        self.lif1_2 = snn.Leaky(beta=beta)
+        self.fc2_2 = nn.Linear(num_hidden, num_hidden)
+        self.lif2_2 = snn.Leaky(beta=beta)
+        self.output_decoder_2 = nn.Linear(num_hidden, 1)
+
+    def forward(self, state, action, mem, training=False):
+
+        x = torch.cat([state, action], dim=-1)
+    
+        #-------------------------------------
+
+        # Q1
+        cur1 = self.fc1(x)
+        spk1, mem['lif1'] = self.lif1(cur1, mem['lif1'])
+        cur2 = self.fc2(spk1)
+        spk2, mem['lif2'] = self.lif2(cur2, mem['lif2'])
+
+        # Q Network 1 firing rate 
+        q1_decoded = self.output_decoder_1(spk2)
+
+        #---------------------------------------------------------
+
+        # Q2
+        cur1 = self.fc1_2(x)
+        spk1, mem['lif1_2'] = self.lif1_2(cur1, mem['lif1_2'])
+        cur2 = self.fc2_2(spk1)
+        spk2, mem['lif2_2'] = self.lif2_2(cur2, mem['lif2_2'])
+
+        q2_decoded = self.output_decoder_2(spk2)
+
+        return q1_decoded, q2_decoded, mem
+
+
+# Define Policy SNN Network
+class PolicyRSNN(nn.Module):
+    def __init__(self, num_inputs, num_outputs, num_hidden, beta=.95):
+        super(PolicyRSNN, self).__init__()
+        self.action_scale = .5
+        self.action_bias = .5
+        spike_grad = surrogate.custom_surrogate(self.custom_grad)
+        #spike_grad = surrogate.atan()
+
+        # initialize layers
+        self.fc1 = nn.Linear(num_inputs, num_hidden)
+        nn.init.kaiming_normal_(self.fc1.weight, mode='fan_out')
+        self.lif1 = snn.RLeaky(beta=beta, linear_features=num_hidden, spike_grad=spike_grad)
+        self.fc2 = nn.Linear(num_hidden, num_hidden)
+        nn.init.kaiming_normal_(self.fc2.weight, mode='fan_out')
+        self.lif2 = snn.RLeaky(beta=beta, linear_features=num_hidden, spike_grad=spike_grad)
+
+        self.mean_linear = nn.Linear(num_hidden, num_hidden)
+        nn.init.kaiming_normal_(self.mean_linear.weight, mode='fan_out')
+        self.mean_linear_lif = snn.RLeaky(beta=beta, linear_features=num_hidden, spike_grad=spike_grad)
+        self.mean_decoder = nn.Linear(num_hidden, num_outputs)
+        nn.init.kaiming_normal_(self.mean_decoder.weight, mode='fan_out')
+
+        self.log_std_linear = nn.Linear(num_hidden, num_hidden)
+        nn.init.kaiming_normal_(self.log_std_linear.weight, mode='fan_out')
+        self.log_std_linear_lif = snn.RLeaky(beta=beta, linear_features=num_hidden, spike_grad=spike_grad)
+        self.log_std_decoder = nn.Linear(num_hidden, num_outputs)
+        nn.init.kaiming_normal_(self.log_std_decoder.weight, mode='fan_out')
+
+    def custom_grad(self, input_, grad_input, spikes):
+        ## The hyperparameter slope is defined inside the function.
+        gamma = 0.3
+        grad = gamma * torch.max(torch.zeros_like(input_), 1 - torch.abs(input_))
+        return grad
 
     def forward(self, x, spks=None, mems=None):
 
@@ -40,22 +171,18 @@ class PolicySNN(nn.Module):
 
         # time-loop
         cur1 = self.fc1(x)
-        spk1, mem1 = self.lif1(cur1, spks['lif1'], mems['lif1'])
-        next_mem2_rec['lif1'], next_spk2_rec['lif1'] = mem1, spk1
-        cur2 = self.fc2(spk1)
-        spk2, mem2 = self.lif2(cur2, spks['lif2'], mems['lif2'])
-        next_mem2_rec['lif2'], next_spk2_rec['lif2'] = mem2, spk2
+        next_spk2_rec['lif1'], next_mem2_rec['lif1'] = self.lif1(cur1, spks['lif1'], mems['lif1'])
+        cur2 = self.fc2(next_spk2_rec['lif1'])
+        next_spk2_rec['lif2'], next_mem2_rec['lif2'] = self.lif2(cur2, spks['lif2'], mems['lif2'])
 
-        cur_mean = self.mean_linear(spk2)
-        spk_mean, mem_mean = self.mean_linear_lif(cur_mean, spks['mean_linear_lif'], mems['mean_linear_lif'])
-        next_mem2_rec['mean_linear_lif'], next_spk2_rec['mean_linear_lif'] = mem_mean, spk_mean
+        cur_mean = self.mean_linear(next_spk2_rec['lif2'])
+        next_spk2_rec['mean_linear_lif'], next_mem2_rec['mean_linear_lif'] = self.mean_linear_lif(cur_mean, spks['mean_linear_lif'], mems['mean_linear_lif'])
 
-        cur_std = self.log_std_linear(spk2)
-        spk_std, mem_std = self.log_std_linear_lif(cur_std, spks['log_std_linear_lif'], mems['log_std_linear_lif'])
-        next_mem2_rec['log_std_linear_lif'], next_spk2_rec['log_std_linear_lif'] = mem_std, spk_std
+        cur_std = self.log_std_linear(next_spk2_rec['lif2'])
+        next_spk2_rec['log_std_linear_lif'], next_mem2_rec['log_std_linear_lif'] = self.log_std_linear_lif(cur_std, spks['log_std_linear_lif'], mems['log_std_linear_lif'])
 
-        spk_mean_decoded = self.mean_decoder(spk_mean)
-        spk_std_decoded = self.log_std_decoder(spk_std)
+        spk_mean_decoded = self.mean_decoder(next_spk2_rec['mean_linear_lif'])
+        spk_std_decoded = self.log_std_decoder(next_spk2_rec['log_std_linear_lif'])
         spk_std_decoded = torch.clamp(spk_std_decoded, min=LOG_SIG_MIN, max=LOG_SIG_MAX)
 
         return spk_mean_decoded, spk_std_decoded, next_mem2_rec, next_spk2_rec
@@ -64,8 +191,6 @@ class PolicySNN(nn.Module):
 
         if sampling == True:
             state = state.unsqueeze(0)
-
-        #state = spikegen.rate(state, num_steps=self.num_steps)
 
         spk_mean_decoded, spk_std_decoded, next_mem2_rec, next_spk2_rec = self.forward(state, spks=spks, mems=mem) 
 
@@ -91,24 +216,38 @@ class PolicySNN(nn.Module):
 
 
 # Define critic SNN Network
-class CriticSNN(nn.Module):
+class CriticRSNN(nn.Module):
     def __init__(self, num_inputs=63, num_outputs=18, num_hidden=512, num_steps=10, beta=.95):
-        super(CriticSNN, self).__init__()
+        super(CriticRSNN, self).__init__()
         self.num_steps = num_steps
+        spike_grad = surrogate.custom_surrogate(self.custom_grad)
+        #spike_grad = surrogate.atan()
 
         # QNet 1
         self.fc1 = nn.Linear(num_inputs, num_hidden)
-        self.lif1 = snn.RLeaky(beta=beta, learn_threshold=True, linear_features=num_hidden)
+        nn.init.kaiming_normal_(self.fc1.weight, mode='fan_out')
+        self.lif1 = snn.RLeaky(beta=beta, learn_threshold=True, linear_features=num_hidden, spike_grad=spike_grad)
         self.fc2 = nn.Linear(num_hidden, num_hidden)
-        self.lif2 = snn.RLeaky(beta=beta, learn_threshold=True, linear_features=num_hidden)
+        nn.init.kaiming_normal_(self.fc2.weight, mode='fan_out')
+        self.lif2 = snn.RLeaky(beta=beta, learn_threshold=True, linear_features=num_hidden, spike_grad=spike_grad)
         self.output_decoder_1 = nn.Linear(num_hidden, 1)
+        nn.init.kaiming_normal_(self.output_decoder_1.weight, mode='fan_out')
 
         # QNet 2
         self.fc1_2 = nn.Linear(num_inputs, num_hidden)
-        self.lif1_2 = snn.RLeaky(beta=beta, learn_threshold=True, linear_features=num_hidden)
+        nn.init.kaiming_normal_(self.fc1_2.weight, mode='fan_out')
+        self.lif1_2 = snn.RLeaky(beta=beta, learn_threshold=True, linear_features=num_hidden, spike_grad=spike_grad)
         self.fc2_2 = nn.Linear(num_hidden, num_hidden)
-        self.lif2_2 = snn.RLeaky(beta=beta, learn_threshold=True, linear_features=num_hidden)
+        nn.init.kaiming_normal_(self.fc2_2.weight, mode='fan_out')
+        self.lif2_2 = snn.RLeaky(beta=beta, learn_threshold=True, linear_features=num_hidden, spike_grad=spike_grad)
         self.output_decoder_2 = nn.Linear(num_hidden, 1)
+        nn.init.kaiming_normal_(self.output_decoder_2.weight, mode='fan_out')
+
+    def custom_grad(self, input_, grad_input, spikes):
+        ## The hyperparameter slope is defined inside the function.
+        gamma = 0.3
+        grad = gamma * torch.max(torch.zeros_like(input_), 1 - torch.abs(input_))
+        return grad
 
     def forward(self, state, action, spk, mem, training=False):
 
@@ -299,6 +438,8 @@ class PolicyANN(nn.Module):
         # initialize layers
         self.fc1 = nn.Linear(num_inputs, num_hidden)
         self.fc2 = nn.Linear(num_hidden, num_hidden)
+        self.fc3 = nn.Linear(num_hidden, num_hidden)
+        self.fc4 = nn.Linear(num_hidden, num_hidden)
 
         self.mean_linear = nn.Linear(num_hidden, num_outputs)
         self.log_std_linear = nn.Linear(num_hidden, num_outputs)
@@ -308,9 +449,11 @@ class PolicyANN(nn.Module):
         # time-loop
         cur1 = self.fc1(x)
         cur2 = self.fc2(cur1)
+        cur3 = self.fc3(cur2)
+        cur4 = self.fc4(cur3)
 
-        cur_mean = self.mean_linear(cur2)
-        cur_std = self.log_std_linear(cur2)
+        cur_mean = self.mean_linear(cur4)
+        cur_std = self.log_std_linear(cur4)
         cur_std = torch.clamp(cur_std, min=LOG_SIG_MIN, max=LOG_SIG_MAX)
 
         return cur_mean, cur_std
@@ -333,7 +476,7 @@ class PolicyANN(nn.Module):
         log_prob = normal.log_prob(noise)
         # Enforce the action_bounds
         log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + epsilon)
-        log_prob = log_prob.sum(1, keepdim=True)
+        log_prob = log_prob.sum(-1, keepdim=True)
         mean = torch.tanh(mean) * self.action_scale + self.action_bias
 
         return action, log_prob, mean
@@ -346,20 +489,28 @@ class CriticANN(nn.Module):
 
         # QNet 1
         self.fc1 = nn.Linear(num_inputs, num_hidden)
-        self.fc2 = nn.Linear(num_hidden, num_outputs)
+        self.fc2 = nn.Linear(num_hidden, num_hidden)
+        self.fc3 = nn.Linear(num_hidden, num_hidden)
+        self.fc4 = nn.Linear(num_hidden, 1)
 
         # QNet 2
         self.fc1_2 = nn.Linear(num_inputs, num_hidden)
-        self.fc2_2 = nn.Linear(num_hidden, num_outputs)
+        self.fc2_2 = nn.Linear(num_hidden, num_hidden)
+        self.fc3_2 = nn.Linear(num_hidden, num_hidden)
+        self.fc4_2 = nn.Linear(num_hidden, 1)
 
     def forward(self, state, action):
 
         x = torch.cat([state, action], dim=-1)
 
         out = self.fc1(x)
-        q1 = self.fc2(out)
+        out = self.fc2(out)
+        out = self.fc3(out)
+        q1 = self.fc4(out)
 
         out = self.fc1_2(x)
-        q2 = self.fc2_2(out)
+        out = self.fc2_2(out)
+        out = self.fc3_2(out)
+        q2 = self.fc4_2(out)
 
         return q1, q2

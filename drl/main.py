@@ -6,9 +6,9 @@ import scipy.io
 import torch
 import matplotlib.pyplot as plt
 import gym
-from SAC.replay_memory import PolicyReplayMemorySNN, PolicyReplayMemoryANN, PolicyReplayMemoryRNN
-from SAC.sac import SAC, SACSNN, SACANN, SACRNN
-from simulation import Simulate_ANN, Simulate_RNN, Simulate_SNN
+from SAC.replay_memory import PolicyReplayMemoryRSNN, PolicyReplayMemoryANN, PolicyReplayMemoryRNN, PolicyReplayMemorySNN
+from SAC.sac import SAC, SACRSNN, SACANN, SACRNN, SACSNN
+from simulation import Simulate_ANN, Simulate_RNN, Simulate_RSNN, Simulate_SNN
 import warmup  # noqa
 
 def main():
@@ -23,7 +23,7 @@ def main():
                         help='discount factor for reward (default: 0.99)')
     parser.add_argument('--tau', type=float, default=0.005, metavar='G',
                         help='target smoothing coefficient(τ) (default: 0.005)')
-    parser.add_argument('--lr', type=float, default=0.00005, metavar='G',
+    parser.add_argument('--lr', type=float, default=0.0001, metavar='G',
                         help='learning rate (default: 0.001)')
     parser.add_argument('--alpha', type=float, default=0.2, metavar='G',
                         help='Temperature parameter α determines the relative importance of the entropy\
@@ -56,6 +56,10 @@ def main():
 
     env = gym.make(args.env_name)
 
+    if args.model == 'rsnn':
+        policy_memory = PolicyReplayMemoryRSNN(args.policy_replay_size, args.seed)
+        agent = SACRSNN(env.observation_space.shape[0], env.action_space.shape[0], args)
+        simulator = Simulate_RSNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize)
     if args.model == 'snn':
         policy_memory = PolicyReplayMemorySNN(args.policy_replay_size, args.seed)
         agent = SACSNN(env.observation_space.shape[0], env.action_space.shape[0], args)
@@ -108,8 +112,8 @@ def main():
             print('Iteration: {} | reward {} | timesteps completed: {}'.format(i_episode, episode_reward, episode_steps))
             print('highest reward so far: {}'.format(highest_reward))
 
-            #np.savetxt('drl/tracking/episode_rewards', reward_tracker)
-            #np.savetxt('drl/tracking/policy_loss', policy_loss_tracker)
+            np.savetxt(f'drl/tracking/episode_rewards_{args.model_save_name}', reward_tracker)
+            np.savetxt(f'drl/tracking/policy_loss_{args.model_save_name}', simulator.policy_loss_tracker)
 
         # Testing, i.e. getting kinematics and activities
         else:
