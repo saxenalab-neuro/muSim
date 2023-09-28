@@ -41,7 +41,7 @@ class Simulate(object):
                 self.critic2_loss_tracker.append(critic_2_loss)
             print(f"mean policy loss: {mean(self.policy_loss_tracker)} | mean critic 1 loss: {mean(self.critic1_loss_tracker)} | mean critic 2 loss: {mean(self.critic2_loss_tracker)}")
     
-    def train(self, iteration, batch_iters):
+    def train(self, iteration):
         pass
 
     def test(self):
@@ -178,6 +178,7 @@ class Simulate_ANN(Simulate):
     def test(self):
 
         episode_reward = 0
+        episode_steps = 0
         done = False
 
         x_kinematics = []
@@ -193,7 +194,7 @@ class Simulate_ANN(Simulate):
                 action = self.agent.select_action(state, evaluate=True)  # Sample action from policy
 
             ### TRACKING REWARD + EXPERIENCE TUPLE###
-            next_state, reward, done = self.env.step(action, i)
+            next_state, reward, done, episode_reward, episode_steps = self._step(action, episode_reward, episode_steps)
             episode_reward += reward
 
             if self.visualize == True:

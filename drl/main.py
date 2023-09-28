@@ -56,6 +56,8 @@ def main():
                         help='save models and optimizer during training')
     parser.add_argument('--model_save_name', type=str, default='',
                         help='name used to save the model with')
+    parser.add_argument('--tracking', type=bool, default=False,
+                        help='track experience')
     parser.add_argument('--total_episodes', type=int, default=5000000, metavar='N',
                         help='total number of episodes')
     args = parser.parse_args()
@@ -121,16 +123,18 @@ def main():
                 print('highest reward: {} | mean_reward: {} | mean timesteps completed: {}'.format(max(reward_tracker), mean(reward_tracker), mean(steps_tracker)))
                 print('highest reward so far: {}'.format(highest_reward))
 
-            np.savetxt(f'tracking/rewards/episode_rewards_{args.model_save_name}', reward_tracker)
-            np.savetxt(f'tracking/policy_losses/policy_loss_{args.model_save_name}', simulator.policy_loss_tracker)
-            np.savetxt(f'tracking/critic_1_losses/critic_1_loss_{args.model_save_name}', simulator.critic1_loss_tracker)
-            np.savetxt(f'tracking/critic_1_losses/critic_2_loss_{args.model_save_name}', simulator.critic2_loss_tracker)
+            if args.tracking:
+                np.savetxt(f'tracking/rewards/episode_rewards_{args.model_save_name}', reward_tracker)
+                np.savetxt(f'tracking/policy_losses/policy_loss_{args.model_save_name}', simulator.policy_loss_tracker)
+                np.savetxt(f'tracking/critic_1_losses/critic_1_loss_{args.model_save_name}', simulator.critic1_loss_tracker)
+                np.savetxt(f'tracking/critic_1_losses/critic_2_loss_{args.model_save_name}', simulator.critic2_loss_tracker)
 
         # Testing, i.e. getting kinematics and activities
         else:
 
             # Run the episode for testing
-            episode_reward, x_kinematics, lstm_activity = simulator.test(env, agent, episode_reward, episode_steps, args)
+            episode_reward, x_kinematics, lstm_activity = simulator.test()
+            print(f"Episode Reward: {episode_reward}")
 
     env.close() #disconnects server
 
