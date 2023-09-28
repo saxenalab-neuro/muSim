@@ -10,6 +10,8 @@ from SAC.replay_memory import PolicyReplayMemoryRSNN, PolicyReplayMemoryANN, Pol
 from SAC.sac import SAC, SACRSNN, SACANN, SACRNN, SACSNN
 from simulation import Simulate_ANN, Simulate_RNN, Simulate_RSNN, Simulate_SNN
 import warmup  # noqa
+from tqdm import tqdm
+from statistics import mean
 
 def main():
 
@@ -32,7 +34,7 @@ def main():
                         help='Automaically adjust α (default: False)')
     parser.add_argument('--seed', type=int, default=123456, metavar='N',
                         help='random seed (default: 123456)')
-    parser.add_argument('--policy_batch_size', type=int, default=256, metavar='N',
+    parser.add_argument('--policy_batch_size', type=int, default=8, metavar='N',
                         help='batch size (default: 6)')
     parser.add_argument('--hidden_size', type=int, default=512, metavar='N',
                         help='hidden size (default: 1000)')
@@ -42,6 +44,8 @@ def main():
                         help='size of replay buffer (default: 2800)')
     parser.add_argument('--batch_iters', type=int, default=30, metavar='N',
                         help='iterations to apply update')
+    parser.add_argument('--experience_sampling', type=int, default=100, metavar='N',
+                        help='how many episodes to run before training')
     parser.add_argument('--cuda', action="store_true",
                         help='run on CUDA (default: False)')
     parser.add_argument('--visualize', type=bool, default=False,
@@ -52,6 +56,8 @@ def main():
                         help='save models and optimizer during training')
     parser.add_argument('--model_save_name', type=str, default='',
                         help='name used to save the model with')
+    parser.add_argument('--total_episodes', type=int, default=5000000, metavar='N',
+                        help='total number of episodes')
     args = parser.parse_args()
 
     env = gym.make(args.env_name)
@@ -59,19 +65,19 @@ def main():
     if args.model == 'rsnn':
         policy_memory = PolicyReplayMemoryRSNN(args.policy_replay_size, args.seed)
         agent = SACRSNN(env.observation_space.shape[0], env.action_space.shape[0], args)
-        simulator = Simulate_RSNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize)
+        simulator = Simulate_RSNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters, args.experience_sampling)
     if args.model == 'snn':
         policy_memory = PolicyReplayMemorySNN(args.policy_replay_size, args.seed)
         agent = SACSNN(env.observation_space.shape[0], env.action_space.shape[0], args)
-        simulator = Simulate_SNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize)
+        simulator = Simulate_SNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters, args.experience_sampling)
     elif args.model == 'ann':
         policy_memory = PolicyReplayMemoryANN(args.policy_replay_size, args.seed)
         agent = SACANN(env.observation_space.shape[0], env.action_space.shape[0], args)
-        simulator = Simulate_ANN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize)
+        simulator = Simulate_ANN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters, args.experience_sampling)
     elif args.model == 'rnn':
         policy_memory = PolicyReplayMemoryRNN(args.policy_replay_size, args.seed)
         agent = SACRNN(env.observation_space.shape[0], env.action_space.shape[0], args)
-        simulator = Simulate_RNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize)
+        simulator = Simulate_RNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters, args.experience_sampling)
 
     # TODO checkpoints
     if args.test_model:
@@ -84,10 +90,11 @@ def main():
     ### INITIALIZE ALL VALUES TO TRACK ###
     highest_reward = -1000
     reward_tracker = []
+    steps_tracker = []
     policy_loss_tracker = []
 
     ### BEGIN TRAINING LOOP
-    for i_episode in itertools.count(1):
+    for i_episode in tqdm(range(1, args.total_episodes)):
 
         episode_reward = 0
         episode_steps = 0
@@ -96,8 +103,9 @@ def main():
         if not args.test_model:
 
             # Run the episode
-            episode_reward, episode_steps = simulator.train(i_episode, args.batch_iters)
+            episode_reward, episode_steps = simulator.train(i_episode)
             reward_tracker.append(episode_reward)
+            steps_tracker.append(episode_steps)
 
             ### SAVING MODELS + TRACKING VARIABLES ###
             if episode_reward > highest_reward:
@@ -108,12 +116,15 @@ def main():
                 torch.save(agent.policy.state_dict(), f'models/policy_net_{args.model_save_name}.pth')
                 torch.save(agent.critic.state_dict(), f'models/value_net_{args.model_save_name}.pth')
 
-            # Printing rewards
-            print('Iteration: {} | reward {} | timesteps completed: {}'.format(i_episode, episode_reward, episode_steps))
-            print('highest reward so far: {}'.format(highest_reward))
+            if i_episode % args.experience_sampling == 0:
+                # Printing rewards
+                print('highest reward: {} | mean_reward: {} | mean timesteps completed: {}'.format(max(reward_tracker), mean(reward_tracker), mean(steps_tracker)))
+                print('highest reward so far: {}'.format(highest_reward))
 
-            np.savetxt(f'drl/tracking/episode_rewards_{args.model_save_name}', reward_tracker)
-            np.savetxt(f'drl/tracking/policy_loss_{args.model_save_name}', simulator.policy_loss_tracker)
+            np.savetxt(f'tracking/rewards/episode_rewards_{args.model_save_name}', reward_tracker)
+            np.savetxt(f'tracking/policy_losses/policy_loss_{args.model_save_name}', simulator.policy_loss_tracker)
+            np.savetxt(f'tracking/critic_1_losses/critic_1_loss_{args.model_save_name}', simulator.critic1_loss_tracker)
+            np.savetxt(f'tracking/critic_1_losses/critic_2_loss_{args.model_save_name}', simulator.critic2_loss_tracker)
 
         # Testing, i.e. getting kinematics and activities
         else:
