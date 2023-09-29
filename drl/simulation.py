@@ -7,6 +7,7 @@ import torch
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from statistics import mean
+from abc import ABC, abstractmethod
 
 class Simulate(object):
     def __init__(self, env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling):
@@ -23,14 +24,26 @@ class Simulate(object):
         self.policy_loss_tracker = []
         self.critic1_loss_tracker = []
         self.critic2_loss_tracker = []
+    
+    def _speed_cost(self, timestep):
+        timestep_scale = 60
+        exp_scale = 0.1
+        shift = 3
+        timestep_scaled = timestep / timestep_scale
+        cost = exp_scale * np.exp(timestep_scaled - shift)
+        return cost
 
-    def _step(self, action, episode_reward, episode_steps):
+    def _step(self, action, timestep, speed_token, episode_reward, episode_steps):
         ### TRACKING REWARD + EXPERIENCE TUPLE###
         next_state, reward, done, info = self.env.step(action)
+        next_state = np.append(next_state, speed_token)
+        # only works for binary activation of speed penalty
+        speed_penalty = self._speed_cost(timestep) * speed_token
+        reward -= speed_penalty
         episode_reward += reward
         episode_steps += 1
 
-        return next_state, reward, done, episode_reward, episode_steps
+        return next_state, reward, done, info, episode_reward, episode_steps
     
     def _check_update(self, iteration):
         if iteration % self.experience_sampling == 0:
@@ -41,10 +54,12 @@ class Simulate(object):
                 self.critic2_loss_tracker.append(critic_2_loss)
             print(f"mean policy loss: {mean(self.policy_loss_tracker)} | mean critic 1 loss: {mean(self.critic1_loss_tracker)} | mean critic 2 loss: {mean(self.critic2_loss_tracker)}")
     
-    def train(self, iteration):
+    @abstractmethod
+    def train(self, iteration, speed_token):
         pass
 
-    def test(self):
+    @abstractmethod
+    def test(self, speed_token):
         pass
 
     
@@ -52,7 +67,7 @@ class Simulate_LSTM(Simulate):
     def __init__(self, env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling):
         super(Simulate_LSTM, self).__init__(env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling)
 
-    def train(self, iteration):
+    def train(self, iteration, speed_token):
 
         episode_reward = 0
         episode_steps = 0
@@ -61,6 +76,7 @@ class Simulate_LSTM(Simulate):
 
         ### GET INITAL STATE + RESET MODEL BY POSE
         state = self.env.reset()
+        state = np.append(state, speed_token)
 
         ep_trajectory = []
 
@@ -69,12 +85,12 @@ class Simulate_LSTM(Simulate):
         c_prev = torch.zeros(size=(1, 1, self.hidden_size))
 
         ### STEPS PER EPISODE ###
-        for i in range(self.env._max_episode_steps):
+        for timestep in range(self.env._max_episode_steps):
             with torch.no_grad():
                 action, h_current, c_current, _ = self.agent.select_action(state, h_prev, c_prev, evaluate=False)  # Sample action from policy
             
             ### TRACKING REWARD + EXPERIENCE TUPLE###
-            next_state, reward, done, episode_reward, episode_steps = self._step(action, episode_reward, episode_steps)
+            next_state, reward, done, _, episode_reward, episode_steps = self._step(action, timestep, speed_token, episode_reward, episode_steps)
 
             if self.visualize == True:
                 self.env.render()
@@ -87,7 +103,7 @@ class Simulate_LSTM(Simulate):
             h_prev = h_current
             c_prev = c_current
 
-            if done and i < self.env._max_episode_steps:
+            if done and timestep < self.env._max_episode_steps:
                 success = 1
             
             ### EARLY TERMINATION OF EPISODE
@@ -102,7 +118,7 @@ class Simulate_LSTM(Simulate):
 
         return episode_reward, episode_steps, success
     
-    def test(self):
+    def test(self, speed_token):
 
         episode_reward = 0
         episode_steps = 0
@@ -111,19 +127,20 @@ class Simulate_LSTM(Simulate):
 
         ### GET INITAL STATE + RESET MODEL BY POSE
         state = self.env.reset()
+        state = np.append(state, speed_token)
 
         #num_layers specified in the policy model 
         h_prev = torch.zeros(size=(1, 1, self.hidden_size))
         c_prev = torch.zeros(size=(1, 1, self.hidden_size))
 
         ### STEPS PER EPISODE ###
-        for i in range(self.env._max_episode_steps):
+        for timestep in range(self.env._max_episode_steps):
 
             with torch.no_grad():
-                action, h_current, c_current, rnn_out = self.agent.select_action(state, h_prev, c_prev, evaluate=True)  # Sample action from policy
+                action, h_current, c_current, _ = self.agent.select_action(state, h_prev, c_prev, evaluate=True)  # Sample action from policy
 
             ### TRACKING REWARD + EXPERIENCE TUPLE###
-            next_state, reward, done, episode_reward, episode_steps = self._step(action, episode_reward, episode_steps)
+            next_state, reward, done, info, episode_reward, episode_steps = self._step(action, timestep, speed_token, episode_reward, episode_steps)
             episode_reward += reward
 
             if self.visualize == True:
@@ -133,7 +150,7 @@ class Simulate_LSTM(Simulate):
             h_prev = h_current
             c_prev = c_current
 
-            if done and i < self.env._max_episode_steps:
+            if done and timestep < self.env._max_episode_steps:
                 success = 1
 
             ### EARLY TERMINATION OF EPISODE
@@ -147,7 +164,7 @@ class Simulate_ANN(Simulate):
     def __init__(self, env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling):
         super(Simulate_ANN, self).__init__(env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling)
 
-    def train(self, iteration):
+    def train(self, iteration, speed_token):
 
         episode_reward = 0
         episode_steps = 0
@@ -156,15 +173,16 @@ class Simulate_ANN(Simulate):
 
         ### GET INITAL STATE + RESET MODEL BY POSE
         state = self.env.reset()
+        state = np.append(state, speed_token)
 
-        ### STEPS PER EPISODE ###
-        for i in range(self.env._max_episode_steps):
+        ### STEPS PER EPISODE ##from abc import ABC, abstractmethod#
+        for timestep in range(self.env._max_episode_steps):
 
             with torch.no_grad():
                 action = self.agent.select_action(state, evaluate=False)  # Sample action from policy
             
             ### TRACKING REWARD + EXPERIENCE TUPLE###
-            next_state, reward, done, episode_reward, episode_steps = self._step(action, episode_reward, episode_steps)
+            next_state, reward, done, _, episode_reward, episode_steps = self._step(action, timestep, speed_token, episode_reward, episode_steps)
 
             if self.visualize == True:
                 self.env.render()
@@ -175,7 +193,7 @@ class Simulate_ANN(Simulate):
 
             state = next_state
 
-            if done and i < self.env._max_episode_steps:
+            if done and timestep < self.env._max_episode_steps:
                 success = 1
             
             ### EARLY TERMINATION OF EPISODE
@@ -187,7 +205,7 @@ class Simulate_ANN(Simulate):
 
         return episode_reward, episode_steps, success
     
-    def test(self):
+    def test(self, speed_token):
 
         episode_reward = 0
         episode_steps = 0
@@ -196,15 +214,16 @@ class Simulate_ANN(Simulate):
 
         ### GET INITAL STATE + RESET MODEL BY POSE
         state = self.env.reset()
+        state = np.append(state, speed_token)
 
         ### STEPS PER EPISODE ###
-        for i in range(self.env._max_episode_steps):
+        for timestep in range(self.env._max_episode_steps):
 
             with torch.no_grad():
                 action = self.agent.select_action(state, evaluate=True)  # Sample action from policy
 
             ### TRACKING REWARD + EXPERIENCE TUPLE###
-            next_state, reward, done, episode_reward, episode_steps = self._step(action, episode_reward, episode_steps)
+            next_state, reward, done, info, episode_reward, episode_steps = self._step(action, timestep, speed_token, episode_reward, episode_steps)
             episode_reward += reward
 
             if self.visualize == True:
@@ -212,7 +231,7 @@ class Simulate_ANN(Simulate):
 
             state = next_state
 
-            if done and i < self.env._max_episode_steps:
+            if done and timestep < self.env._max_episode_steps:
                 success = 1
 
             ### EARLY TERMINATION OF EPISODE
@@ -235,7 +254,7 @@ class Simulate_LSNN(Simulate):
                     spk2_rec[name[0]], mem2_rec[name[0]], b2_rec[name[0]]  = name[1].init_lleaky()
         return spk2_rec, mem2_rec, b2_rec
 
-    def train(self, iteration):
+    def train(self, iteration, speed_token):
 
         episode_reward = 0
         episode_steps = 0
@@ -244,6 +263,7 @@ class Simulate_LSNN(Simulate):
 
         ### GET INITAL STATE + RESET MODEL BY POSE
         state = self.env.reset()
+        state = np.append(state, speed_token)
 
         ep_trajectory = []
 
@@ -251,21 +271,21 @@ class Simulate_LSNN(Simulate):
         spk2_rec_policy, mem2_rec_policy, b2_rec_policy = self._init_lleaky()
 
         ### STEPS PER EPISODE ###
-        for i in range(self.env._max_episode_steps):
+        for timestep in range(self.env._max_episode_steps):
 
             with torch.no_grad():
                 action, mem2_rec_policy, spk2_rec_policy, b2_rec_policy = self.agent.select_action(state, spk2_rec_policy, mem2_rec_policy, b2_rec_policy, evaluate=False)  # Sample action from policy
             
             ### TRACKING REWARD + EXPERIENCE TUPLE###
-            next_state, reward, done, episode_reward, episode_steps = self._step(action, episode_reward, episode_steps)
-            mask = 0 if done else 1
-            state = next_state
+            next_state, reward, done, _, episode_reward, episode_steps = self._step(action, timestep, speed_token, episode_reward, episode_steps)
 
             if self.visualize == True:
                 self.env.render()
 
-            if done and i < self.env._max_episode_steps:
+            if done and timestep < self.env._max_episode_steps:
                 success = 1
+
+            mask = 0 if done else 1
             
             ### EARLY TERMINATION OF EPISODE
             if done:
@@ -273,6 +293,8 @@ class Simulate_LSNN(Simulate):
                 break
             else:
                 ep_trajectory.append([state, action, reward, next_state, mask])
+
+            state = next_state
 
         ### SIMULATION ###
         self._check_update(iteration)
@@ -282,7 +304,7 @@ class Simulate_LSNN(Simulate):
 
         return episode_reward, episode_steps, success
     
-    def test(self):
+    def test(self, speed_token):
 
         episode_reward = 0
         episode_steps = 0
@@ -291,18 +313,19 @@ class Simulate_LSNN(Simulate):
 
         ### GET INITAL STATE + RESET MODEL BY POSE
         state = self.env.reset()
+        state = np.append(state, speed_token)
 
         #num_layers specified in the policy model 
-        spk2_rec_policy, mem2_rec_policy = self._init_rleaky()
+        spk2_rec_policy, mem2_rec_policy, b2_rec_policy = self._init_lleaky()
 
         ### STEPS PER EPISODE ###
-        for i in range(self.env._max_episode_steps):
+        for timestep in range(self.env._max_episode_steps):
 
             with torch.no_grad():
-                action, mem2_rec_policy, spk2_rec_policy = self.agent.select_action(state, spk2_rec_policy, mem2_rec_policy, evaluate=True)  # Sample action from policy
+                action, mem2_rec_policy, spk2_rec_policy = self.agent.select_action(state, spk2_rec_policy, mem2_rec_policy, b2_rec_policy, evaluate=True)  # Sample action from policy
 
             ### TRACKING REWARD + EXPERIENCE TUPLE###
-            next_state, reward, done, episode_reward, episode_steps = self._step(action, episode_reward, episode_steps)
+            next_state, reward, done, info, episode_reward, episode_steps = self._step(action, timestep, speed_token, episode_reward, episode_steps)
             episode_reward += reward
 
             if self.visualize == True:
@@ -310,7 +333,7 @@ class Simulate_LSNN(Simulate):
 
             state = next_state
 
-            if done and i < self.env._max_episode_steps:
+            if done and timestep < self.env._max_episode_steps:
                 success = 1
 
             ### EARLY TERMINATION OF EPISODE
@@ -331,7 +354,7 @@ class Simulate_SNN(Simulate):
                 mem2_rec[name[0]] = name[1].init_leaky()
         return mem2_rec
 
-    def train(self, iteration):
+    def train(self, iteration, speed_token):
 
         done = False
         episode_reward = 0
@@ -340,6 +363,7 @@ class Simulate_SNN(Simulate):
 
         ### GET INITAL STATE + RESET MODEL BY POSE
         state = self.env.reset()
+        state = np.append(state, speed_token)
 
         ep_trajectory = []
 
@@ -347,21 +371,21 @@ class Simulate_SNN(Simulate):
         mem2_rec_policy = self._init_leaky()
 
         ### STEPS PER EPISODE ###
-        for i in range(self.env._max_episode_steps):
+        for timestep in range(self.env._max_episode_steps):
 
             with torch.no_grad():
                 action, mem2_rec_policy = self.agent.select_action(state, mem2_rec_policy, evaluate=False)  # Sample action from policy
             
             ### TRACKING REWARD + EXPERIENCE TUPLE###
-            next_state, reward, done, episode_reward, episode_steps = self._step(action, episode_reward, episode_steps)
-            mask = 0 if done else 1
-            state = next_state
+            next_state, reward, done, _, episode_reward, episode_steps = self._step(action, timestep, speed_token, episode_reward, episode_steps)
 
             if self.visualize == True:
                 self.env.render()
 
-            if done and i < self.env._max_episode_steps:
+            if done and timestep < self.env._max_episode_steps:
                 success = 1
+
+            mask = 0 if done else 1
             
             ### EARLY TERMINATION OF EPISODE
             if done:
@@ -369,6 +393,8 @@ class Simulate_SNN(Simulate):
                 break
             else:
                 ep_trajectory.append([state, action, reward, next_state, mask])
+
+            state = next_state
 
         ### SIMULATION ###
         self._check_update(iteration)
@@ -378,7 +404,7 @@ class Simulate_SNN(Simulate):
 
         return episode_reward, episode_steps, success
     
-    def test(self):
+    def test(self, speed_token):
 
         episode_reward = 0
         episode_steps = 0
@@ -387,18 +413,19 @@ class Simulate_SNN(Simulate):
 
         ### GET INITAL STATE + RESET MODEL BY POSE
         state = self.env.reset()
+        state = np.append(state, speed_token)
 
         #num_layers specified in the policy model 
-        spk2_rec_policy, mem2_rec_policy = self._init_rleaky()
+        mem2_rec_policy = self._init_leaky()
 
         ### STEPS PER EPISODE ###
-        for i in range(self.env._max_episode_steps):
+        for timestep in range(self.env._max_episode_steps):
 
             with torch.no_grad():
-                action, mem2_rec_policy, spk2_rec_policy = self.agent.select_action(state, spk2_rec_policy, mem2_rec_policy, evaluate=True)  # Sample action from policy
+                action, mem2_rec_policy = self.agent.select_action(state, mem2_rec_policy, evaluate=True)  # Sample action from policy
 
             ### TRACKING REWARD + EXPERIENCE TUPLE###
-            next_state, reward, done, episode_reward, episode_steps = self._step(action, episode_reward, episode_steps)
+            next_state, reward, done, info, episode_reward, episode_steps = self._step(action, timestep, speed_token, episode_reward, episode_steps)
             episode_reward += reward
 
             if self.visualize == True:
@@ -406,7 +433,7 @@ class Simulate_SNN(Simulate):
 
             state = next_state
 
-            if done and i < self.env._max_episode_steps:
+            if done and timestep < self.env._max_episode_steps:
                 success = 1
 
             ### EARLY TERMINATION OF EPISODE

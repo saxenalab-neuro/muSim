@@ -58,25 +58,27 @@ def main():
                         help='total number of episodes')
     parser.add_argument('--tracking', type=bool, default=False, metavar='N',
                         help='track experience')
+    parser.add_argument('--fast_movements', type=bool, default=False, metavar='N',
+                        help='generate fast reaches')
     args = parser.parse_args()
 
     env = gym.make(args.env_name)
 
     if args.model == 'lsnn':
         policy_memory = PolicyReplayMemoryLSNN(args.policy_replay_size, args.seed)
-        agent = SACLSNN(env.observation_space.shape[0], env.action_space.shape[0], args)
+        agent = SACLSNN(env.observation_space.shape[0]+1, env.action_space.shape[0], args)
         simulator = Simulate_LSNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters, args.experience_sampling)
     if args.model == 'snn':
         policy_memory = PolicyReplayMemorySNN(args.policy_replay_size, args.seed)
-        agent = SACSNN(env.observation_space.shape[0], env.action_space.shape[0], args)
+        agent = SACSNN(env.observation_space.shape[0]+1, env.action_space.shape[0], args)
         simulator = Simulate_SNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters, args.experience_sampling)
     elif args.model == 'ann':
         policy_memory = PolicyReplayMemoryANN(args.policy_replay_size, args.seed)
-        agent = SACANN(env.observation_space.shape[0], env.action_space.shape[0], args)
+        agent = SACANN(env.observation_space.shape[0]+1, env.action_space.shape[0], args)
         simulator = Simulate_ANN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters, args.experience_sampling)
     elif args.model == 'lstm':
         policy_memory = PolicyReplayMemoryLSTM(args.policy_replay_size, args.seed)
-        agent = SACLSTM(env.observation_space.shape[0], env.action_space.shape[0], args)
+        agent = SACLSTM(env.observation_space.shape[0]+1, env.action_space.shape[0], args)
         simulator = Simulate_LSTM(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters, args.experience_sampling)
 
     # TODO checkpoints
@@ -99,11 +101,16 @@ def main():
         episode_reward = 0
         episode_steps = 0
 
+        if args.fast_movements == True and i_episode % 2 == 0:
+            speed_token = 1
+        else:
+            speed_token = 0
+
         # Training
         if not args.test_model:
 
             # Run the episode
-            episode_reward, episode_steps, success = simulator.train(i_episode)
+            episode_reward, episode_steps, success = simulator.train(i_episode, speed_token)
 
             reward_tracker.append(episode_reward)
             steps_tracker.append(episode_steps)
@@ -134,7 +141,7 @@ def main():
         else:
 
             # Run the episode for testing
-            episode_reward, success = simulator.test(i_episode)
+            episode_reward, success = simulator.test(speed_token)
             print(f'Episode Reward: {episode_reward} | Success: {success}')
 
     env.close() #disconnects server

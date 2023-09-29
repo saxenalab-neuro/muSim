@@ -8,6 +8,7 @@ from .model import CriticSNN, PolicySNN
 from .model import CriticANN, PolicyANN
 from .model import CriticLSTM, PolicyLSTM
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, pad_sequence
+from abc import ABC, abstractmethod
 
 class SAC(object):
     def __init__(self, num_inputs, action_space, args):
@@ -19,9 +20,11 @@ class SAC(object):
         self.automatic_entropy_tuning = args.automatic_entropy_tuning
         self.device = torch.device("cuda")
 
+    @abstractmethod
     def select_action(self, state, evaluate=False):
         pass
 
+    @abstractmethod
     def update_parametersRNN(self, policy_memory, policy_batch_size):
         pass
 
