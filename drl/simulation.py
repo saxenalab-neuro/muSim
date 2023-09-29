@@ -209,17 +209,18 @@ class Simulate_ANN(Simulate):
         return episode_reward, x_kinematics, lstm_activity
 
 
-class Simulate_RSNN(Simulate):
+class Simulate_LSNN(Simulate):
     def __init__(self, env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling):
-        super().__init__(env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling)
+        super(Simulate_LSNN, self).__init__(env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling)
     
-    def _init_rleaky(self):
+    def _init_lleaky(self):
         mem2_rec = {}
         spk2_rec = {}
+        b2_rec = {}
         for name in self.agent.policy.named_children():
             if "lif" in name[0]:
-                    spk2_rec[name[0]], mem2_rec[name[0]] = name[1].init_rleaky()
-        return spk2_rec, mem2_rec
+                    spk2_rec[name[0]], mem2_rec[name[0]], b2_rec[name[0]]  = name[1].init_lleaky()
+        return spk2_rec, mem2_rec, b2_rec
 
     def train(self, iteration):
 
@@ -233,13 +234,13 @@ class Simulate_RSNN(Simulate):
         ep_trajectory = []
 
         #num_layers specified in the policy model 
-        spk2_rec_policy, mem2_rec_policy = self._init_rleaky()
+        spk2_rec_policy, mem2_rec_policy, b2_rec_policy = self._init_lleaky()
 
         ### STEPS PER EPISODE ###
         for i in range(self.env._max_episode_steps):
 
             with torch.no_grad():
-                action, mem2_rec_policy, spk2_rec_policy = self.agent.select_action(state, spk2_rec_policy, mem2_rec_policy, evaluate=False)  # Sample action from policy
+                action, mem2_rec_policy, spk2_rec_policy, b2_rec_policy = self.agent.select_action(state, spk2_rec_policy, mem2_rec_policy, b2_rec_policy, evaluate=False)  # Sample action from policy
             
             ### TRACKING REWARD + EXPERIENCE TUPLE###
             next_state, reward, done, episode_reward, episode_steps = self._step(action, episode_reward, episode_steps)

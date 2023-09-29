@@ -23,9 +23,9 @@ class PolicyReplayMemory:
     def __len__(self):
         return len(self.buffer)
 
-class PolicyReplayMemoryRSNN(PolicyReplayMemory):
+class PolicyReplayMemoryLSNN(PolicyReplayMemory):
     def __init__(self, capacity, seed):
-        super(PolicyReplayMemoryRSNN, self).__init__(capacity, seed)
+        super(PolicyReplayMemoryLSNN, self).__init__(capacity, seed)
 
     def sample(self, batch_size):
         batch = random.sample(self.buffer, batch_size)
