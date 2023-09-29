@@ -278,7 +278,6 @@ class SACLSNN(SAC):
         self.policy_optim.zero_grad()
         policy_loss.backward()
         torch.nn.utils.clip_grad_norm_(self.policy.parameters(), 1)
-        print(self.policy.fc2.weight.grad)
         self.policy_optim.step()
 
         soft_update(self.critic_target, self.critic, self.tau)

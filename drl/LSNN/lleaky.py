@@ -227,14 +227,14 @@ class LLeaky(ALIF):
         self,
         beta,
         V=1.0,
-        thresh_beta=1.6,
+        thresh_beta=.5,
         dt=1.,
         tau_adaptation=200,
         all_to_all=True,
         linear_features=None,
         conv2d_channels=None,
         kernel_size=None,
-        threshold=1.0,
+        threshold=0.01,
         spike_grad=None,
         surrogate_disable=False,
         init_hidden=False,
@@ -309,7 +309,7 @@ class LLeaky(ALIF):
             # dyanmic threshold here
             b = self._b_state_function(spk, b)
             thresh = self._get_new_thresh(b)
-            self.reset = self.alif_mem_reset(mem, thresh)
+            self.reset = self.alif_mem_reset(mem, b, thresh)
             mem = self._build_state_function(input_, spk, mem, thresh)
 
             if self.state_quant:
@@ -318,7 +318,7 @@ class LLeaky(ALIF):
             if self.inhibition:
                 spk = self.alif_fire_inhibition(mem.size(0), mem, thresh)  # batch_size
             else:
-                spk = self.alif_fire(mem, thresh)
+                spk = self.alif_fire(mem, thresh, b)
 
             return spk, mem, b
 
@@ -333,9 +333,9 @@ class LLeaky(ALIF):
                 self.mem = self.state_quant(self.mem)
 
             if self.inhibition:
-                self.spk = self.fire_inhibition(self.mem.size(0), self.mem)
+                self.spk = self.alif_fire_inhibition(self.mem.size(0), self.mem)
             else:
-                self.spk = self.fire(self.mem)
+                self.spk = self.alif_fire(self.mem)
 
             if self.output:  # read-out layer returns output+states
                 return self.spk, self.mem
@@ -377,7 +377,7 @@ class LLeaky(ALIF):
             param.requires_grad = False
 
     def _base_state_function(self, input_, spk, mem):
-        base_fn = self.beta.clamp(0, 1) * mem + (1 - self.beta.clamp(0, 1)) * (input_ + self.recurrent(spk))
+        base_fn = self.beta.clamp(0, 1) * mem + (input_ + self.recurrent(spk))
         return base_fn
 
     def _b_state_function(self, spk, b):

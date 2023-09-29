@@ -159,10 +159,11 @@ class PolicyLSNN(nn.Module):
         self.log_std_decoder = nn.Linear(num_hidden, num_outputs)
         nn.init.kaiming_normal_(self.log_std_decoder.weight, mode='fan_out')
 
-    def _custom_grad(self, input_, grad_input, spikes):
+    def _custom_grad(self, input_, b, grad_input, spikes):
         ## The hyperparameter slope is defined inside the function.
         gamma = 0.3
-        grad = gamma * torch.max(torch.zeros_like(input_), 1 - torch.abs(input_))
+        normalized = (input_ - b) / b
+        grad = gamma * torch.max(torch.zeros_like(normalized), 1 - torch.abs(normalized))
         return grad
 
     def forward(self, x, spks=None, mems=None, b=None):
@@ -245,10 +246,11 @@ class CriticLSNN(nn.Module):
         self.output_decoder_2 = nn.Linear(num_hidden, 1)
         nn.init.kaiming_normal_(self.output_decoder_2.weight, mode='fan_out')
 
-    def _custom_grad(self, input_, grad_input, spikes):
+    def _custom_grad(self, input_, b, grad_input, spikes):
         ## The hyperparameter slope is defined inside the function.
         gamma = 0.3
-        grad = gamma * torch.max(torch.zeros_like(input_), 1 - torch.abs(input_))
+        normalized = (input_ - b) / b
+        grad = gamma * torch.max(torch.zeros_like(normalized), 1 - torch.abs(normalized))
         return grad
 
     def forward(self, state, action, spk, mem, b, training=False):

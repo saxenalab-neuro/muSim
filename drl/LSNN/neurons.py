@@ -2,8 +2,7 @@ from warnings import warn
 import torch
 import torch.nn as nn
 import snntorch as snn
-from snntorch._neurons import SpikingNeuron
-
+from snntorch import SpikingNeuron
 
 __all__ = [
     "SpikingNeuron",
@@ -52,10 +51,7 @@ class ALIF(SpikingNeuron):
         )
         self._reset_mechanism = reset_mechanism
 
-        if spike_grad is None:
-            self.spike_grad = self.ATan.apply
-        else:
-            self.spike_grad = spike_grad
+        self.spike_grad = spike_grad
 
         if self.surrogate_disable:
             self.spike_grad = self._surrogate_bypass
@@ -107,7 +103,7 @@ class ALIF(SpikingNeuron):
             threshold = torch.as_tensor(threshold)
         self.register_buffer("threshold", threshold)
 
-    def alif_fire(self, mem, thresh):
+    def alif_fire(self, mem, thresh, b):
         """Generates spike if mem > threshold.
         Returns spk."""
 
@@ -115,17 +111,17 @@ class ALIF(SpikingNeuron):
             mem = self.state_quant(mem)
 
         mem_shift = mem - thresh
-        spk = self.spike_grad(mem_shift)
+        spk = self.spike_grad(mem_shift, b)
 
         spk = spk * self.graded_spikes_factor
 
         return spk
 
-    def alif_mem_reset(self, mem, thresh):
+    def alif_mem_reset(self, mem, b, thresh):
         """Generates detached reset signal if mem > threshold.
         Returns reset."""
         mem_shift = mem - thresh
-        reset = self.spike_grad(mem_shift).clone().detach()
+        reset = self.spike_grad(mem_shift, b).clone().detach()
 
         return reset
 
