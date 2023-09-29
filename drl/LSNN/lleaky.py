@@ -227,7 +227,7 @@ class LLeaky(ALIF):
         self,
         beta,
         V=1.0,
-        thresh_beta=.5,
+        thresh_beta=1.8,
         dt=1.,
         tau_adaptation=200,
         all_to_all=True,
@@ -241,7 +241,7 @@ class LLeaky(ALIF):
         inhibition=False,
         learn_beta=False,
         learn_recurrent=True,  # changed learn_V
-        reset_mechanism="subtract",
+        reset_mechanism="zero",
         state_quant=False,
         output=False,
     ):
@@ -353,6 +353,7 @@ class LLeaky(ALIF):
 
     def _init_recurrent_linear(self):
         self.recurrent = nn.Linear(self.linear_features, self.linear_features)
+        nn.init.kaiming_normal_(self.recurrent.weight, mode='fan_in')
 
     def _init_recurrent_conv2d(self):
         self._init_padding()
@@ -377,7 +378,7 @@ class LLeaky(ALIF):
             param.requires_grad = False
 
     def _base_state_function(self, input_, spk, mem):
-        base_fn = self.beta.clamp(0, 1) * mem + (input_ + self.recurrent(spk))
+        base_fn = self.beta.clamp(0, 1) * mem + (1 - self.beta.clamp(0, 1)) * (input_ + self.recurrent(spk))
         return base_fn
 
     def _b_state_function(self, spk, b):

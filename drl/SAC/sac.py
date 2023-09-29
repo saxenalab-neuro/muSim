@@ -196,7 +196,7 @@ class SACLSNN(SAC):
 
         return action.detach().cpu().numpy()[0], mem2_rec_next, spk2_rec_next, b2_rec_next
     
-    def init_leakys(self, network, recurrent=True):
+    def _init_leakys(self, network):
         mem_dict = {}
         spk_dict = {}
         b_dict = {}
@@ -226,15 +226,14 @@ class SACLSNN(SAC):
 
         # Gathering them in batches
         with torch.no_grad():
-            policy_mems, policy_spks, policy_b = self.init_leakys(self.policy, recurrent=True)
+            policy_mems, policy_spks, policy_b = self._init_leakys(self.policy)
             next_state_action = torch.empty_like(action_batch).to(self.device)
             next_state_log_pi = torch.empty([policy_batch_size, max_len, 1]).to(self.device)
             for i in range(next_state_batch.shape[1]):
                 next_state_action[:, i, :], next_state_log_pi[:, i, :], _, policy_mems, policy_spks, policy_b = self.policy.sample(next_state_batch[:, i, :].unsqueeze(1), spks=policy_spks, mem=policy_mems, b=policy_b, sampling=False, training=True)
 
             # pass sequency through Q network
-            critic_target_mems, critic_target_spks, critic_target_b = self.init_leakys(self.critic_target, recurrent=True)
-
+            critic_target_mems, critic_target_spks, critic_target_b = self._init_leakys(self.critic_target)
             qf1_next_target = torch.empty([policy_batch_size, max_len, 1]).to(self.device)
             qf2_next_target = torch.empty([policy_batch_size, max_len, 1]).to(self.device)
             for i in range(next_state_batch.shape[1]):
@@ -243,7 +242,7 @@ class SACLSNN(SAC):
             min_qf_next_target = torch.min(qf1_next_target, qf2_next_target) - self.alpha * next_state_log_pi
             next_q_value = reward_batch + mask_batch * self.gamma * (min_qf_next_target)
 
-        critic_mems, critic_spks, critic_b = self.init_leakys(self.critic, recurrent=True)
+        critic_mems, critic_spks, critic_b = self._init_leakys(self.critic)
 
         qf1 = torch.empty([policy_batch_size, max_len, 1]).to(self.device)
         qf2 = torch.empty([policy_batch_size, max_len, 1]).to(self.device)
@@ -259,13 +258,13 @@ class SACLSNN(SAC):
         torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 1)
         self.critic_optim.step()
 
-        policy_mems, policy_spks, policy_b = self.init_leakys(self.policy, recurrent=True)
+        policy_mems, policy_spks, policy_b = self._init_leakys(self.policy)
         pi_action_bat = torch.empty_like(action_batch).to(self.device)
         log_prob_bat = torch.empty(policy_batch_size, max_len, 1).to(self.device)
         for i in range(state_batch.shape[1]):
             pi_action_bat[:, i, :], log_prob_bat[:, i, :], _, policy_mems, policy_spks, policy_b = self.policy.sample(state_batch[:, i, :].unsqueeze(1), spks=policy_spks, mem=policy_mems, b=policy_b, sampling=False, training=True)
 
-        critic_mems, critic_spks, critic_b = self.init_leakys(self.critic, recurrent=True)
+        critic_mems, critic_spks, critic_b = self._init_leakys(self.critic)
 
         qf1_pi = torch.empty([policy_batch_size, max_len, 1]).to(self.device)
         qf2_pi = torch.empty([policy_batch_size, max_len, 1]).to(self.device)
