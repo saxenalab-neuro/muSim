@@ -5,8 +5,8 @@ from torch.distributions import Normal
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, pad_sequence
 import numpy as np
 import snntorch as snn
-from snntorch.snntorch._neurons.lleaky import LLeaky
-from snntorch.snntorch import surrogate
+from LSNN.lleaky import LLeaky
+from LSNN import surrogate
 
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20
