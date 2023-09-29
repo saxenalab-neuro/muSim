@@ -48,15 +48,16 @@ class Simulate(object):
         pass
 
     
-class Simulate_RNN(Simulate):
+class Simulate_LSTM(Simulate):
     def __init__(self, env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling):
-        super(Simulate_RNN, self).__init__(env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling)
+        super(Simulate_LSTM, self).__init__(env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling)
 
     def train(self, iteration):
 
-        done = False
         episode_reward = 0
         episode_steps = 0
+        success = 0
+        done = False
 
         ### GET INITAL STATE + RESET MODEL BY POSE
         state = self.env.reset()
@@ -65,11 +66,12 @@ class Simulate_RNN(Simulate):
 
         #num_layers specified in the policy model 
         h_prev = torch.zeros(size=(1, 1, self.hidden_size))
+        c_prev = torch.zeros(size=(1, 1, self.hidden_size))
 
         ### STEPS PER EPISODE ###
         for i in range(self.env._max_episode_steps):
             with torch.no_grad():
-                action, h_current, c_current, _ = self.agent.select_action(state, h_prev, evaluate=False)  # Sample action from policy
+                action, h_current, c_current, _ = self.agent.select_action(state, h_prev, c_prev, evaluate=False)  # Sample action from policy
             
             ### TRACKING REWARD + EXPERIENCE TUPLE###
             next_state, reward, done, episode_reward, episode_steps = self._step(action, episode_reward, episode_steps)
@@ -79,10 +81,14 @@ class Simulate_RNN(Simulate):
 
             mask = 0 if done else 1
 
-            ep_trajectory.append((state, action, reward, next_state, mask, h_current.squeeze(0).cpu().numpy(),  c_current.squeeze(0).cpu().numpy()))
+            ep_trajectory.append((state, action, np.array([reward]), next_state, np.array([mask]), h_prev.detach().cpu(), c_prev.detach().cpu(), h_current.detach().cpu(),  c_current.detach().cpu()))
 
             state = next_state
             h_prev = h_current
+            c_prev = c_current
+
+            if done and i < self.env._max_episode_steps:
+                success = 1
             
             ### EARLY TERMINATION OF EPISODE
             if done:
@@ -94,32 +100,30 @@ class Simulate_RNN(Simulate):
         # Push the episode to replay
         self.policy_memory.push(ep_trajectory)
 
-        return episode_reward, episode_steps
+        return episode_reward, episode_steps, success
     
     def test(self):
 
         episode_reward = 0
+        episode_steps = 0
+        success = 0
         done = False
-
-        x_kinematics = []
-        rnn_activity = []
 
         ### GET INITAL STATE + RESET MODEL BY POSE
         state = self.env.reset()
 
         #num_layers specified in the policy model 
         h_prev = torch.zeros(size=(1, 1, self.hidden_size))
+        c_prev = torch.zeros(size=(1, 1, self.hidden_size))
 
         ### STEPS PER EPISODE ###
         for i in range(self.env._max_episode_steps):
 
             with torch.no_grad():
-                action, h_current, c_current, rnn_out = self.agent.select_action(state, h_prev, evaluate=True)  # Sample action from policy
-                rnn_out = np.squeeze(rnn_out)
-                rnn_activity.append(rnn_out)
+                action, h_current, c_current, rnn_out = self.agent.select_action(state, h_prev, c_prev, evaluate=True)  # Sample action from policy
 
             ### TRACKING REWARD + EXPERIENCE TUPLE###
-            next_state, reward, done = self.env.step(action, i)
+            next_state, reward, done, episode_reward, episode_steps = self._step(action, episode_reward, episode_steps)
             episode_reward += reward
 
             if self.visualize == True:
@@ -127,12 +131,16 @@ class Simulate_RNN(Simulate):
 
             state = next_state
             h_prev = h_current
+            c_prev = c_current
+
+            if done and i < self.env._max_episode_steps:
+                success = 1
 
             ### EARLY TERMINATION OF EPISODE
             if done:
                 break
         
-        return episode_reward, x_kinematics, rnn_activity
+        return episode_reward, success
         
 
 class Simulate_ANN(Simulate):
@@ -141,9 +149,10 @@ class Simulate_ANN(Simulate):
 
     def train(self, iteration):
 
-        done = False
         episode_reward = 0
         episode_steps = 0
+        success = 0
+        done = False
 
         ### GET INITAL STATE + RESET MODEL BY POSE
         state = self.env.reset()
@@ -165,6 +174,9 @@ class Simulate_ANN(Simulate):
             self.policy_memory.push([list(state), list(action), reward, list(next_state), mask])
 
             state = next_state
+
+            if done and i < self.env._max_episode_steps:
+                success = 1
             
             ### EARLY TERMINATION OF EPISODE
             if done:
@@ -173,16 +185,14 @@ class Simulate_ANN(Simulate):
         ### SIMULATION ###
         self._check_update(iteration)
 
-        return episode_reward, episode_steps
+        return episode_reward, episode_steps, success
     
     def test(self):
 
         episode_reward = 0
         episode_steps = 0
+        success = 0
         done = False
-
-        x_kinematics = []
-        lstm_activity = []
 
         ### GET INITAL STATE + RESET MODEL BY POSE
         state = self.env.reset()
@@ -202,11 +212,14 @@ class Simulate_ANN(Simulate):
 
             state = next_state
 
+            if done and i < self.env._max_episode_steps:
+                success = 1
+
             ### EARLY TERMINATION OF EPISODE
             if done:
                 break
         
-        return episode_reward, x_kinematics, lstm_activity
+        return episode_reward, success
 
 
 class Simulate_LSNN(Simulate):
@@ -224,9 +237,10 @@ class Simulate_LSNN(Simulate):
 
     def train(self, iteration):
 
-        done = False
         episode_reward = 0
         episode_steps = 0
+        success = 0
+        done = False
 
         ### GET INITAL STATE + RESET MODEL BY POSE
         state = self.env.reset()
@@ -249,6 +263,9 @@ class Simulate_LSNN(Simulate):
 
             if self.visualize == True:
                 self.env.render()
+
+            if done and i < self.env._max_episode_steps:
+                success = 1
             
             ### EARLY TERMINATION OF EPISODE
             if done:
@@ -263,15 +280,14 @@ class Simulate_LSNN(Simulate):
         # Push the episode to replay
         self.policy_memory.push(ep_trajectory)
 
-        return episode_reward, episode_steps
+        return episode_reward, episode_steps, success
     
     def test(self):
 
         episode_reward = 0
+        episode_steps = 0
+        success = 0
         done = False
-
-        x_kinematics = []
-        activity = []
 
         ### GET INITAL STATE + RESET MODEL BY POSE
         state = self.env.reset()
@@ -286,7 +302,7 @@ class Simulate_LSNN(Simulate):
                 action, mem2_rec_policy, spk2_rec_policy = self.agent.select_action(state, spk2_rec_policy, mem2_rec_policy, evaluate=True)  # Sample action from policy
 
             ### TRACKING REWARD + EXPERIENCE TUPLE###
-            next_state, reward, done = self.env.step(action, i)
+            next_state, reward, done, episode_reward, episode_steps = self._step(action, episode_reward, episode_steps)
             episode_reward += reward
 
             if self.visualize == True:
@@ -294,11 +310,14 @@ class Simulate_LSNN(Simulate):
 
             state = next_state
 
+            if done and i < self.env._max_episode_steps:
+                success = 1
+
             ### EARLY TERMINATION OF EPISODE
             if done:
                 break
         
-        return episode_reward, x_kinematics, activity
+        return episode_reward, success
 
 
 class Simulate_SNN(Simulate):
@@ -317,6 +336,7 @@ class Simulate_SNN(Simulate):
         done = False
         episode_reward = 0
         episode_steps = 0
+        success = 0
 
         ### GET INITAL STATE + RESET MODEL BY POSE
         state = self.env.reset()
@@ -339,6 +359,9 @@ class Simulate_SNN(Simulate):
 
             if self.visualize == True:
                 self.env.render()
+
+            if done and i < self.env._max_episode_steps:
+                success = 1
             
             ### EARLY TERMINATION OF EPISODE
             if done:
@@ -353,15 +376,14 @@ class Simulate_SNN(Simulate):
         # Push the episode to replay
         self.policy_memory.push(ep_trajectory)
 
-        return episode_reward, episode_steps
+        return episode_reward, episode_steps, success
     
     def test(self):
 
         episode_reward = 0
+        episode_steps = 0
+        success = 0
         done = False
-
-        x_kinematics = []
-        activity = []
 
         ### GET INITAL STATE + RESET MODEL BY POSE
         state = self.env.reset()
@@ -376,7 +398,7 @@ class Simulate_SNN(Simulate):
                 action, mem2_rec_policy, spk2_rec_policy = self.agent.select_action(state, spk2_rec_policy, mem2_rec_policy, evaluate=True)  # Sample action from policy
 
             ### TRACKING REWARD + EXPERIENCE TUPLE###
-            next_state, reward, done = self.env.step(action, i)
+            next_state, reward, done, episode_reward, episode_steps = self._step(action, episode_reward, episode_steps)
             episode_reward += reward
 
             if self.visualize == True:
@@ -384,8 +406,11 @@ class Simulate_SNN(Simulate):
 
             state = next_state
 
+            if done and i < self.env._max_episode_steps:
+                success = 1
+
             ### EARLY TERMINATION OF EPISODE
             if done:
                 break
         
-        return episode_reward, x_kinematics, activity
+        return episode_reward, success

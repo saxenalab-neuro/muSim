@@ -6,9 +6,9 @@ import scipy.io
 import torch
 import matplotlib.pyplot as plt
 import gym
-from SAC.replay_memory import PolicyReplayMemoryLSNN, PolicyReplayMemoryANN, PolicyReplayMemoryRNN, PolicyReplayMemorySNN
-from SAC.sac import SAC, SACLSNN, SACANN, SACRNN, SACSNN
-from simulation import Simulate_ANN, Simulate_RNN, Simulate_LSNN, Simulate_SNN
+from SAC.replay_memory import PolicyReplayMemoryLSNN, PolicyReplayMemoryANN, PolicyReplayMemoryLSTM, PolicyReplayMemorySNN
+from SAC.sac import SAC, SACLSNN, SACANN, SACLSTM, SACSNN
+from simulation import Simulate_ANN, Simulate_LSTM, Simulate_LSNN, Simulate_SNN
 import warmup  # noqa
 from tqdm import tqdm
 from statistics import mean
@@ -38,8 +38,6 @@ def main():
                         help='batch size (default: 6)')
     parser.add_argument('--hidden_size', type=int, default=512, metavar='N',
                         help='hidden size (default: 1000)')
-    parser.add_argument('--updates_per_step', type=int, default=1, metavar='N',
-                        help='model updates per simulator step (default: 1)')
     parser.add_argument('--policy_replay_size', type=int, default=1000000, metavar='N',
                         help='size of replay buffer (default: 2800)')
     parser.add_argument('--batch_iters', type=int, default=30, metavar='N',
@@ -76,10 +74,10 @@ def main():
         policy_memory = PolicyReplayMemoryANN(args.policy_replay_size, args.seed)
         agent = SACANN(env.observation_space.shape[0], env.action_space.shape[0], args)
         simulator = Simulate_ANN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters, args.experience_sampling)
-    elif args.model == 'rnn':
-        policy_memory = PolicyReplayMemoryRNN(args.policy_replay_size, args.seed)
-        agent = SACRNN(env.observation_space.shape[0], env.action_space.shape[0], args)
-        simulator = Simulate_RNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters, args.experience_sampling)
+    elif args.model == 'lstm':
+        policy_memory = PolicyReplayMemoryLSTM(args.policy_replay_size, args.seed)
+        agent = SACLSTM(env.observation_space.shape[0], env.action_space.shape[0], args)
+        simulator = Simulate_LSTM(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters, args.experience_sampling)
 
     # TODO checkpoints
     if args.test_model:
@@ -93,7 +91,7 @@ def main():
     highest_reward = -1000
     reward_tracker = []
     steps_tracker = []
-    policy_loss_tracker = []
+    success_tracker = []
 
     ### BEGIN TRAINING LOOP
     for i_episode in tqdm(range(1, args.total_episodes)):
@@ -105,9 +103,11 @@ def main():
         if not args.test_model:
 
             # Run the episode
-            episode_reward, episode_steps = simulator.train(i_episode)
+            episode_reward, episode_steps, success = simulator.train(i_episode)
+
             reward_tracker.append(episode_reward)
             steps_tracker.append(episode_steps)
+            success_tracker.append(success)
 
             ### SAVING MODELS + TRACKING VARIABLES ###
             if episode_reward > highest_reward:
@@ -124,6 +124,7 @@ def main():
                 print('highest reward so far: {}'.format(highest_reward))
 
             if args.tracking == True:
+                np.savetxt(f'tracking/success/episode_success_{args.model_save_name}', success_tracker)
                 np.savetxt(f'tracking/rewards/episode_rewards_{args.model_save_name}', reward_tracker)
                 np.savetxt(f'tracking/policy_losses/policy_loss_{args.model_save_name}', simulator.policy_loss_tracker)
                 np.savetxt(f'tracking/critic_1_losses/critic_1_loss_{args.model_save_name}', simulator.critic1_loss_tracker)
@@ -133,7 +134,8 @@ def main():
         else:
 
             # Run the episode for testing
-            episode_reward, x_kinematics, lstm_activity = simulator.test(i_episode)
+            episode_reward, success = simulator.test(i_episode)
+            print(f'Episode Reward: {episode_reward} | Success: {success}')
 
     env.close() #disconnects server
 

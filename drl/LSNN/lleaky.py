@@ -227,7 +227,7 @@ class LLeaky(ALIF):
         self,
         beta,
         V=1.0,
-        thresh_beta=1.8,
+        thresh_beta=1.6,
         dt=1.,
         tau_adaptation=200,
         all_to_all=True,
