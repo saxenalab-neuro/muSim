@@ -46,7 +46,7 @@ class Simulate(object):
         return next_state, reward, done, info, episode_reward, episode_steps
     
     def _check_update(self, iteration):
-        if iteration % self.experience_sampling == 0:
+        if iteration % self.experience_sampling == 0 and len(self.policy_memory.buffer) > self.policy_batch_size:
             for _ in tqdm(range(self.batch_iters)):
                 critic_1_loss, critic_2_loss, policy_loss = self.agent.update_parameters(self.policy_memory, self.policy_batch_size)
                 self.policy_loss_tracker.append(policy_loss)
@@ -86,6 +86,7 @@ class Simulate_LSTM(Simulate):
 
         ### STEPS PER EPISODE ###
         for timestep in range(self.env._max_episode_steps):
+
             with torch.no_grad():
                 action, h_current, c_current, _ = self.agent.select_action(state, h_prev, c_prev, evaluate=False)  # Sample action from policy
             

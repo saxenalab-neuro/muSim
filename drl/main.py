@@ -36,13 +36,13 @@ def main():
                         help='random seed (default: 123456)')
     parser.add_argument('--policy_batch_size', type=int, default=8, metavar='N',
                         help='batch size (default: 6)')
-    parser.add_argument('--hidden_size', type=int, default=512, metavar='N',
+    parser.add_argument('--hidden_size', type=int, default=256, metavar='N',
                         help='hidden size (default: 1000)')
     parser.add_argument('--policy_replay_size', type=int, default=1000000, metavar='N',
                         help='size of replay buffer (default: 2800)')
-    parser.add_argument('--batch_iters', type=int, default=30, metavar='N',
+    parser.add_argument('--batch_iters', type=int, default=1, metavar='N',
                         help='iterations to apply update')
-    parser.add_argument('--experience_sampling', type=int, default=100, metavar='N',
+    parser.add_argument('--experience_sampling', type=int, default=1, metavar='N',
                         help='how many episodes to run before training')
     parser.add_argument('--cuda', action="store_true",
                         help='run on CUDA (default: False)')
@@ -60,6 +60,8 @@ def main():
                         help='track experience')
     parser.add_argument('--fast_movements', type=bool, default=False, metavar='N',
                         help='generate fast reaches')
+    parser.add_argument('--deterministic', type=bool, default=False, metavar='N',
+                        help='use deterministic policy')
     args = parser.parse_args()
 
     env = gym.make(args.env_name)

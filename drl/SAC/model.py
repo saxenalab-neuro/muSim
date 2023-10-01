@@ -74,29 +74,24 @@ class PolicySNN(nn.Module):
         log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + epsilon)
         log_prob = log_prob.sum(-1, keepdim=True)
         mean = torch.tanh(spk_mean_decoded) * self.action_scale + self.action_bias
-        
-        if training:
-            action = action.squeeze()
-            log_prob = log_prob.squeeze(-1)
 
         return action, log_prob, mean, next_mem2_rec
 
 
 # Define critic SNN Network
 class CriticSNN(nn.Module):
-    def __init__(self, num_inputs=63, num_outputs=18, num_hidden=512, num_steps=10, beta=.95):
+    def __init__(self, num_inputs=63, action_space=18, num_hidden=512, beta=.95):
         super(CriticSNN, self).__init__()
-        self.num_steps = num_steps
 
         # QNet 1
-        self.fc1 = nn.Linear(num_inputs, num_hidden)
+        self.fc1 = nn.Linear(num_inputs+action_space, num_hidden)
         self.lif1 = snn.Leaky(beta=beta)
         self.fc2 = nn.Linear(num_hidden, num_hidden)
         self.lif2 = snn.Leaky(beta=beta)
         self.output_decoder_1 = nn.Linear(num_hidden, 1)
 
         # QNet 2
-        self.fc1_2 = nn.Linear(num_inputs, num_hidden)
+        self.fc1_2 = nn.Linear(num_inputs+action_space, num_hidden)
         self.lif1_2 = snn.Leaky(beta=beta)
         self.fc2_2 = nn.Linear(num_hidden, num_hidden)
         self.lif2_2 = snn.Leaky(beta=beta)
@@ -211,10 +206,6 @@ class PolicyLSNN(nn.Module):
         log_prob = log_prob.sum(-1, keepdim=True)
         mean = torch.tanh(spk_mean_decoded) * self.action_scale + self.action_bias
         
-        if training:
-            action = action.squeeze()
-            log_prob = log_prob.squeeze(-1)
-
         return action, log_prob, mean, next_mem2_rec, next_spk2_rec, next_b2_rec
 
 
@@ -294,17 +285,8 @@ class PolicyLSTM(nn.Module):
         self.mean_linear = nn.Linear(hidden_dim, num_actions)
         self.log_std_linear = nn.Linear(hidden_dim, num_actions)
 
-        # action rescaling
-        # Pass none action space and adjust the action scale and bias manually
-        if action_space is None:
-            # Try different scales to see what works best
-            self.action_scale = torch.tensor(0.5)
-            self.action_bias = torch.tensor(0.5)
-        else:
-            self.action_scale = torch.FloatTensor(
-                (action_space.high - action_space.low) / 2.)
-            self.action_bias = torch.FloatTensor(
-                (action_space.high + action_space.low) / 2.)
+        self.action_scale = torch.tensor(0.5)
+        self.action_bias = torch.tensor(0.5)
 
     def forward(self, state, h_prev, c_prev, sampling):
 
@@ -423,9 +405,10 @@ class CriticLSTM(nn.Module):
 
 # Define Policy SNN Network
 class PolicyANN(nn.Module):
-    def __init__(self, num_inputs=45, num_outputs=18, num_hidden=512, num_steps=25, beta=.75):
+    def __init__(self, num_inputs=45, num_outputs=18, num_hidden=512, deterministic=False):
         super(PolicyANN, self).__init__()
-        self.num_steps = num_steps
+        self.deterministic = deterministic
+        self.noise = torch.Tensor(num_outputs)
         self.action_scale = .5
         self.action_bias = .5
 
@@ -459,12 +442,17 @@ class PolicyANN(nn.Module):
 
         mean, std = self.forward(state) 
 
-        std = std.exp()
+        if self.deterministic:
+            mean = torch.tanh(mean) * self.action_scale + self.action_bias
+            noise = self.noise.normal_(0., std=0.1).to('cuda')
+            noise = noise.clamp(-0.25, 0.25)
+            action = mean + noise
+            return action, torch.tensor(0.), mean
 
+        std = std.exp()
         # white noise
         normal = Normal(mean, std)
         noise = normal.rsample()
-
         y_t = torch.tanh(noise) # reparameterization trick
         action = y_t * self.action_scale + self.action_bias
         log_prob = normal.log_prob(noise)
@@ -478,18 +466,17 @@ class PolicyANN(nn.Module):
 
 # Define critic SNN Network
 class CriticANN(nn.Module):
-    def __init__(self, num_inputs=63, num_outputs=18, num_hidden=512, num_steps=25, beta=.9):
+    def __init__(self, num_inputs=63, action_space=18, num_hidden=512):
         super(CriticANN, self).__init__()
-        self.num_steps = num_steps
 
         # QNet 1
-        self.fc1 = nn.Linear(num_inputs, num_hidden)
+        self.fc1 = nn.Linear(num_inputs + action_space, num_hidden)
         self.fc2 = nn.Linear(num_hidden, num_hidden)
         self.fc3 = nn.Linear(num_hidden, num_hidden)
         self.fc4 = nn.Linear(num_hidden, 1)
 
         # QNet 2
-        self.fc1_2 = nn.Linear(num_inputs, num_hidden)
+        self.fc1_2 = nn.Linear(num_inputs + action_space, num_hidden)
         self.fc2_2 = nn.Linear(num_hidden, num_hidden)
         self.fc3_2 = nn.Linear(num_hidden, num_hidden)
         self.fc4_2 = nn.Linear(num_hidden, 1)

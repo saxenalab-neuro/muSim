@@ -72,8 +72,8 @@ class SACSNN(SAC):
     def __init__(self, num_inputs, action_space, args):
         super(SACSNN, self).__init__(num_inputs, action_space, args)
 
-        self.critic = CriticSNN(num_inputs+action_space, action_space, args.hidden_size).to(self.device)
-        self.critic_target = CriticSNN(num_inputs+action_space, action_space, args.hidden_size).to(self.device)
+        self.critic = CriticSNN(num_inputs, action_space, args.hidden_size).to(self.device)
+        self.critic_target = CriticSNN(num_inputs, action_space, args.hidden_size).to(self.device)
         hard_update(self.critic_target, self.critic)
         self.critic_optim = Adam(self.critic.parameters(), lr=args.lr)
 
@@ -123,7 +123,7 @@ class SACSNN(SAC):
             next_state_action = torch.empty_like(action_batch).to(self.device)
             next_state_log_pi = torch.empty([policy_batch_size, max_len, 1]).to(self.device)
             for i in range(next_state_batch.shape[1]):
-                next_state_action[:, i, :], next_state_log_pi[:, i, :], _, policy_mems = self.policy.sample(next_state_batch[:, i, :].unsqueeze(1), mem=policy_mems, sampling=False, training=True)
+                next_state_action[:, i, :], next_state_log_pi[:, i, :], _, policy_mems = self.policy.sample(next_state_batch[:, i, :], mem=policy_mems, sampling=False, training=True)
 
             # pass sequency through Q network
             critic_target_mems = self._init_leakys(self.critic_target)
@@ -153,7 +153,7 @@ class SACSNN(SAC):
         pi_action_bat = torch.empty_like(action_batch).to(self.device)
         log_prob_bat = torch.empty([policy_batch_size, max_len, 1]).to(self.device)
         for i in range(state_batch.shape[1]):
-            pi_action_bat[:, i, :], log_prob_bat[:, i, :], _, policy_mems = self.policy.sample(state_batch[:, i, :].unsqueeze(1), mem=policy_mems, sampling=False, training=True)
+            pi_action_bat[:, i, :], log_prob_bat[:, i, :], _, policy_mems = self.policy.sample(state_batch[:, i, :], mem=policy_mems, sampling=False, training=True)
 
         critic_mems = self._init_leakys(self.critic)
         qf1_pi = torch.empty([policy_batch_size, max_len, 1]).to(self.device)
@@ -235,7 +235,7 @@ class SACLSNN(SAC):
             policy_mems, policy_spks, policy_b = self._init_leakys(self.policy)
             next_state_action, next_state_log_pi = self._gen_out_tensors(action_batch.shape, [policy_batch_size, max_len, 1])
             for i in range(next_state_batch.shape[1]):
-                next_state_action[:, i, :], next_state_log_pi[:, i, :], _, policy_mems, policy_spks, policy_b = self.policy.sample(next_state_batch[:, i, :].unsqueeze(1), spks=policy_spks, mem=policy_mems, b=policy_b, sampling=False, training=True)
+                next_state_action[:, i, :], next_state_log_pi[:, i, :], _, policy_mems, policy_spks, policy_b = self.policy.sample(next_state_batch[:, i, :], spks=policy_spks, mem=policy_mems, b=policy_b, sampling=False, training=True)
 
             # pass sequency through Q network
             critic_target_mems, critic_target_spks, critic_target_b = self._init_leakys(self.critic_target)
@@ -263,7 +263,7 @@ class SACLSNN(SAC):
         policy_mems, policy_spks, policy_b = self._init_leakys(self.policy)
         pi_action_bat, log_prob_bat = self._gen_out_tensors(action_batch.shape, [policy_batch_size, max_len, 1])
         for i in range(state_batch.shape[1]):
-            pi_action_bat[:, i, :], log_prob_bat[:, i, :], _, policy_mems, policy_spks, policy_b = self.policy.sample(state_batch[:, i, :].unsqueeze(1), spks=policy_spks, mem=policy_mems, b=policy_b, sampling=False, training=True)
+            pi_action_bat[:, i, :], log_prob_bat[:, i, :], _, policy_mems, policy_spks, policy_b = self.policy.sample(state_batch[:, i, :], spks=policy_spks, mem=policy_mems, b=policy_b, sampling=False, training=True)
 
         critic_mems, critic_spks, critic_b = self._init_leakys(self.critic)
         qf1_pi, qf2_pi = self._gen_out_tensors([policy_batch_size, max_len, 1], [policy_batch_size, max_len, 1])
@@ -287,12 +287,12 @@ class SACANN(SAC):
     def __init__(self, num_inputs, action_space, args):
         super(SACANN, self).__init__(num_inputs, action_space, args)
 
-        self.critic = CriticANN(num_inputs+action_space, action_space, args.hidden_size).to(self.device)
-        self.critic_target = CriticANN(num_inputs+action_space, action_space, args.hidden_size).to(self.device)
+        self.critic = CriticANN(num_inputs, action_space, args.hidden_size).to(self.device)
+        self.critic_target = CriticANN(num_inputs, action_space, args.hidden_size).to(self.device)
         hard_update(self.critic_target, self.critic)
         self.critic_optim = Adam(self.critic.parameters(), lr=args.lr)
 
-        self.policy = PolicyANN(num_inputs, action_space, args.hidden_size).to(self.device)
+        self.policy = PolicyANN(num_inputs, action_space, args.hidden_size, args.deterministic).to(self.device)
         self.policy_optim = Adam(self.policy.parameters(), lr=args.lr)
 
     def select_action(self, state, evaluate=False):
