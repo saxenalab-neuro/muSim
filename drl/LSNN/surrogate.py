@@ -68,19 +68,19 @@ class CustomSurrogate(torch.autograd.Function):
 
     """
     @staticmethod
-    def forward(ctx, input_, b, custom_surrogate_function):
+    def forward(ctx, input_, normalized, custom_surrogate_function):
         out = (input_ > 0).float()
-        ctx.save_for_backward(input_, b, out)
+        ctx.save_for_backward(input_, normalized, out)
         ctx.custom_surrogate_function = custom_surrogate_function
         return out
 
     @staticmethod
     def backward(ctx, grad_output):
-        input_, b, out = ctx.saved_tensors
+        input_, normalized, out = ctx.saved_tensors
         custom_surrogate_function = ctx.custom_surrogate_function
 
         grad_input = grad_output.clone()
-        grad = custom_surrogate_function(input_, b, grad_input, out)
+        grad = custom_surrogate_function(input_, normalized, grad_input, out)
         return grad, None, None
 
 
@@ -88,8 +88,8 @@ def custom_surrogate(custom_surrogate_function):
     """Custom surrogate gradient enclosed within a wrapper."""
     func = custom_surrogate_function
 
-    def inner(data, b):
-        return CustomSurrogate.apply(data, b, func)
+    def inner(data, normalized):
+        return CustomSurrogate.apply(data, normalized, func)
 
     return inner
 

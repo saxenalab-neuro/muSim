@@ -96,7 +96,7 @@ class Simulate_LSTM(Simulate):
             if self.visualize == True:
                 self.env.render()
 
-            mask = 0 if done else 1
+            mask = 1 if episode_steps == self.env._max_episode_steps else float(not done)
 
             ep_trajectory.append((state, action, np.array([reward]), next_state, np.array([mask]), h_prev.detach().cpu(), c_prev.detach().cpu(), h_current.detach().cpu(),  c_current.detach().cpu()))
 
@@ -188,7 +188,7 @@ class Simulate_ANN(Simulate):
             if self.visualize == True:
                 self.env.render()
 
-            mask = 0 if done else 1
+            mask = 1 if episode_steps == self.env._max_episode_steps else float(not done)
 
             self.policy_memory.push([list(state), list(action), reward, list(next_state), mask])
 
@@ -286,7 +286,7 @@ class Simulate_LSNN(Simulate):
             if done and timestep < self.env._max_episode_steps:
                 success = 1
 
-            mask = 0 if done else 1
+            mask = 1 if episode_steps == self.env._max_episode_steps else float(not done)
             
             ### EARLY TERMINATION OF EPISODE
             if done:
@@ -386,7 +386,7 @@ class Simulate_SNN(Simulate):
             if done and timestep < self.env._max_episode_steps:
                 success = 1
 
-            mask = 0 if done else 1
+            mask = 1 if episode_steps == self.env._max_episode_steps else float(not done)
             
             ### EARLY TERMINATION OF EPISODE
             if done:

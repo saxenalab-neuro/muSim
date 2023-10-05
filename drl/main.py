@@ -12,6 +12,10 @@ from simulation import Simulate_ANN, Simulate_LSTM, Simulate_LSNN, Simulate_SNN
 import warmup  # noqa
 from tqdm import tqdm
 from statistics import mean
+from SAC.RL_Framework_Mujoco import Arm_Env
+
+monkey_path = 'monkey/monkeyArm_current_converted_ball.xml'
+monkey_params = 'monkey/params_monkey.pckl'
 
 def main():
 
@@ -64,23 +68,28 @@ def main():
                         help='use deterministic policy')
     args = parser.parse_args()
 
-    env = gym.make(args.env_name)
+    if args.env_name == 'monkey':
+        env = Arm_Env(monkey_path, monkey_params, 5)
+        observation_shape = env.observation_space.shape[0]+3+3+1
+    else:
+        env = gym.make(args.env_name)
+        observation_shape = env.observation_space.shape[0]+1
 
     if args.model == 'lsnn':
         policy_memory = PolicyReplayMemoryLSNN(args.policy_replay_size, args.seed)
-        agent = SACLSNN(env.observation_space.shape[0]+1, env.action_space.shape[0], args)
+        agent = SACLSNN(observation_shape, env.action_space.shape[0], args)
         simulator = Simulate_LSNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters, args.experience_sampling)
     if args.model == 'snn':
         policy_memory = PolicyReplayMemorySNN(args.policy_replay_size, args.seed)
-        agent = SACSNN(env.observation_space.shape[0]+1, env.action_space.shape[0], args)
+        agent = SACSNN(observation_shape, env.action_space.shape[0], args)
         simulator = Simulate_SNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters, args.experience_sampling)
     elif args.model == 'ann':
         policy_memory = PolicyReplayMemoryANN(args.policy_replay_size, args.seed)
-        agent = SACANN(env.observation_space.shape[0]+1, env.action_space.shape[0], args)
+        agent = SACANN(observation_shape, env.action_space.shape[0], args)
         simulator = Simulate_ANN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters, args.experience_sampling)
     elif args.model == 'lstm':
         policy_memory = PolicyReplayMemoryLSTM(args.policy_replay_size, args.seed)
-        agent = SACLSTM(env.observation_space.shape[0]+1, env.action_space.shape[0], args)
+        agent = SACLSTM(observation_shape, env.action_space.shape[0], args)
         simulator = Simulate_LSTM(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters, args.experience_sampling)
 
     # TODO checkpoints

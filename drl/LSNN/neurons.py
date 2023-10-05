@@ -111,7 +111,8 @@ class ALIF(SpikingNeuron):
             mem = self.state_quant(mem)
 
         mem_shift = mem - thresh
-        spk = self.spike_grad(mem_shift, b)
+        mem_normalized = (mem - thresh) / thresh
+        spk = self.spike_grad(mem_shift, mem_normalized)
 
         spk = spk * self.graded_spikes_factor
 
@@ -121,7 +122,8 @@ class ALIF(SpikingNeuron):
         """Generates detached reset signal if mem > threshold.
         Returns reset."""
         mem_shift = mem - thresh
-        reset = self.spike_grad(mem_shift, b).clone().detach()
+        mem_normalized = (mem - thresh) / thresh
+        reset = self.spike_grad(mem_shift, mem_normalized).clone().detach()
 
         return reset
 

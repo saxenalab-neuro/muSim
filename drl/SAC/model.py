@@ -136,28 +136,27 @@ class PolicyLSNN(nn.Module):
 
         # initialize layers
         self.fc1 = nn.Linear(num_inputs, num_hidden)
-        nn.init.kaiming_normal_(self.fc1.weight, mode='fan_in')
+        #nn.init.kaiming_normal_(self.fc1.weight, mode='fan_in')
         self.lif1 = LLeaky(beta=beta, linear_features=num_hidden, spike_grad=spike_grad)
         self.fc2 = nn.Linear(num_hidden, num_hidden)
-        nn.init.kaiming_normal_(self.fc2.weight, mode='fan_in')
+        #nn.init.kaiming_normal_(self.fc2.weight, mode='fan_in')
         self.lif2 = LLeaky(beta=beta, linear_features=num_hidden, spike_grad=spike_grad)
 
         self.mean_linear = nn.Linear(num_hidden, num_hidden)
-        nn.init.kaiming_normal_(self.mean_linear.weight, mode='fan_in')
+        #nn.init.kaiming_normal_(self.mean_linear.weight, mode='fan_in')
         self.mean_linear_lif = LLeaky(beta=beta, linear_features=num_hidden, spike_grad=spike_grad)
         self.mean_decoder = nn.Linear(num_hidden, num_outputs)
-        nn.init.kaiming_normal_(self.mean_decoder.weight, mode='fan_in')
+        #nn.init.kaiming_normal_(self.mean_decoder.weight, mode='fan_in')
 
         self.log_std_linear = nn.Linear(num_hidden, num_hidden)
-        nn.init.kaiming_normal_(self.log_std_linear.weight, mode='fan_in')
+        #nn.init.kaiming_normal_(self.log_std_linear.weight, mode='fan_in')
         self.log_std_linear_lif = LLeaky(beta=beta, linear_features=num_hidden, spike_grad=spike_grad)
         self.log_std_decoder = nn.Linear(num_hidden, num_outputs)
-        nn.init.kaiming_normal_(self.log_std_decoder.weight, mode='fan_in')
+        #nn.init.kaiming_normal_(self.log_std_decoder.weight, mode='fan_in')
 
-    def _custom_grad(self, input_, b, grad_input, spikes):
+    def _custom_grad(self, input_, normalized, grad_input, spikes):
         ## The hyperparameter slope is defined inside the function.
         gamma = 0.3
-        normalized = (input_ - b) / b
         grad = gamma * torch.max(torch.zeros_like(normalized), 1 - torch.abs(normalized))
         return grad
 
@@ -219,28 +218,27 @@ class CriticLSNN(nn.Module):
 
         # QNet 1
         self.fc1 = nn.Linear(num_inputs, num_hidden)
-        nn.init.kaiming_normal_(self.fc1.weight, mode='fan_in')
+        #nn.init.kaiming_normal_(self.fc1.weight, mode='fan_in')
         self.lif1 = LLeaky(beta=beta, linear_features=num_hidden, spike_grad=spike_grad)
         self.fc2 = nn.Linear(num_hidden, num_hidden)
-        nn.init.kaiming_normal_(self.fc2.weight, mode='fan_in')
+        #nn.init.kaiming_normal_(self.fc2.weight, mode='fan_in')
         self.lif2 = LLeaky(beta=beta, linear_features=num_hidden, spike_grad=spike_grad)
         self.output_decoder_1 = nn.Linear(num_hidden, 1)
-        nn.init.kaiming_normal_(self.output_decoder_1.weight, mode='fan_in')
+        #nn.init.kaiming_normal_(self.output_decoder_1.weight, mode='fan_in')
 
         # QNet 2
         self.fc1_2 = nn.Linear(num_inputs, num_hidden)
-        nn.init.kaiming_normal_(self.fc1_2.weight, mode='fan_in')
+        #nn.init.kaiming_normal_(self.fc1_2.weight, mode='fan_in')
         self.lif1_2 = LLeaky(beta=beta, linear_features=num_hidden, spike_grad=spike_grad)
         self.fc2_2 = nn.Linear(num_hidden, num_hidden)
-        nn.init.kaiming_normal_(self.fc2_2.weight, mode='fan_in')
+        #nn.init.kaiming_normal_(self.fc2_2.weight, mode='fan_in')
         self.lif2_2 = LLeaky(beta=beta, linear_features=num_hidden, spike_grad=spike_grad)
         self.output_decoder_2 = nn.Linear(num_hidden, 1)
-        nn.init.kaiming_normal_(self.output_decoder_2.weight, mode='fan_in')
+        #nn.init.kaiming_normal_(self.output_decoder_2.weight, mode='fan_in')
 
-    def _custom_grad(self, input_, b, grad_input, spikes):
+    def _custom_grad(self, input_, normalized, grad_input, spikes):
         ## The hyperparameter slope is defined inside the function.
         gamma = 0.3
-        normalized = (input_ - b) / b
         grad = gamma * torch.max(torch.zeros_like(normalized), 1 - torch.abs(normalized))
         return grad
 

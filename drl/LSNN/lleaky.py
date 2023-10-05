@@ -353,7 +353,7 @@ class LLeaky(ALIF):
 
     def _init_recurrent_linear(self):
         self.recurrent = nn.Linear(self.linear_features, self.linear_features)
-        nn.init.kaiming_normal_(self.recurrent.weight, mode='fan_in')
+        #nn.init.kaiming_normal_(self.recurrent.weight, mode='fan_in')
 
     def _init_recurrent_conv2d(self):
         self._init_padding()
