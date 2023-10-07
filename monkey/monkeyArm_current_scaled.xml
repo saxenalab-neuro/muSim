@@ -1,0 +1,473 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mujoco model="Monkey Arm Current">
+  <compiler inertiafromgeom="auto" angle="radian" balanceinertia="true" boundmass="0.001" boundinertia="0.001">
+    <lengthrange inttotal="50" useexisting="true"></lengthrange>
+  </compiler>
+  <default>
+    <joint limited="true" damping="0.5" armature="0.1" stiffness="2"></joint>
+    <geom rgba="0.8 0.6 .4 1" margin="0.001"></geom>
+    <site size="0.001"></site>
+    <tendon width="0.001" rgba=".95 .3 .3 1" limited="false"></tendon>
+    <default class="muscle">
+      <muscle ctrllimited="true" ctrlrange="0.002 1" scale="2000"></muscle>
+    </default>
+    <default class="motor">
+      <general gainprm="5 0 0 0 0 0 0 0 0 0"></general>
+    </default>
+  </default>
+  <option timestep="0.002" collision="predefined"></option>
+  <size njmax="1000" nconmax="400" nuser_jnt="1"></size>
+  <worldbody>
+    <body name="sternum" pos="       0 -2.23711e-17        1" quat="0.7071067811865475 0.7071067811865475 0.0 0.0">
+      <light mode="trackcom" directional="false" pos="0 0 4.0" dir="0 0 -1"></light>
+      <geom name="sternum" type="mesh" mesh="sternum"></geom>
+      <site name="pectoralis_inf-P1" pos="0.0331677 -0.0140839 -0.04725"></site>
+      <site name="pectoralis_inf-P3" pos="0.0220229 -0.0186303 -0.00738581"></site>
+      <body name="clavicle" pos="       0        0        0" quat="1.0 0.0 0.0 0.0">
+        <geom name="clavicle" type="mesh" mesh="clavicle"></geom>
+        <site name="deltoid_ant-P1" pos="0.0120089 0.0199837 -0.0123066"></site>
+        <site name="pectoralis_sup-P1" pos="0.0296563 0.00221696 -0.0361728"></site>
+        <site name="pectoralis_sup-P2" pos="0.0204415 -0.0117942 -0.00990533"></site>
+        <body name="scapula" pos="       0        0        0" quat="1.0 0.0 0.0 0.0">
+          <geom name="scapula" type="mesh" mesh="scapula"></geom>
+          <site name="bicep_lh-P1" pos="-0.001415 0.0116716 -0.00421882"></site>
+          <site name="bicep_sh-P1" pos="0.005006 0.00403096 -0.00928048"></site>
+          <site name="coracobrachialis-P1" pos="0.00568137 0.00332641 -0.00985539"></site>
+          <site name="coracobrachialis-P2" pos="0.00752866 -0.00741225 0.00049928"></site>
+          <site name="deltoid_ant-P2" pos="0.0124096 0.0148434 0.00160382"></site>
+          <site name="deltoid_med-P1" pos="-0.00413097 0.0134429 0.00897914"></site>
+          <site name="deltoid_med-P2" pos="-0.00280437 0.0102632 0.0149334"></site>
+          <site name="deltoid_pos-P1" pos="-0.031415 0.00518007 -0.0114773"></site>
+          <site name="dorsoepitrochlearis-P1" pos="0.00803711 -0.0326048 -0.00556196"></site>
+          <site name="infraspinatus-P1" pos="-0.0170813 -0.0336418 -0.0287667"></site>
+          <site name="lat_dorsi_sup-P1" pos="-0.0518049 -0.05647 -0.0490717"></site>
+          <site name="lat_dorsi_sup-P2" pos="-0.0343128 -0.0380677 -0.0208317"></site>
+          <site name="lat_dorsi_sup-P3" pos="-0.0139569 -0.0257503 -0.0102175"></site>
+          <site name="lat_dorsi_cen-P1" pos="-0.0395885 -0.0844117 -0.0400967"></site>
+          <site name="lat_dorsi_cen-P2" pos="-0.0262124 -0.0547087 -0.0179488"></site>
+          <site name="lat_dorsi_cen-P3" pos="-0.00923915 -0.0366063 -0.00847752"></site>
+          <site name="lat_dorsi_inf-P1" pos="-0.02259 -0.117562 -0.0281918"></site>
+          <site name="lat_dorsi_inf-P2" pos="-0.0190108 -0.0726375 -0.0183598"></site>
+          <site name="lat_dorsi_inf-P3" pos="-0.00671568 -0.0475658 -0.00855742"></site>
+          <site name="subscapularis-P1" pos="-0.0401794 -0.0163557 -0.0434123"></site>
+          <site name="supraspinatus-P1" pos="-0.039969 0.00880497 -0.0325724"></site>
+          <site name="supraspinatus-P2" pos="-0.00702282 0.017184 -0.00390647"></site>
+          <site name="teres_major-P1" pos="-0.0448917 -0.0382902 -0.0269176"></site>
+          <site name="teres_major-P2" pos="-0.00728912 -0.0192575 -0.00530986"></site>
+          <site name="teres_minor-P1" pos="-0.0333031 -0.0109902 -0.0149465"></site>
+          <site name="teres_minor-P2" pos="-0.0167974 -0.00165682 0.00096117"></site>
+          <site name="teres_minor-P3" pos="-0.0125463 0.00302292 0.0114278"></site>
+          <site name="tricep_lon-P1" pos="-0.0262697 -0.0160721 -0.0101192"></site>
+          <body name="humerus" pos="       0    0.002    0.005" quat="1.0 0.0 0.0 0.0">
+            <geom name="humerus" type="mesh" mesh="humerus"></geom>
+            <inertial pos="       0  -0.0555        0" mass="0.203" fullinertia="0.000293 0.000173 0.000293        0        0        0"></inertial>
+            <site name="anconeus-P1" pos="-0.00632836 -0.115053 0.00349906"></site>
+            <site name="bicep_lh-P2" pos="0.00834146 0.00619877 -0.00662536"></site>
+            <site name="bicep_lh-P3" pos="0.0137371 0.00030917 -0.00251563"></site>
+            <site name="bicep_lh-P4" pos="0.0152399 -0.00829801 0.00267377"></site>
+            <site name="bicep_lh-P5" pos="0.0173307 -0.0176342 0.00348195"></site>
+            <site name="bicep_lh-P6" pos="0.01641 -0.09299 0.00122"></site>
+            <site name="bicep_sh-P2" pos="0.0113466 -0.00789496 -0.0088837"></site>
+            <site name="bicep_sh-P3" pos="0.0173119 -0.0163882 -0.00667662"></site>
+            <site name="bicep_sh-P4" pos="0.01641 -0.09299 0.00122"></site>
+            <site name="brachialis-P1" pos="0.00898936 -0.0531827 0.00609122"></site>
+            <site name="brachioradialis-P1" pos="0.00241165 -0.0781182 0.00768392"></site>
+            <site name="coracobrachialis-P3" pos="0.00537791 -0.0281937 -0.00207885"></site>
+            <site name="coracobrachialis-P4" pos="0.0102654 -0.0399106 -0.00060604"></site>
+            <site name="coracobrachialis-P5" pos="0.00898831 -0.0531843 0.00609106"></site>
+            <site name="deltoid_ant-P3" pos="0.0114653 -0.0350968 0.00589031"></site>
+            <site name="deltoid_med-P3" pos="0.0128964 -0.0349655 0.00764048"></site>
+            <site name="deltoid_pos-P2" pos="-0.0186943 -0.00808775 0.0133007"></site>
+            <site name="deltoid_pos-P3" pos="0.00512701 -0.0344488 0.0103991"></site>
+            <site name="dorsoepitrochlearis-P2" pos="-0.00192344 -0.0439945 -0.00058018"></site>
+            <site name="dorsoepitrochlearis-P3" pos="-0.00850242 -0.10306 -0.00470532"></site>
+            <site name="ext_carpi_rad_longus-P1" pos="2.342e-005 -0.0882464 0.00696635"></site>
+            <site name="ext_carp_rad_brevis-P1" pos="0.00495817 -0.113628 0.0146818"></site>
+            <site name="ext_carpi_ulnaris-P1" pos="0.00495863 -0.116878 0.0122446"></site>
+            <site name="ext_digitorum-P1" pos="0.0045054 -0.114854 0.0146524"></site>
+            <site name="ext_digiti-P1" pos="0.0009439 -0.118829 0.0128691"></site>
+            <site name="flex_carpi_radialis-P1" pos="0.00060897 -0.122704 -0.00973851"></site>
+            <site name="flex_digit_superficialis-P1" pos="-0.00359 -0.12211 -0.01146"></site>
+            <site name="infraspinatus-P2" pos="0.00656088 -0.00488467 0.0103085"></site>
+            <site name="lat_dorsi_sup-P4" pos="0.00209131 -0.0269673 0.00787084"></site>
+            <site name="lat_dorsi_cen-P4" pos="0.00227203 -0.0268108 0.00775898"></site>
+            <site name="lat_dorsi_inf-P4" pos="0.00228779 -0.0268855 0.00768377"></site>
+            <site name="palmaris_longus-P1" pos="-0.00359122 -0.122112 -0.0114664"></site>
+            <site name="pectoralis_sup-P3" pos="0.00931889 -0.0352931 0.00326588"></site>
+            <site name="pectoralis_inf-P2" pos="0.00893849 -0.0389993 0.00322279"></site>
+            <site name="pronator_teres-P1" pos="0.00159854 -0.120028 -0.0102318"></site>
+            <site name="subscapularis-P2" pos="0.00455369 0.00455243 -0.00853652"></site>
+            <site name="supinator-P1" pos="0.00151058 -0.115482 0.0146201"></site>
+            <site name="supraspinatus-P3" pos="0.0105423 0.00853244 0.00842501"></site>
+            <site name="teres_major-P3" pos="0.00884004 -0.0284418 0.00066507"></site>
+            <site name="teres_minor-P4" pos="-0.00295662 0.00754551 0.00927424"></site>
+            <site name="tricep_lat-P1" pos="0.00343606 -0.0120452 0.00817807"></site>
+            <site name="tricep_lat-P2" pos="-0.00661123 -0.0482261 0.00844396"></site>
+            <site name="tricep_lat-P3" pos="-0.0169 -0.10497 -0.00623"></site>
+            <site name="tricep_lon-P2" pos="-0.00945771 -0.0479589 0.00358659"></site>
+            <site name="tricep_lon-P3" pos="-0.0169 -0.10497 -0.00623"></site>
+            <site name="tricep_sho-P1" pos="0.00171795 -0.04211 0.00509713"></site>
+            <site name="tricep_sho-P2" pos="-0.00706469 -0.0728094 -0.00347627"></site>
+            <site name="tricep_sho-P3" pos="-0.0169 -0.10497 -0.00623"></site>
+            <joint name="shoulder_adduction" type="hinge" pos="0 0 0" axis="       1        0        0" limited="false" range="-1.74533 0.872665" ref="0"></joint>
+            <joint name="shoulder_rotation" type="hinge" pos="0 0 0" axis="       0        1        0" limited="false" range="-1.39626   1.5708" ref="0"></joint>
+            <joint name="shoulder_flexion" type="hinge" pos="0 0 0" axis="       0        0        1" limited="false" range="  -1.309   1.5708" ref="0"></joint>
+            <body name="ulna1" pos="       0   -0.125   -0.003" quat="1.0 0.0 0.0 0.0">
+              <joint name="elbow_flexion" type="hinge" pos="0 0 0" axis="       0        0        1" limited="false" range="0.349066  2.44346" ref="0"></joint>
+              <body name="ulna" pos="       0        0        0" quat="1.0 0.0 0.0 0.0">
+                <geom name="ulna" type="mesh" mesh="ulna"></geom>
+                <inertial pos="   0.004   -0.045    0.004" mass="0.0922" fullinertia="0.000143 2.07e-05 0.000143        0        0        0"></inertial>
+                <site name="abd_poll_longus-P1" pos="-0.0134542 -0.036131 0.00779"></site>
+                <site name="abd_poll_longus-P2" pos="-0.00589149 -0.0744007 0.00540344"></site>
+                <site name="anconeus-P2" pos="-0.0095746 -0.0110556 0.00734644"></site>
+                <site name="brachialis-P2" pos="-0.00689449 -0.0167103 -0.00011849"></site>
+                <site name="dorsoepitrochlearis-P4" pos="-0.00976546 0.0101558 -0.0070947"></site>
+                <site name="ext_indicis-P1" pos="-0.0106748 -0.0669418 0.00431148"></site>
+                <site name="flex_carpi_ulnaris-P1" pos="-0.00626395 -0.00576911 -0.00528576"></site>
+                <site name="flex_digit_profundus-P1" pos="-0.00910546 -0.0460418 0.00095037"></site>
+                <site name="pronator_quad-P1" pos="-0.00609803 -0.0936326 -0.00163172"></site>
+                <site name="tricep_lat-P4" pos="-0.0159459 0.00881669 -0.00513722"></site>
+                <site name="tricep_lon-P4" pos="-0.0157669 0.00830524 -0.00558853"></site>
+                <site name="tricep_sho-P4" pos="-0.0161454 0.00876453 -0.00503754"></site>
+                <body name="radius_jcc" pos="       0   -0.008    0.005" quat="0.9998209174098923 0.01775660138237004 -0.00011621834917850029 0.0065439063474658">
+                  <inertial pos="       0        0        0" mass="1e-06" fullinertia="   1e-07    1e-07    1e-07        0        0        0"></inertial>
+                  <joint name="radial_pronation" type="hinge" pos="0 0 0" axis="       0        1        0" limited="false" range=" -1.5708   1.5708" ref="0"></joint>
+                  <body name="radius" pos="       0        0        0" quat="0.9998209174098923 -0.01775660138237004 -0.00011621834917850029 -0.0065439063474658">
+                    <geom name="radius" type="mesh" mesh="radius"></geom>
+                    <inertial pos="   0.008   -0.045    0.008" mass="0.0618" fullinertia="9.53e-05 1.38e-06 9.53e-05        0        0        0"></inertial>
+                    <site name="abd_poll_longus-P3" pos="0.00676938 -0.129509 0.00708684"></site>
+                    <site name="bicep_lh-P7" pos="-0.0031344 -0.0226197 -0.00049658"></site>
+                    <site name="bicep_sh-P5" pos="-0.00313456 -0.0226192 -0.00049636"></site>
+                    <site name="brachioradialis-P2" pos="0.0145975 -0.0292495 0.00077764"></site>
+                    <site name="brachioradialis-P3" pos="0.0176545 -0.132166 0.00106433"></site>
+                    <site name="ext_carpi_rad_longus-P2" pos="0.00885958 -0.0269329 0.00814727"></site>
+                    <site name="ext_carpi_rad_longus-P3" pos="0.01484 -0.13599 0.00375"></site>
+                    <site name="ext_carp_rad_brevis-P2" pos="0.00892746 -0.129406 0.00735588"></site>
+                    <site name="ext_carpi_ulnaris-P2" pos="-0.00025815 -0.135178 0.00378109"></site>
+                    <site name="ext_digitorum-P2" pos="0.00823679 -0.129805 0.00699904"></site>
+                    <site name="ext_digiti-P2" pos="0.00273506 -0.128023 0.00782584"></site>
+                    <site name="ext_indicis-P2" pos="0.00266475 -0.11007 0.00567202"></site>
+                    <site name="ext_indicis-P3" pos="0.00493 -0.13294 0.00262"></site>
+                    <site name="flex_carpi_radialis-P2" pos="0.0108332 -0.131353 -0.00634294"></site>
+                    <site name="flex_carpi_ulnaris-P2" pos="0.0016464 -0.131236 -0.00700539"></site>
+                    <site name="flex_digit_profundus-P3" pos="0.0109418 -0.133962 -0.00656384"></site>
+                    <site name="flex_digit_profundus-P2" pos="0.0074 -0.12242 -0.0072"></site>
+                    <site name="flex_digit_superficialis-P2" pos="0.0115119 -0.132662 -0.00824617"></site>
+                    <site name="flex_poll_longus-P1" pos="0.005328 -0.0433027 -0.00663943"></site>
+                    <site name="flex_poll_longus-P2" pos="0.0088 -0.13166 -0.00773"></site>
+                    <site name="palmaris_longus-P2" pos="0.01058 -0.12709 -0.00689"></site>
+                    <site name="palmaris_longus-P3" pos="0.0111999 -0.131741 -0.00604117"></site>
+                    <site name="pronator_quad-P2" pos="0.00821347 -0.0959875 -0.00610373"></site>
+                    <site name="pronator_teres-P2" pos="0.00720098 -0.0451973 -0.00693245"></site>
+                    <site name="supinator-P2" pos="0.00675303 -0.031047 -0.00170358"></site>
+                    <body name="radius1" pos="   0.007   -0.132  -0.0015" quat="0.9999999536033283 -0.0003046199952888821 0.0 0.0">
+                      <body name="hand" pos="       0        0        0" quat="1.0 0.0 0.0 0.0">
+                        <geom name="hand" type="mesh" mesh="hand"></geom>
+                        <inertial pos="   0.012   -0.025    0.007" mass="0.049" fullinertia="3.82e-05 1.56e-06 3.82e-05        0        0        0"></inertial>
+                        <site name="abd_poll_longus-P4" pos="0.00704809 -0.00538695 0.00708962"></site>
+                        <site name="abd_poll_longus-P5" pos="0.0120716 -0.0190709 0.00350984"></site>
+                        <site name="ext_carpi_rad_longus-P4" pos="0.00806575 -0.0297264 0.00471252"></site>
+                        <site name="ext_carp_rad_brevis-P3" pos="0.00286125 -0.00820514 0.00535315"></site>
+                        <site name="ext_carp_rad_brevis-P4" pos="0.00201083 -0.0285152 0.0042954"></site>
+                        <site name="ext_carpi_ulnaris-P3" pos="-0.00529569 -0.0121079 0.00443402"></site>
+                        <site name="ext_digitorum-P3" pos="0.00106101 -0.00804001 0.00594996"></site>
+                        <site name="ext_digitorum-P4" pos="0.00222721 -0.0391191 0.00429738"></site>
+                        <site name="ext_digiti-P3" pos="-0.00496082 -0.012152 0.00583044"></site>
+                        <site name="ext_digiti-P4" pos="-0.00870747 -0.0274009 0.00430346"></site>
+                        <site name="ext_indicis-P4" pos="0.0067409 -0.0213957 0.00653257"></site>
+                        <site name="flex_carpi_radialis-P3" pos="0.0107732 -0.0114522 -0.0001884"></site>
+                        <site name="flex_carpi_ulnaris-P3" pos="-0.00346201 -0.00910496 -0.0019235"></site>
+                        <site name="flex_digit_profundus-P4" pos="-0.00139132 -0.0172483 -0.00108922"></site>
+                        <site name="flex_digit_superficialis-P3" pos="-0.00060287 -0.0373804 -0.00082"></site>
+                        <site name="flex_poll_longus-P3" pos="0.00316994 -0.018195 -0.00122613"></site>
+                        <site name="palmaris_longus-P4" pos="0.00062154 -0.0123001 -0.001955"></site>
+                        <joint name="wrist_flexion" type="hinge" pos="0 0 0" axis="       1        0        0" limited="false" range="  -1.309   1.5708" ref="0"></joint>
+                        <joint name="wrist_abduction" type="hinge" pos="0 0 0" axis="       0        0        1" limited="false" range=" -1.0472 0.785398" ref="0"></joint>
+                      </body>
+                    </body>
+                  </body>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+    <camera name="for_testing" pos="0 0 0" euler="0 0 0"></camera>
+	<body name="target" pos="0.1 0.1 0.85">
+		<geom size="0.01 0.01 0.01" type="sphere"/>
+		<joint axis="1 0 0" name="box:x" type="slide" limited="false" range="-6.28319  6.28319"></joint>
+        <joint axis="0 0 1" name="box:y" type="slide" limited="false" range="-6.28319  6.28319"></joint>
+    </body>
+  </worldbody>
+  <asset>
+    <mesh name="sternum" file="Geometry/sternum.stl" scale="   0.001    0.001    0.001"></mesh>
+    <mesh name="clavicle" file="Geometry/clavicle.stl" scale="   0.001    0.001    0.001"></mesh>
+    <mesh name="scapula" file="Geometry/scapula.stl" scale="   0.001    0.001    0.001"></mesh>
+    <mesh name="humerus" file="Geometry/humerus.stl" scale="   0.001    0.001    0.001"></mesh>
+    <mesh name="ulna" file="Geometry/ulna.stl" scale="   0.001    0.001    0.001"></mesh>
+    <mesh name="radius" file="Geometry/radius.stl" scale="   0.001    0.001    0.001"></mesh>
+    <mesh name="hand" file="Geometry/hand.stl" scale="   0.001    0.001    0.001"></mesh>
+    <texture name="texplane" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 0.15 0.2" width="100" height="100"></texture>
+    <material name="MatPlane" reflectance="0.0" texture="texplane" texrepeat="1 1" texuniform="true"></material>
+  </asset>
+  <tendon>
+    <spatial name="abd_poll_longus_tendon">
+      <site site="abd_poll_longus-P1"></site>
+      <site site="abd_poll_longus-P2"></site>
+      <site site="abd_poll_longus-P3"></site>
+      <site site="abd_poll_longus-P4"></site>
+      <site site="abd_poll_longus-P5"></site>
+    </spatial>
+    <spatial name="anconeus_tendon">
+      <site site="anconeus-P1"></site>
+      <site site="anconeus-P2"></site>
+    </spatial>
+    <spatial name="bicep_lh_tendon">
+      <site site="bicep_lh-P1"></site>
+      <site site="bicep_lh-P2"></site>
+      <site site="bicep_lh-P3"></site>
+      <site site="bicep_lh-P4"></site>
+      <site site="bicep_lh-P5"></site>
+      <site site="bicep_lh-P6"></site>
+      <site site="bicep_lh-P7"></site>
+    </spatial>
+    <spatial name="bicep_sh_tendon">
+      <site site="bicep_sh-P1"></site>
+      <site site="bicep_sh-P2"></site>
+      <site site="bicep_sh-P3"></site>
+      <site site="bicep_sh-P4"></site>
+      <site site="bicep_sh-P5"></site>
+    </spatial>
+    <spatial name="brachialis_tendon">
+      <site site="brachialis-P1"></site>
+      <site site="brachialis-P2"></site>
+    </spatial>
+    <spatial name="brachioradialis_tendon">
+      <site site="brachioradialis-P1"></site>
+      <site site="brachioradialis-P2"></site>
+      <site site="brachioradialis-P3"></site>
+    </spatial>
+    <spatial name="coracobrachialis_tendon">
+      <site site="coracobrachialis-P1"></site>
+      <site site="coracobrachialis-P2"></site>
+      <site site="coracobrachialis-P3"></site>
+      <site site="coracobrachialis-P4"></site>
+      <site site="coracobrachialis-P5"></site>
+    </spatial>
+    <spatial name="deltoid_ant_tendon">
+      <site site="deltoid_ant-P1"></site>
+      <site site="deltoid_ant-P2"></site>
+      <site site="deltoid_ant-P3"></site>
+    </spatial>
+    <spatial name="deltoid_med_tendon">
+      <site site="deltoid_med-P1"></site>
+      <site site="deltoid_med-P2"></site>
+      <site site="deltoid_med-P3"></site>
+    </spatial>
+    <spatial name="deltoid_pos_tendon">
+      <site site="deltoid_pos-P1"></site>
+      <site site="deltoid_pos-P2"></site>
+      <site site="deltoid_pos-P3"></site>
+    </spatial>
+    <spatial name="dorsoepitrochlearis_tendon">
+      <site site="dorsoepitrochlearis-P1"></site>
+      <site site="dorsoepitrochlearis-P2"></site>
+      <site site="dorsoepitrochlearis-P3"></site>
+      <site site="dorsoepitrochlearis-P4"></site>
+    </spatial>
+    <spatial name="ext_carpi_rad_longus_tendon">
+      <site site="ext_carpi_rad_longus-P1"></site>
+      <site site="ext_carpi_rad_longus-P2"></site>
+      <site site="ext_carpi_rad_longus-P3"></site>
+      <site site="ext_carpi_rad_longus-P4"></site>
+    </spatial>
+    <spatial name="ext_carp_rad_brevis_tendon">
+      <site site="ext_carp_rad_brevis-P1"></site>
+      <site site="ext_carp_rad_brevis-P2"></site>
+      <site site="ext_carp_rad_brevis-P3"></site>
+      <site site="ext_carp_rad_brevis-P4"></site>
+    </spatial>
+    <spatial name="ext_carpi_ulnaris_tendon">
+      <site site="ext_carpi_ulnaris-P1"></site>
+      <site site="ext_carpi_ulnaris-P2"></site>
+      <site site="ext_carpi_ulnaris-P3"></site>
+    </spatial>
+    <spatial name="ext_digitorum_tendon">
+      <site site="ext_digitorum-P1"></site>
+      <site site="ext_digitorum-P2"></site>
+      <site site="ext_digitorum-P3"></site>
+      <site site="ext_digitorum-P4"></site>
+    </spatial>
+    <spatial name="ext_digiti_tendon">
+      <site site="ext_digiti-P1"></site>
+      <site site="ext_digiti-P2"></site>
+      <site site="ext_digiti-P3"></site>
+      <site site="ext_digiti-P4"></site>
+    </spatial>
+    <spatial name="ext_indicis_tendon">
+      <site site="ext_indicis-P1"></site>
+      <site site="ext_indicis-P2"></site>
+      <site site="ext_indicis-P3"></site>
+      <site site="ext_indicis-P4"></site>
+    </spatial>
+    <spatial name="flex_carpi_radialis_tendon">
+      <site site="flex_carpi_radialis-P1"></site>
+      <site site="flex_carpi_radialis-P2"></site>
+      <site site="flex_carpi_radialis-P3"></site>
+    </spatial>
+    <spatial name="flex_carpi_ulnaris_tendon">
+      <site site="flex_carpi_ulnaris-P1"></site>
+      <site site="flex_carpi_ulnaris-P2"></site>
+      <site site="flex_carpi_ulnaris-P3"></site>
+    </spatial>
+    <spatial name="flex_digit_profundus_tendon">
+      <site site="flex_digit_profundus-P1"></site>
+      <site site="flex_digit_profundus-P2"></site>
+      <site site="flex_digit_profundus-P3"></site>
+      <site site="flex_digit_profundus-P4"></site>
+    </spatial>
+    <spatial name="flex_digit_superficialis_tendon">
+      <site site="flex_digit_superficialis-P1"></site>
+      <site site="flex_digit_superficialis-P2"></site>
+      <site site="flex_digit_superficialis-P3"></site>
+    </spatial>
+    <spatial name="flex_poll_longus_tendon">
+      <site site="flex_poll_longus-P1"></site>
+      <site site="flex_poll_longus-P2"></site>
+      <site site="flex_poll_longus-P3"></site>
+    </spatial>
+    <spatial name="infraspinatus_tendon">
+      <site site="infraspinatus-P1"></site>
+      <site site="infraspinatus-P2"></site>
+    </spatial>
+    <spatial name="lat_dorsi_sup_tendon">
+      <site site="lat_dorsi_sup-P1"></site>
+      <site site="lat_dorsi_sup-P2"></site>
+      <site site="lat_dorsi_sup-P3"></site>
+      <site site="lat_dorsi_sup-P4"></site>
+    </spatial>
+    <spatial name="lat_dorsi_cen_tendon">
+      <site site="lat_dorsi_cen-P1"></site>
+      <site site="lat_dorsi_cen-P2"></site>
+      <site site="lat_dorsi_cen-P3"></site>
+      <site site="lat_dorsi_cen-P4"></site>
+    </spatial>
+    <spatial name="lat_dorsi_inf_tendon">
+      <site site="lat_dorsi_inf-P1"></site>
+      <site site="lat_dorsi_inf-P2"></site>
+      <site site="lat_dorsi_inf-P3"></site>
+      <site site="lat_dorsi_inf-P4"></site>
+    </spatial>
+    <spatial name="palmaris_longus_tendon">
+      <site site="palmaris_longus-P1"></site>
+      <site site="palmaris_longus-P2"></site>
+      <site site="palmaris_longus-P3"></site>
+      <site site="palmaris_longus-P4"></site>
+    </spatial>
+    <spatial name="pectoralis_sup_tendon">
+      <site site="pectoralis_sup-P1"></site>
+      <site site="pectoralis_sup-P2"></site>
+      <site site="pectoralis_sup-P3"></site>
+    </spatial>
+    <spatial name="pectoralis_inf_tendon">
+      <site site="pectoralis_inf-P1"></site>
+      <site site="pectoralis_inf-P2"></site>
+      <site site="pectoralis_inf-P3"></site>
+    </spatial>
+    <spatial name="pronator_quad_tendon">
+      <site site="pronator_quad-P1"></site>
+      <site site="pronator_quad-P2"></site>
+    </spatial>
+    <spatial name="pronator_teres_tendon">
+      <site site="pronator_teres-P1"></site>
+      <site site="pronator_teres-P2"></site>
+    </spatial>
+    <spatial name="subscapularis_tendon">
+      <site site="subscapularis-P1"></site>
+      <site site="subscapularis-P2"></site>
+    </spatial>
+    <spatial name="supinator_tendon">
+      <site site="supinator-P1"></site>
+      <site site="supinator-P2"></site>
+    </spatial>
+    <spatial name="supraspinatus_tendon">
+      <site site="supraspinatus-P1"></site>
+      <site site="supraspinatus-P2"></site>
+      <site site="supraspinatus-P3"></site>
+    </spatial>
+    <spatial name="teres_major_tendon">
+      <site site="teres_major-P1"></site>
+      <site site="teres_major-P2"></site>
+      <site site="teres_major-P3"></site>
+    </spatial>
+    <spatial name="teres_minor_tendon">
+      <site site="teres_minor-P1"></site>
+      <site site="teres_minor-P2"></site>
+      <site site="teres_minor-P3"></site>
+      <site site="teres_minor-P4"></site>
+    </spatial>
+    <spatial name="tricep_lat_tendon">
+      <site site="tricep_lat-P1"></site>
+      <site site="tricep_lat-P2"></site>
+      <site site="tricep_lat-P3"></site>
+      <site site="tricep_lat-P4"></site>
+    </spatial>
+    <spatial name="tricep_lon_tendon">
+      <site site="tricep_lon-P1"></site>
+      <site site="tricep_lon-P2"></site>
+      <site site="tricep_lon-P3"></site>
+      <site site="tricep_lon-P4"></site>
+    </spatial>
+    <spatial name="tricep_sho_tendon">
+      <site site="tricep_sho-P1"></site>
+      <site site="tricep_sho-P2"></site>
+      <site site="tricep_sho-P3"></site>
+      <site site="tricep_sho-P4"></site>
+    </spatial>
+  </tendon>
+  <actuator>
+    <muscle name="abd_poll_longus" tendon="abd_poll_longus_tendon" class="muscle" force="30" lengthrange="0.0733771 0.163131"></muscle>
+    <muscle name="anconeus" tendon="anconeus_tendon" class="muscle" force="30" lengthrange=" 0.02473 0.0349359"></muscle>
+    <muscle name="bicep_lh" tendon="bicep_lh_tendon" class="muscle" force="58.2" lengthrange="0.131634 0.253213"></muscle>
+    <muscle name="bicep_sh" tendon="bicep_sh_tendon" class="muscle" force="38.7" lengthrange="0.103772 0.226264"></muscle>
+    <muscle name="brachialis" tendon="brachialis_tendon" class="muscle" force="135.6" lengthrange=" 0.06352  0.12052"></muscle>
+    <muscle name="brachioradialis" tendon="brachioradialis_tendon" class="muscle" force="38.7" lengthrange="0.104596 0.227088"></muscle>
+    <muscle name="coracobrachialis" tendon="coracobrachialis_tendon" class="muscle" force="38.7" lengthrange="0.0438696 0.127609"></muscle>
+    <muscle name="deltoid_ant" tendon="deltoid_ant_tendon" class="muscle" force="135.6" lengthrange=" 0.02475 0.0702499"></muscle>
+    <muscle name="deltoid_med" tendon="deltoid_med_tendon" class="muscle" force="116.1" lengthrange="0.025979 0.0739372"></muscle>
+    <muscle name="deltoid_pos" tendon="deltoid_pos_tendon" class="muscle" force="406.5" lengthrange="0.0364931 0.105479"></muscle>
+    <muscle name="dorsoepitrochlearis" tendon="dorsoepitrochlearis_tendon" class="muscle" force="44.8" lengthrange="0.100418  0.22291"></muscle>
+    <muscle name="ext_carpi_rad_longus" tendon="ext_carpi_rad_longus_tendon" class="muscle" force="72" lengthrange="0.112944 0.228831"></muscle>
+    <muscle name="ext_carp_rad_brevis" tendon="ext_carp_rad_brevis_tendon" class="muscle" force="30" lengthrange="0.0977406 0.220222"></muscle>
+    <muscle name="ext_carpi_ulnaris" tendon="ext_carpi_ulnaris_tendon" class="muscle" force="30" lengthrange="0.111517  0.23378"></muscle>
+    <muscle name="ext_digitorum" tendon="ext_digitorum_tendon" class="muscle" force="30" lengthrange="0.106862 0.229186"></muscle>
+    <muscle name="ext_digiti" tendon="ext_digiti_tendon" class="muscle" force="30" lengthrange="0.121483 0.243849"></muscle>
+    <muscle name="ext_indicis" tendon="ext_indicis_tendon" class="muscle" force="30" lengthrange="0.0528715 0.0966524"></muscle>
+    <muscle name="flex_carpi_radialis" tendon="flex_carpi_radialis_tendon" class="muscle" force="60" lengthrange="0.103688 0.226001"></muscle>
+    <muscle name="flex_carpi_ulnaris" tendon="flex_carpi_ulnaris_tendon" class="muscle" force="96" lengthrange="0.144312 0.187953"></muscle>
+    <muscle name="flex_digit_profundus" tendon="flex_digit_profundus_tendon" class="muscle" force="30" lengthrange="0.0707364 0.131622"></muscle>
+    <muscle name="flex_digit_superficialis" tendon="flex_digit_superficialis_tendon" class="muscle" force="30" lengthrange="0.133138 0.255066"></muscle>
+    <muscle name="flex_poll_longus" tendon="flex_poll_longus_tendon" class="muscle" force="30" lengthrange="0.0747479 0.102608"></muscle>
+    <muscle name="infraspinatus" tendon="infraspinatus_tendon" class="muscle" force="174.3" lengthrange="0.0258646 0.0735939"></muscle>
+    <muscle name="lat_dorsi_sup" tendon="lat_dorsi_sup_tendon" class="muscle" force="129" lengthrange="0.063246 0.185738"></muscle>
+    <muscle name="lat_dorsi_cen" tendon="lat_dorsi_cen_tendon" class="muscle" force="129" lengthrange=" 0.05795  0.16985"></muscle>
+    <muscle name="lat_dorsi_inf" tendon="lat_dorsi_inf_tendon" class="muscle" force="129" lengthrange=" 0.06995  0.19245"></muscle>
+    <muscle name="palmaris_longus" tendon="palmaris_longus_tendon" class="muscle" force="27" lengthrange="0.0845387 0.206802"></muscle>
+    <muscle name="pectoralis_sup" tendon="pectoralis_sup_tendon" class="muscle" force="154.8" lengthrange=" 0.02905 0.0831499"></muscle>
+    <muscle name="pectoralis_inf" tendon="pectoralis_inf_tendon" class="muscle" force="116.1" lengthrange="  0.0344 0.0991999"></muscle>
+    <muscle name="pronator_quad" tendon="pronator_quad_tendon" class="muscle" force="33.3" lengthrange="0.0144537 0.0393612"></muscle>
+    <muscle name="pronator_teres" tendon="pronator_teres_tendon" class="muscle" force="48.3" lengthrange="0.0328064 0.0733396"></muscle>
+    <muscle name="subscapularis" tendon="subscapularis_tendon" class="muscle" force="290.4" lengthrange="0.0331185 0.0816937"></muscle>
+    <muscle name="supinator" tendon="supinator_tendon" class="muscle" force="30" lengthrange="0.023568 0.066704"></muscle>
+    <muscle name="supraspinatus" tendon="supraspinatus_tendon" class="muscle" force="135" lengthrange="0.0354587 0.102376"></muscle>
+    <muscle name="teres_major" tendon="teres_major_tendon" class="muscle" force="77.4" lengthrange="0.0415395 0.120619"></muscle>
+    <muscle name="teres_minor" tendon="teres_minor_tendon" class="muscle" force="174" lengthrange="0.0217071 0.0611213"></muscle>
+    <muscle name="tricep_lat" tendon="tricep_lat_tendon" class="muscle" force="135.6" lengthrange="0.075587 0.189943"></muscle>
+    <muscle name="tricep_lon" tendon="tricep_lon_tendon" class="muscle" force="116.1" lengthrange="0.081526 0.172516"></muscle>
+    <muscle name="tricep_sho" tendon="tricep_sho_tendon" class="muscle" force="135.6" lengthrange="0.0546969 0.143695"></muscle>
+  </actuator>
+  <equality>
+    <weld name="origin_to_worldbody" body1="sternum" active="false"></weld>
+  </equality>
+</mujoco>
