@@ -126,8 +126,8 @@ class MujocoEnv(gym.Env):
         self.x_coord_619 = x_coord_619 + self.center[0]
         self.y_coord_619 = y_coord_619 + self.center[1]
 
-        self.x_coord = self.x_coord_1319 
-        self.y_coord = self.y_coord_1319
+        self.x_coord = self.x_coord_619
+        self.y_coord = self.y_coord_619
 
         self.viewer= None 
         self._viewers= {}
