@@ -14,7 +14,7 @@ from tqdm import tqdm
 from statistics import mean
 from SAC.RL_Framework_Mujoco import Arm_Env
 
-monkey_path = 'monkey/monkeyArm_current_converted_ball.xml'
+monkey_path = 'monkey/monkeyArm_current_scaled.xml'
 monkey_params = 'monkey/params_monkey.pckl'
 
 def main():
