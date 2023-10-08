@@ -76,9 +76,9 @@ class MujocoEnv(gym.Env):
 
         #Meta parameters for the simulation
         self.n_fixedsteps= 5
-        self.timestep_limit= (1319 * 1) + self.n_fixedsteps
+        self.timestep_limit= (619 * 1) + self.n_fixedsteps
         # self._max_episode_steps= self.timestep_limit/ 2
-        self._max_episode_steps= 1000   #Do not matter. It is being set in the main.py where the total number of steps are being changed.
+        self._max_episode_steps= (619 * 1) + self.n_fixedsteps   #Do not matter. It is being set in the main.py where the total number of steps are being changed.
         self.radius= 0.038   #0.075
         self.theta= np.pi
         self.center= [0.06, 0.083]
@@ -327,9 +327,12 @@ class Arm_Env(MujocoEnv, utils.EzPickle):
     def step(self, action):
         self.istep += 1
 
-        if self.istep > self.n_fixedsteps:
+        if self.istep > self.n_fixedsteps and self.istep < 20:
             self.threshold = 0.032
-            # self.threshold = 1.0
+        elif self.istep >= 20 and self.istep<30:
+            self.threshold = 0.016
+        elif self.istep >=30:
+            self.threshold = 0.008
 
         prev_hand_xpos= self.sim.data.get_body_xpos("hand").copy()
 

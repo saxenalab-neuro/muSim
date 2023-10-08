@@ -21,7 +21,7 @@ def main():
 
     ### PARAMETERS ###
     parser = argparse.ArgumentParser(description='PyTorch Soft Actor-Critic Args')
-    parser.add_argument('--env_name', type=str, default="muscle_arm-v0",
+    parser.add_argument('--env_name', type=str, default="monkey",
                         help='humanreacher-v0, muscle_arm-v0, torque_arm-v0')
     parser.add_argument('--model', type=str, default="snn",
                         help='snn, ann')
@@ -29,7 +29,7 @@ def main():
                         help='discount factor for reward (default: 0.99)')
     parser.add_argument('--tau', type=float, default=0.005, metavar='G',
                         help='target smoothing coefficient(τ) (default: 0.005)')
-    parser.add_argument('--lr', type=float, default=0.001, metavar='G',
+    parser.add_argument('--lr', type=float, default=0.0003, metavar='G',
                         help='learning rate (default: 0.001)')
     parser.add_argument('--alpha', type=float, default=0.2, metavar='G',
                         help='Temperature parameter α determines the relative importance of the entropy\
@@ -46,8 +46,6 @@ def main():
                         help='size of replay buffer (default: 2800)')
     parser.add_argument('--batch_iters', type=int, default=1, metavar='N',
                         help='iterations to apply update')
-    parser.add_argument('--experience_sampling', type=int, default=1, metavar='N',
-                        help='how many episodes to run before training')
     parser.add_argument('--cuda', action="store_true",
                         help='run on CUDA (default: False)')
     parser.add_argument('--visualize', type=bool, default=False,
@@ -78,19 +76,19 @@ def main():
     if args.model == 'lsnn':
         policy_memory = PolicyReplayMemoryLSNN(args.policy_replay_size, args.seed)
         agent = SACLSNN(observation_shape, env.action_space.shape[0], args)
-        simulator = Simulate_LSNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters, args.experience_sampling)
+        simulator = Simulate_LSNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters)
     if args.model == 'snn':
         policy_memory = PolicyReplayMemorySNN(args.policy_replay_size, args.seed)
         agent = SACSNN(observation_shape, env.action_space.shape[0], args)
-        simulator = Simulate_SNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters, args.experience_sampling)
+        simulator = Simulate_SNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters)
     elif args.model == 'ann':
         policy_memory = PolicyReplayMemoryANN(args.policy_replay_size, args.seed)
         agent = SACANN(observation_shape, env.action_space.shape[0], args)
-        simulator = Simulate_ANN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters, args.experience_sampling)
+        simulator = Simulate_ANN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters)
     elif args.model == 'lstm':
         policy_memory = PolicyReplayMemoryLSTM(args.policy_replay_size, args.seed)
         agent = SACLSTM(observation_shape, env.action_space.shape[0], args)
-        simulator = Simulate_LSTM(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters, args.experience_sampling)
+        simulator = Simulate_LSTM(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters)
 
     # TODO checkpoints
     if args.test_model:
@@ -133,13 +131,14 @@ def main():
             
             # Save the model if necessary
             if args.save_model:
-                torch.save(agent.policy.state_dict(), f'models/policy_net_{args.model_save_name}.pth')
-                torch.save(agent.critic.state_dict(), f'models/value_net_{args.model_save_name}.pth')
+                if episode_reward == highest_reward:
+                    torch.save(agent.policy.state_dict(), f'models/policy_net_{args.model_save_name}_best.pth')
+                    torch.save(agent.critic.state_dict(), f'models/value_net_{args.model_save_name}_best.pth')
+                else:
+                    torch.save(agent.policy.state_dict(), f'models/policy_net_{args.model_save_name}_cur.pth')
+                    torch.save(agent.critic.state_dict(), f'models/value_net_{args.model_save_name}_cur.pth')
 
-            if i_episode % args.experience_sampling == 0:
-                # Printing rewards
-                print('highest reward: {} | mean_reward: {} | mean timesteps completed: {}'.format(max(reward_tracker), mean(reward_tracker), mean(steps_tracker)))
-                print('highest reward so far: {}'.format(highest_reward))
+            print('highest reward: {} | reward: {} | timesteps completed: {}'.format(max(reward_tracker), episode_reward, episode_steps))
 
             if args.tracking == True:
                 np.savetxt(f'tracking/success/episode_success_{args.model_save_name}', success_tracker)

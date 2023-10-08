@@ -10,7 +10,7 @@ from statistics import mean
 from abc import ABC, abstractmethod
 
 class Simulate(object):
-    def __init__(self, env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling):
+    def __init__(self, env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters):
         
         self.env = env
         self.agent = agent
@@ -19,7 +19,6 @@ class Simulate(object):
         self.hidden_size = hidden_size
         self.visualize = visualize
         self.batch_iters = batch_iters
-        self.experience_sampling = experience_sampling
 
         self.policy_loss_tracker = []
         self.critic1_loss_tracker = []
@@ -45,9 +44,9 @@ class Simulate(object):
 
         return next_state, reward, done, info, episode_reward, episode_steps
     
-    def _check_update(self, iteration):
-        if iteration % self.experience_sampling == 0 and len(self.policy_memory.buffer) > self.policy_batch_size:
-            for _ in tqdm(range(self.batch_iters)):
+    def _check_update(self):
+        if len(self.policy_memory.buffer) > self.policy_batch_size:
+            for _ in range(self.batch_iters):
                 critic_1_loss, critic_2_loss, policy_loss = self.agent.update_parameters(self.policy_memory, self.policy_batch_size)
                 self.policy_loss_tracker.append(policy_loss)
                 self.critic1_loss_tracker.append(critic_1_loss)
@@ -64,8 +63,8 @@ class Simulate(object):
 
     
 class Simulate_LSTM(Simulate):
-    def __init__(self, env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling):
-        super(Simulate_LSTM, self).__init__(env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling)
+    def __init__(self, env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters):
+        super(Simulate_LSTM, self).__init__(env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters)
 
     def train(self, iteration, speed_token):
 
@@ -89,6 +88,9 @@ class Simulate_LSTM(Simulate):
 
             with torch.no_grad():
                 action, h_current, c_current, _ = self.agent.select_action(state, h_prev, c_prev, evaluate=False)  # Sample action from policy
+
+            ### SIMULATION ###
+            self._check_update()
             
             ### TRACKING REWARD + EXPERIENCE TUPLE###
             next_state, reward, done, _, episode_reward, episode_steps = self._step(action, timestep, speed_token, episode_reward, episode_steps)
@@ -110,9 +112,6 @@ class Simulate_LSTM(Simulate):
             ### EARLY TERMINATION OF EPISODE
             if done:
                 break
-
-        ### SIMULATION ###
-        self._check_update(iteration)
         
         # Push the episode to replay
         self.policy_memory.push(ep_trajectory)
@@ -162,8 +161,8 @@ class Simulate_LSTM(Simulate):
         
 
 class Simulate_ANN(Simulate):
-    def __init__(self, env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling):
-        super(Simulate_ANN, self).__init__(env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling)
+    def __init__(self, env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters):
+        super(Simulate_ANN, self).__init__(env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters)
 
     def train(self, iteration, speed_token):
 
@@ -181,6 +180,9 @@ class Simulate_ANN(Simulate):
 
             with torch.no_grad():
                 action = self.agent.select_action(state, evaluate=False)  # Sample action from policy
+
+            ### SIMULATION ###
+            self._check_update()
             
             ### TRACKING REWARD + EXPERIENCE TUPLE###
             next_state, reward, done, _, episode_reward, episode_steps = self._step(action, timestep, speed_token, episode_reward, episode_steps)
@@ -200,9 +202,6 @@ class Simulate_ANN(Simulate):
             ### EARLY TERMINATION OF EPISODE
             if done:
                 break
-
-        ### SIMULATION ###
-        self._check_update(iteration)
 
         return episode_reward, episode_steps, success
     
@@ -243,8 +242,8 @@ class Simulate_ANN(Simulate):
 
 
 class Simulate_LSNN(Simulate):
-    def __init__(self, env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling):
-        super(Simulate_LSNN, self).__init__(env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling)
+    def __init__(self, env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters):
+        super(Simulate_LSNN, self).__init__(env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters)
     
     def _init_lleaky(self):
         mem2_rec = {}
@@ -276,6 +275,9 @@ class Simulate_LSNN(Simulate):
 
             with torch.no_grad():
                 action, mem2_rec_policy, spk2_rec_policy, b2_rec_policy = self.agent.select_action(state, spk2_rec_policy, mem2_rec_policy, b2_rec_policy, evaluate=False)  # Sample action from policy
+
+            ### SIMULATION ###
+            self._check_update()
             
             ### TRACKING REWARD + EXPERIENCE TUPLE###
             next_state, reward, done, _, episode_reward, episode_steps = self._step(action, timestep, speed_token, episode_reward, episode_steps)
@@ -296,9 +298,6 @@ class Simulate_LSNN(Simulate):
                 ep_trajectory.append([state, action, reward, next_state, mask])
 
             state = next_state
-
-        ### SIMULATION ###
-        self._check_update(iteration)
 
         # Push the episode to replay
         self.policy_memory.push(ep_trajectory)
@@ -345,8 +344,8 @@ class Simulate_LSNN(Simulate):
 
 
 class Simulate_SNN(Simulate):
-    def __init__(self, env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling):
-        super().__init__(env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters, experience_sampling)
+    def __init__(self, env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters):
+        super().__init__(env, agent, policy_memory, policy_batch_size, hidden_size, visualize, batch_iters)
     
     def _init_leaky(self):
         mem2_rec = {}
@@ -376,6 +375,9 @@ class Simulate_SNN(Simulate):
 
             with torch.no_grad():
                 action, mem2_rec_policy = self.agent.select_action(state, mem2_rec_policy, evaluate=False)  # Sample action from policy
+
+            ### SIMULATION ###
+            self._check_update()
             
             ### TRACKING REWARD + EXPERIENCE TUPLE###
             next_state, reward, done, _, episode_reward, episode_steps = self._step(action, timestep, speed_token, episode_reward, episode_steps)
@@ -396,9 +398,6 @@ class Simulate_SNN(Simulate):
                 ep_trajectory.append([state, action, reward, next_state, mask])
 
             state = next_state
-
-        ### SIMULATION ###
-        self._check_update(iteration)
 
         # Push the episode to replay
         self.policy_memory.push(ep_trajectory)
