@@ -413,8 +413,6 @@ class PolicyANN(nn.Module):
         # initialize layers
         self.fc1 = nn.Linear(num_inputs, num_hidden)
         self.fc2 = nn.Linear(num_hidden, num_hidden)
-        self.fc3 = nn.Linear(num_hidden, num_hidden)
-        self.fc4 = nn.Linear(num_hidden, num_hidden)
 
         self.mean_linear = nn.Linear(num_hidden, num_outputs)
         self.log_std_linear = nn.Linear(num_hidden, num_outputs)
@@ -424,11 +422,9 @@ class PolicyANN(nn.Module):
         # time-loop
         cur1 = self.fc1(x)
         cur2 = self.fc2(cur1)
-        cur3 = self.fc3(cur2)
-        cur4 = self.fc4(cur3)
 
-        cur_mean = self.mean_linear(cur4)
-        cur_std = self.log_std_linear(cur4)
+        cur_mean = self.mean_linear(cur2)
+        cur_std = self.log_std_linear(cur2)
         cur_std = torch.clamp(cur_std, min=LOG_SIG_MIN, max=LOG_SIG_MAX)
 
         return cur_mean, cur_std
@@ -470,14 +466,12 @@ class CriticANN(nn.Module):
         # QNet 1
         self.fc1 = nn.Linear(num_inputs + action_space, num_hidden)
         self.fc2 = nn.Linear(num_hidden, num_hidden)
-        self.fc3 = nn.Linear(num_hidden, num_hidden)
-        self.fc4 = nn.Linear(num_hidden, 1)
+        self.fc3 = nn.Linear(num_hidden, 1)
 
         # QNet 2
         self.fc1_2 = nn.Linear(num_inputs + action_space, num_hidden)
         self.fc2_2 = nn.Linear(num_hidden, num_hidden)
-        self.fc3_2 = nn.Linear(num_hidden, num_hidden)
-        self.fc4_2 = nn.Linear(num_hidden, 1)
+        self.fc3_2 = nn.Linear(num_hidden, 1)
 
     def forward(self, state, action):
 
@@ -485,12 +479,10 @@ class CriticANN(nn.Module):
 
         out = self.fc1(x)
         out = self.fc2(out)
-        out = self.fc3(out)
-        q1 = self.fc4(out)
+        q1 = self.fc3(out)
 
         out = self.fc1_2(x)
         out = self.fc2_2(out)
-        out = self.fc3_2(out)
-        q2 = self.fc4_2(out)
+        q2 = self.fc3_2(out)
 
         return q1, q2
