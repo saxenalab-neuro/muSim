@@ -24,6 +24,10 @@ class PolicySNN(nn.Module):
         self.lif1 = snn.Leaky(beta=beta)
         self.fc2 = nn.Linear(num_hidden, num_hidden)
         self.lif2 = snn.Leaky(beta=beta)
+        self.fc3 = nn.Linear(num_hidden, num_hidden)
+        self.lif3 = snn.Leaky(beta=beta)
+        self.fc4 = nn.Linear(num_hidden, num_hidden)
+        self.lif4 = snn.Leaky(beta=beta)
 
         self.mean_linear = nn.Linear(num_hidden, num_hidden)
         self.mean_linear_lif = snn.Leaky(beta=beta)
@@ -41,11 +45,15 @@ class PolicySNN(nn.Module):
         spk1, mems['lif1'] = self.lif1(cur1, mems['lif1'])
         cur2 = self.fc2(spk1)
         spk2, mems['lif2'] = self.lif2(cur2, mems['lif2'])
+        cur3 = self.fc3(spk2)
+        spk3, mems['lif3'] = self.lif3(cur3, mems['lif3'])
+        cur4 = self.fc4(spk3)
+        spk4, mems['lif4'] = self.lif4(cur4, mems['lif4'])
 
-        cur_mean = self.mean_linear(spk2)
+        cur_mean = self.mean_linear(spk4)
         spk_mean, mems['mean_linear_lif'] = self.mean_linear_lif(cur_mean, mems['mean_linear_lif'])
 
-        cur_std = self.log_std_linear(spk2)
+        cur_std = self.log_std_linear(spk4)
         spk_std, mems['log_std_linear_lif'] = self.log_std_linear_lif(cur_std, mems['log_std_linear_lif'])
 
         spk_mean_decoded = self.mean_decoder(spk_mean)
@@ -88,6 +96,8 @@ class CriticSNN(nn.Module):
         self.lif1 = snn.Leaky(beta=beta)
         self.fc2 = nn.Linear(num_hidden, num_hidden)
         self.lif2 = snn.Leaky(beta=beta)
+        self.fc3 = nn.Linear(num_hidden, num_hidden)
+        self.lif3 = snn.Leaky(beta=beta)
         self.output_decoder_1 = nn.Linear(num_hidden, 1)
 
         # QNet 2
@@ -95,6 +105,8 @@ class CriticSNN(nn.Module):
         self.lif1_2 = snn.Leaky(beta=beta)
         self.fc2_2 = nn.Linear(num_hidden, num_hidden)
         self.lif2_2 = snn.Leaky(beta=beta)
+        self.fc3_2 = nn.Linear(num_hidden, num_hidden)
+        self.lif3_2 = snn.Leaky(beta=beta)
         self.output_decoder_2 = nn.Linear(num_hidden, 1)
 
     def forward(self, state, action, mem, training=False):
@@ -108,9 +120,11 @@ class CriticSNN(nn.Module):
         spk1, mem['lif1'] = self.lif1(cur1, mem['lif1'])
         cur2 = self.fc2(spk1)
         spk2, mem['lif2'] = self.lif2(cur2, mem['lif2'])
+        cur3 = self.fc3(spk2)
+        spk3, mem['lif3'] = self.lif3(cur3, mem['lif3'])
 
         # Q Network 1 firing rate 
-        q1_decoded = self.output_decoder_1(spk2)
+        q1_decoded = self.output_decoder_1(spk3)
 
         #---------------------------------------------------------
 
@@ -119,8 +133,10 @@ class CriticSNN(nn.Module):
         spk1, mem['lif1_2'] = self.lif1_2(cur1, mem['lif1_2'])
         cur2 = self.fc2_2(spk1)
         spk2, mem['lif2_2'] = self.lif2_2(cur2, mem['lif2_2'])
+        cur3 = self.fc3_2(spk2)
+        spk3, mem['lif3_2'] = self.lif3_2(cur3, mem['lif3_2'])
 
-        q2_decoded = self.output_decoder_2(spk2)
+        q2_decoded = self.output_decoder_2(spk3)
 
         return q1_decoded, q2_decoded, mem
 
@@ -385,7 +401,7 @@ class CriticLSTM(nn.Module):
 
         x1 = torch.cat([fc_branch_1, lstm_branch_1], dim=-1)
         x1 = F.relu(self.linear3(x1))
-        x1 = F.relu(self.linear4(x1))
+        x1 = self.linear4(x1)
 
         fc_branch_2 = F.relu(self.linear5(xu_p))
 
@@ -396,7 +412,7 @@ class CriticLSTM(nn.Module):
 
         x2 = torch.cat([fc_branch_2, lstm_branch_2], dim=-1)
         x2 = F.relu(self.linear7(x2))
-        x2 = F.relu(self.linear8(x2))
+        x2 = self.linear8(x2)
 
         return x1, x2
     
@@ -413,18 +429,29 @@ class PolicyANN(nn.Module):
         # initialize layers
         self.fc1 = nn.Linear(num_inputs, num_hidden)
         self.fc2 = nn.Linear(num_hidden, num_hidden)
+        self.fc3 = nn.Linear(num_hidden, num_hidden)
+        self.fc4 = nn.Linear(num_hidden, num_hidden)
 
-        self.mean_linear = nn.Linear(num_hidden, num_outputs)
-        self.log_std_linear = nn.Linear(num_hidden, num_outputs)
+        self.mean_linear1 = nn.Linear(num_hidden, num_hidden)
+        self.mean_linear2 = nn.Linear(num_hidden, num_outputs)
+
+        self.log_std_linear1 = nn.Linear(num_hidden, num_hidden)
+        self.log_std_linear2 = nn.Linear(num_hidden, num_outputs)
 
     def forward(self, x):
 
         # time-loop
-        cur1 = self.fc1(x)
-        cur2 = self.fc2(cur1)
+        cur1 = F.relu(self.fc1(x))
+        cur2 = F.relu(self.fc2(cur1))
+        cur3 = F.relu(self.fc3(cur2))
+        cur4 = F.relu(self.fc4(cur3))
 
-        cur_mean = self.mean_linear(cur2)
-        cur_std = self.log_std_linear(cur2)
+        cur_mean = F.relu(self.mean_linear1(cur4))
+        cur_mean = self.mean_linear2(cur_mean)
+
+        cur_std = F.relu(self.log_std_linear1(cur4))
+        cur_std = self.log_std_linear2(cur4)
+
         cur_std = torch.clamp(cur_std, min=LOG_SIG_MIN, max=LOG_SIG_MAX)
 
         return cur_mean, cur_std
@@ -466,23 +493,27 @@ class CriticANN(nn.Module):
         # QNet 1
         self.fc1 = nn.Linear(num_inputs + action_space, num_hidden)
         self.fc2 = nn.Linear(num_hidden, num_hidden)
-        self.fc3 = nn.Linear(num_hidden, 1)
+        self.fc3 = nn.Linear(num_hidden, num_hidden)
+        self.fc4 = nn.Linear(num_hidden, 1)
 
         # QNet 2
         self.fc1_2 = nn.Linear(num_inputs + action_space, num_hidden)
         self.fc2_2 = nn.Linear(num_hidden, num_hidden)
-        self.fc3_2 = nn.Linear(num_hidden, 1)
+        self.fc3_2 = nn.Linear(num_hidden, num_hidden)
+        self.fc4_2 = nn.Linear(num_hidden, 1)
 
     def forward(self, state, action):
 
         x = torch.cat([state, action], dim=-1)
 
-        out = self.fc1(x)
-        out = self.fc2(out)
-        q1 = self.fc3(out)
+        out = F.relu(self.fc1(x))
+        out = F.relu(self.fc2(out))
+        out = F.relu(self.fc3(out))
+        q1 = self.fc4(out)
 
-        out = self.fc1_2(x)
-        out = self.fc2_2(out)
-        q2 = self.fc3_2(out)
+        out = F.relu(self.fc1_2(x))
+        out = F.relu(self.fc2_2(out))
+        out = F.relu(self.fc3_2(out))
+        q2 = self.fc4_2(out)
 
         return q1, q2
