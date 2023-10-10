@@ -25,7 +25,7 @@ def main():
                         help='humanreacher-v0, muscle_arm-v0, torque_arm-v0')
     parser.add_argument('--model', type=str, default="snn",
                         help='snn, ann')
-    parser.add_argument('--gamma', type=float, default=0.9, metavar='G',
+    parser.add_argument('--gamma', type=float, default=0.99, metavar='G',
                         help='discount factor for reward (default: 0.99)')
     parser.add_argument('--tau', type=float, default=0.005, metavar='G',
                         help='target smoothing coefficient(τ) (default: 0.005)')

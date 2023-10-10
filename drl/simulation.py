@@ -51,7 +51,7 @@ class Simulate(object):
                 self.policy_loss_tracker.append(policy_loss)
                 self.critic1_loss_tracker.append(critic_1_loss)
                 self.critic2_loss_tracker.append(critic_2_loss)
-            print(f"mean policy loss: {mean(self.policy_loss_tracker)} | mean critic 1 loss: {mean(self.critic1_loss_tracker)} | mean critic 2 loss: {mean(self.critic2_loss_tracker)}")
+            #print(f"mean policy loss: {mean(self.policy_loss_tracker)} | mean critic 1 loss: {mean(self.critic1_loss_tracker)} | mean critic 2 loss: {mean(self.critic2_loss_tracker)}")
     
     @abstractmethod
     def train(self, iteration, speed_token):

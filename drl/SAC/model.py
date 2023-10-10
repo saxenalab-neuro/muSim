@@ -450,7 +450,7 @@ class PolicyANN(nn.Module):
         cur_mean = self.mean_linear2(cur_mean)
 
         cur_std = F.relu(self.log_std_linear1(cur4))
-        cur_std = self.log_std_linear2(cur4)
+        cur_std = self.log_std_linear2(cur_std)
 
         cur_std = torch.clamp(cur_std, min=LOG_SIG_MIN, max=LOG_SIG_MAX)
 
