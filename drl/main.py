@@ -6,9 +6,9 @@ import scipy.io
 import torch
 import matplotlib.pyplot as plt
 import gym
-from SAC.replay_memory import PolicyReplayMemoryLSNN, PolicyReplayMemoryANN, PolicyReplayMemoryLSTM, PolicyReplayMemorySNN
-from SAC.sac import SAC, SACLSNN, SACANN, SACLSTM, SACSNN
-from simulation import Simulate_ANN, Simulate_LSTM, Simulate_LSNN, Simulate_SNN
+from SAC.replay_memory import PolicyReplayMemoryANN, PolicyReplayMemoryLSTM
+from SAC.sac import SAC, SACANN, SACLSTM
+from simulation import Simulate_ANN, Simulate_LSTM
 import warmup  # noqa
 from tqdm import tqdm
 from statistics import mean
@@ -73,15 +73,7 @@ def main():
         env = gym.make(args.env_name)
         observation_shape = env.observation_space.shape[0]+1
 
-    if args.model == 'lsnn':
-        policy_memory = PolicyReplayMemoryLSNN(args.policy_replay_size, args.seed)
-        agent = SACLSNN(observation_shape, env.action_space.shape[0], args)
-        simulator = Simulate_LSNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters)
-    if args.model == 'snn':
-        policy_memory = PolicyReplayMemorySNN(args.policy_replay_size, args.seed)
-        agent = SACSNN(observation_shape, env.action_space.shape[0], args)
-        simulator = Simulate_SNN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters)
-    elif args.model == 'ann':
+    if args.model == 'ann':
         policy_memory = PolicyReplayMemoryANN(args.policy_replay_size, args.seed)
         agent = SACANN(observation_shape, env.action_space.shape[0], args)
         simulator = Simulate_ANN(env, agent, policy_memory, args.policy_batch_size, args.hidden_size, args.visualize, args.batch_iters)
@@ -105,7 +97,7 @@ def main():
     success_tracker = []
 
     ### BEGIN TRAINING LOOP
-    for i_episode in tqdm(range(1, args.total_episodes)):
+    for i_episode in range(1, args.total_episodes):
 
         episode_reward = 0
         episode_steps = 0
