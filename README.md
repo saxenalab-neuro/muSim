@@ -1,2 +1,2 @@
-# SNN-Neuromechanical-Simulation
-Training RSNNs to control musculoskeletal models using bio-plausible learning rules
+# Biomechanical-DRL
+Training LSTMs and ANNs to perform tasks with musculoskeletal models. Environments include human arms performing reaching and a monkey model performing cycling.
