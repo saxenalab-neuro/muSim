@@ -1,0 +1,26 @@
+### MUSCLE MODEL ###
+env_name = monkey
+muscle_path = monkey/monkeyArm_current_scaled.xml
+muscle_params_path = monkey/params_monkey.pckl
+
+### SAC TRAINING ###
+model = rnn
+gamma = 0.99
+tau = 0.005
+lr = 0.0003
+alpha = 0.20
+automatic_entropy_tuning = True
+seed = 123456
+policy_batch_size = 8
+hidden_size = 256
+policy_replay_size = 50000
+multi_policy_loss = True
+batch_iters = 1
+cuda = True
+visualize = True
+total_episodes = 1000000
+
+### SAVING ###
+model_save_name = monkey
+save_iter = 1000
+checkpoint_path = checkpoint/monkey.pth
