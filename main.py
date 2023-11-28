@@ -9,7 +9,7 @@ import gym
 import warmup  # noqa
 from tqdm import tqdm
 from statistics import mean
-from SAC.RL_Framework_Mujoco import Arm_Env
+from SAC.RL_Framework_Mujoco import Muscle_Env
 from itertools import count
 from simulate import Simulate
 import config
@@ -20,8 +20,9 @@ def main():
     parser = config.config_parser()
     args = parser.parse_args()
 
+    ### Training Object ###
     trainer = Simulate(
-        args.env_name,
+        Muscle_Env,
         args.model,
         args.gamma,
         args.tau,
@@ -44,10 +45,11 @@ def main():
         args.muscle_params_path
     )
 
+    ### TRAIN OR TEST ###
     if args.test == False:
         trainer.train()
     else:
-        trainer.test()
+        trainer.test(args.test_data_filename)
 
 if __name__ == '__main__':
     main()

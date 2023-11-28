@@ -10,7 +10,7 @@ import pickle
 
 class Simulate():
     def __init__(self, 
-                 env_name: str,
+                 env: str,
                  model: str,
                  gamma: float,
                  tau: float,
@@ -83,9 +83,8 @@ class Simulate():
         """
 
         ### Load Custom Gym Environment ###
-        if env_name == 'monkey':
-            self.env = Arm_Env(muscle_path, muscle_params_path, 5)
-            self.observation_shape = self.env.observation_space.shape[0]+3+3
+        self.env = env(muscle_path, muscle_params_path, 5)
+        self.observation_shape = self.env.observation_space.shape[0]+3+3
 
         ### Load SAC Agent ###
         self.agent = SAC_Agent(self.observation_shape, 
@@ -117,11 +116,11 @@ class Simulate():
         torch.manual_seed(seed)
         np.random.seed(seed)
 
-    def test(self):
+    def test(self, save_name):
 
         """ Use a saved model to generate kinematic trajectory
 
-            returns: 
+            saves these values: 
             --------
                 episode_reward: int
                     - Total reward of the trained model
@@ -130,6 +129,12 @@ class Simulate():
                 hidden_activity: list
                     - list containing the rnn activity during testing
         """
+
+        Test_Values = {
+            "hidden_act": [],
+            "kinematics": [],
+            "episode_reward": 0,
+        }
 
         episode_reward = 0
         episode_steps = 0
@@ -165,7 +170,14 @@ class Simulate():
             if done:
                 break
         
-        return episode_reward
+        # TODO get kinematics
+        Test_Values["hidden_act"] = hidden_activity
+        Test_Values["episode_reward"] = episode_reward
+        
+        with open(f'{save_name}.pkl', 'wb') as f:
+            pickle.dump(Test_Values, f)
+            print("Saved to %s" % f'{save_name}.pkl')
+            print('--------------------------\n')
 
     def train(self):
 
