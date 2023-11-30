@@ -1,11 +1,10 @@
 import os
 import torch
 import torch.nn.functional as F
-from torch.optim import Adam, AdamW, RMSprop, SGD
+from torch.optim import Adam
 from .utils1 import soft_update, hard_update
 from .model import Actor, Critic
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, pad_sequence
-from abc import ABC, abstractmethod
+from torch.nn.utils.rnn import pad_sequence
 import numpy as np
 from replay_memory import PolicyReplayMemory
 

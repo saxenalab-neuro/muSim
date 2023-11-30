@@ -1,11 +1,7 @@
-from itertools import count
 import numpy as np
 import torch
-import gym
 from SAC.sac import SAC_Agent
-from SAC.model import Actor, Critic
 from SAC.replay_memory import PolicyReplayMemory
-from SAC.RL_Framework_Mujoco import Arm_Env
 import pickle
 
 class Simulate():

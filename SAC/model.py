@@ -2,9 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Normal
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence, pad_sequence
-import numpy as np
-import snntorch as snn
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 LOG_SIG_MAX = 2
 LOG_SIG_MIN = -20

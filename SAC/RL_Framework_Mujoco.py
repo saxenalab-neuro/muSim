@@ -45,12 +45,6 @@ class MujocoEnv(gym.Env):
 
         self.frame_skip= frame_skip
         self.model = mujoco_py.load_model_from_path(model_path)
-        #optimize the model
-        #Optimize the model parameters
-        #with open(params_file_path, 'rb') as f:
-        #    out= pickle.load(f)
-
-        #out[0].set_values_to_model(self.model)
 
         self.sim= mujoco_py.MjSim(self.model)
         self.data= self.sim.data 
@@ -136,12 +130,6 @@ class MujocoEnv(gym.Env):
             'render.modes': ['human', 'rgb_array', 'depth_array'],
             'video.frames_per_second': int(np.round(1.0 / self.dt))
         }
-
-        # self.init_qpos= self.sim.data.qpos.ravel().copy()
-        # self.init_qvel= self.sim.data.qvel.ravel().copy()
-
-        # self.init_qpos= np.load('./init_qpos.npy')
-        # self.init_qvel= np.load('./init_qvel.npy')
 
         self.init_qpos= np.load('SAC/qpos_1.npy')
         self.init_qvel= np.load('SAC/qvel_1.npy')
@@ -276,7 +264,7 @@ class MujocoEnv(gym.Env):
         ])
 
 
-class Arm_Env(MujocoEnv, utils.EzPickle):
+class Muscle_Env(MujocoEnv, utils.EzPickle):
 
     def __init__(self, model_path, params_file_path, frame_skip):
         utils.EzPickle.__init__(self)

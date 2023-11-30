@@ -1,16 +1,4 @@
-import numpy as np
-import time
-import argparse
-import itertools
-import scipy.io
-import torch
-import matplotlib.pyplot as plt
-import gym
-import warmup  # noqa
-from tqdm import tqdm
-from statistics import mean
 from SAC.RL_Framework_Mujoco import Muscle_Env
-from itertools import count
 from simulate import Simulate
 import config
 

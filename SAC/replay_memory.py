@@ -2,7 +2,6 @@ import random
 import numpy as np
 from itertools import chain
 import torch
-import torch.nn.functional as F
 
 class PolicyReplayMemory:
     def __init__(self, capacity, seed):
