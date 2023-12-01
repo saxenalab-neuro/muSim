@@ -73,10 +73,19 @@ def config_parser():
                         default=False,
                         help='visualize mouse')
 
-    parser.add_argument('--model_save_name', 
+    parser.add_argument('--root_dir', 
                         type=str, 
                         default='',
-                        help='name used to save the model with')
+                        help='specify you root directory')
+
+    parser.add_argument('--checkpoint_file', 
+                        type=str, 
+                        default='',
+                        help='specify the name of the file in which you would like to save model weights/training params (do not add extension). Also saves statistics file in root of project folder with same name')
+
+    parser.add_argument('--checkpoint_folder', 
+                        type=str, 
+                        help='specify the name of the folder in which you would like to save the checkpoint file')
 
     parser.add_argument('--total_episodes', 
                         type=int, 
@@ -92,10 +101,6 @@ def config_parser():
                         type=bool, 
                         default=False, 
                         help='test a model')
-
-    parser.add_argument('--checkpoint_path', 
-                        type=str, 
-                        help='path of checkpoint training parameters')
 
     parser.add_argument('--muscle_path', 
                         type=str, 

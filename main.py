@@ -25,10 +25,11 @@ def main():
         args.batch_iters,
         args.cuda,
         args.visualize,
-        args.model_save_name,
+        args.root_dir,
+        args.checkpoint_file,
+        args.checkpoint_folder,
         args.total_episodes,
         args.save_iter,
-        args.checkpoint_path,
         args.muscle_path,
         args.muscle_params_path
     )

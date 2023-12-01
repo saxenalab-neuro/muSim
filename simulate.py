@@ -3,6 +3,7 @@ import torch
 from SAC.sac import SAC_Agent
 from SAC.replay_memory import PolicyReplayMemory
 import pickle
+import os
 
 class Simulate():
     def __init__(self, 
@@ -21,10 +22,11 @@ class Simulate():
                  batch_iters: int,
                  cuda: bool,
                  visualize: bool,
-                 model_save_name: str,
+                 root_dir: str,
+                 checkpoint_file: str,
+                 checkpoint_folder: str,
                  episodes: int,
                  save_iter: int,
-                 checkpoint_path: str,
                  muscle_path: str,
                  muscle_params_path: str):
 
@@ -103,9 +105,10 @@ class Simulate():
         self.hidden_size = hidden_size
         self.policy_batch_size = policy_batch_size
         self.visualize = visualize
-        self.model_save_name = model_save_name
+        self.root_dir = root_dir
+        self.checkpoint_file = checkpoint_file
+        self.checkpoint_folder = checkpoint_folder
         self.batch_iters = batch_iters
-        self.checkpoint_path = checkpoint_path
         self.save_iter = save_iter
 
         ### Set Seed for Training ###
@@ -212,7 +215,7 @@ class Simulate():
 
                 ### Select Action ###
                 with torch.no_grad():
-                    action, h_current, _, _ = self.agent.select_action(state, h_prev, evaluate=False)
+                    action, h_current, _ = self.agent.select_action(state, h_prev, evaluate=False)
 
                 ### Update Critic and Actor Parameters ###
                 if len(self.policy_memory.buffer) > self.policy_batch_size:
@@ -223,7 +226,7 @@ class Simulate():
                         critic1_loss_tracker.append(critic_1_loss)
 
                 ### SIMULATION ###
-                next_state, reward, done, info = self.env.step(action)
+                next_state, reward, done, _ = self.env.step(action)
                 episode_reward += reward
                 episode_steps += 1
 
@@ -258,7 +261,7 @@ class Simulate():
             Statistics["critic_loss"].append(np.mean(np.array(critic1_loss_tracker)))
 
             ### Save to File ###
-            with open(f'statistics_{self.model_save_name}.pkl', 'wb') as f:
+            with open(f'statistics_{self.checkpoint_file}.pkl', 'wb') as f:
                 pickle.dump(Statistics, f)
                 print("Saved to %s" % 'statistics.pkl')
                 print('--------------------------\n')
@@ -268,6 +271,7 @@ class Simulate():
                 highest_reward = episode_reward 
             
             ### SAVING STATE DICT OF TRAINING ###
+            f = os.path.join(self.root_dir, self.checkpoint_folder, self.checkpoint_file)
             if episode % self.save_iter == 0 and len(self.policy_memory.buffer) > self.policy_batch_size:
                 torch.save({
                     'iteration': episode,
@@ -276,7 +280,7 @@ class Simulate():
                     'critic_target_state_dict': self.agent.critic_target.state_dict(),
                     'agent_optimizer_state_dict': self.agent.actor_optim.state_dict(),
                     'critic_optimizer_state_dict': self.agent.critic_optim.state_dict(),
-                }, self.checkpoint_path + str(episode) + '.pth')
+                }, f + '.pth')
 
             ### PRINT TRAINING OUTPUT ###
             print('-----------------------------------')

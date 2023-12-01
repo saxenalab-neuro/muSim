@@ -51,6 +51,53 @@ class SAC_Agent():
             self.target_entropy = -torch.prod(torch.Tensor(action_space.shape).to(self.device)).item()
             self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
             self.alpha_optim = Adam([self.log_alpha], lr=lr)
+    
+    def _policy_loss_2(self, policy_state_batch, h0, len_seq, mask_seq):
+
+        # Sample the hidden weights of the RNN
+        J_rnn_w = self.actor.rnn.weight_hh_l0        #These weights would be of the size (hidden_dim, hidden_dim)
+
+        #Sample the output of the RNN for the policy_state_batch
+        rnn_out_r, _ = self.actor.forward_for_simple_dynamics(policy_state_batch, h0, sampling=False, len_seq=len_seq)
+        rnn_out_r = rnn_out_r.reshape(-1, rnn_out_r.size()[-1])[mask_seq]
+
+        #Reshape the policy hidden weights vector
+        J_rnn_w = J_rnn_w.unsqueeze(0).repeat(rnn_out_r.size()[0], 1, 1)
+        rnn_out_r = 1 - torch.pow(rnn_out_r, 2)
+
+        R_j = torch.mul(J_rnn_w, rnn_out_r.unsqueeze(-1))
+
+        policy_loss_2 = torch.norm(R_j)**2
+
+        return policy_loss_2
+    
+    def _policy_loss_3(self, policy_state_batch, h0, len_seq, mask_seq):
+
+        #Find the loss encouraging the minimization of the firing rates for the linear and the RNN layer
+        #Sample the output of the RNN for the policy_state_batch
+        rnn_out_r, linear_out = self.actor.forward_for_simple_dynamics(policy_state_batch, h0, sampling=False, len_seq=len_seq)
+        rnn_out_r = rnn_out_r.reshape(-1, rnn_out_r.size()[-1])[mask_seq]
+        linear_out = linear_out.reshape(-1, linear_out.size()[-1])[mask_seq]
+
+        policy_loss_3 = torch.norm(rnn_out_r)**2 + torch.norm(linear_out)**2
+
+        return policy_loss_3
+
+    def _policy_loss_4(self):
+
+        #Find the loss encouraging the minimization of the input and output weights of the RNN and the layers downstream
+        #and upstream of the RNN
+        #Sample the input weights of the RNN
+        J_rnn_i = self.actor.rnn.weight_ih_l0
+        J_in1 = self.actor.linear1.weight
+
+        #Sample the output weights
+        J_out1 = self.actor.mean_linear.weight
+        J_out2 = self.actor.log_std_linear.weight
+
+        policy_loss_4 = torch.norm(J_in1)**2 + torch.norm(J_rnn_i)**2 + torch.norm(J_out1)**2 + torch.norm(J_out2)**2
+
+        return policy_loss_4
 
     def select_action(self, state: np.ndarray, h_prev: torch.Tensor, evaluate=False) -> (np.ndarray, torch.Tensor, np.ndarray):
 
@@ -121,40 +168,9 @@ class SAC_Agent():
 
         if self.multi_policy_loss:
 
-            # Sample the hidden weights of the RNN
-            J_lstm_w = self.actor.lstm.weight_hh_l0        #These weights would be of the size (hidden_dim, hidden_dim)
-
-            #Sample the output of the RNN for the policy_state_batch
-            lstm_out_r, _ = self.actor.forward_for_simple_dynamics(policy_state_batch, h0, sampling=False, len_seq=len_seq)
-            lstm_out_r = lstm_out_r.reshape(-1, lstm_out_r.size()[-1])[mask_seq]
-
-            #Reshape the policy hidden weights vector
-            J_lstm_w = J_lstm_w.unsqueeze(0).repeat(lstm_out_r.size()[0], 1, 1)
-            lstm_out_r = 1 - torch.pow(lstm_out_r, 2)
-
-            R_j = torch.mul(J_lstm_w, lstm_out_r.unsqueeze(-1))
-
-            policy_loss_2 = torch.norm(R_j)**2
-
-            #Find the loss encouraging the minimization of the firing rates for the linear and the RNN layer
-            #Sample the output of the RNN for the policy_state_batch
-            lstm_out_r, linear_out = self.actor.forward_for_simple_dynamics(policy_state_batch, h0, sampling=False, len_seq= len_seq)
-            lstm_out_r = lstm_out_r.reshape(-1, lstm_out_r.size()[-1])[mask_seq]
-            linear_out = linear_out.reshape(-1, linear_out.size()[-1])[mask_seq]
-
-            policy_loss_3 = torch.norm(lstm_out_r)**2 + torch.norm(linear_out)**2
-
-            #Find the loss encouraging the minimization of the input and output weights of the RNN and the layers downstream
-            #and upstream of the RNN
-            #Sample the input weights of the RNN
-            J_lstm_i = self.actor.lstm.weight_ih_l0
-            J_in1 = self.actor.linear1.weight
-
-            #Sample the output weights
-            J_out1 = self.actor.mean_linear.weight
-            J_out2 = self.actor.log_std_linear.weight
-
-            policy_loss_4 = torch.norm(J_in1)**2 + torch.norm(J_lstm_i)**2 + torch.norm(J_out1)**2 + torch.norm(J_out2)**2
+            policy_loss_2 = self._policy_loss_2(policy_state_batch, h0, len_seq, mask_seq)
+            policy_loss_3 = self._policy_loss_3(policy_state_batch, h0, len_seq, mask_seq)
+            policy_loss_4 = self._policy_loss_4(policy_state_batch, h0, len_seq, mask_seq)
 
             ### CALCULATE FINAL POLICY LOSS ###
             policy_loss += (0.1*(policy_loss_2)) + (0.01*(policy_loss_3)) + (0.001*(policy_loss_4))

@@ -21,9 +21,9 @@ class Actor(nn.Module):
         self.linear1 = nn.Linear(num_inputs, hidden_dim)
 
         if model == "rnn":
-            self.lstm = nn.RNN(hidden_dim, hidden_dim, batch_first=True)
+            self.rnn = nn.RNN(hidden_dim, hidden_dim, batch_first=True)
         elif model == "gru":
-            self.lstm = nn.GRU(hidden_dim, hidden_dim, batch_first=True)
+            self.rnn = nn.GRU(hidden_dim, hidden_dim, batch_first=True)
         else:
             raise NotImplementedError
 
@@ -51,7 +51,7 @@ class Actor(nn.Module):
             assert len_seq!=None, "Proved the len_seq"
             x = pack_padded_sequence(x, len_seq, batch_first= True, enforce_sorted= False)
 
-        x, (h_current) = self.lstm(x, (h_prev))
+        x, (h_current) = self.rnn(x, (h_prev))
 
         if sampling == False:
            x, _ = pad_packed_sequence(x, batch_first= True)
@@ -119,7 +119,7 @@ class Actor(nn.Module):
             assert len_seq!=None, "Proved the len_seq"
             x = pack_padded_sequence(x, len_seq, batch_first= True, enforce_sorted= False)
 
-        x, _ = self.lstm(x, (h_prev))
+        x, _ = self.rnn(x, (h_prev))
 
         if sampling == False:
            x, _ = pad_packed_sequence(x, batch_first= True)
