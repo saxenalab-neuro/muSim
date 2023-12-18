@@ -170,7 +170,7 @@ class SAC_Agent():
 
             policy_loss_2 = self._policy_loss_2(policy_state_batch, h0, len_seq, mask_seq)
             policy_loss_3 = self._policy_loss_3(policy_state_batch, h0, len_seq, mask_seq)
-            policy_loss_4 = self._policy_loss_4(policy_state_batch, h0, len_seq, mask_seq)
+            policy_loss_4 = self._policy_loss_4()
 
             ### CALCULATE FINAL POLICY LOSS ###
             policy_loss += (0.1*(policy_loss_2)) + (0.01*(policy_loss_3)) + (0.001*(policy_loss_4))

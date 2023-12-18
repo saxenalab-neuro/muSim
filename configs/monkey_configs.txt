@@ -1,5 +1,4 @@
 ### MUSCLE MODEL ###
-env_name = monkey
 muscle_path = monkey/monkeyArm_current_scaled.xml
 muscle_params_path = monkey/params_monkey.pckl
 
@@ -17,10 +16,8 @@ policy_replay_size = 50000
 multi_policy_loss = True
 batch_iters = 1
 cuda = True
-visualize = True
 total_episodes = 1000000
 
 ### SAVING ###
-model_save_name = monkey
 save_iter = 1000
 checkpoint_path = checkpoint/monkey.pth
