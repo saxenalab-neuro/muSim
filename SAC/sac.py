@@ -52,6 +52,7 @@ class SAC_Agent():
             self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
             self.alpha_optim = Adam([self.log_alpha], lr=lr)
     
+    #This loss encourages the simple low-dimensional dynamics in the RNN activity
     def _policy_loss_2(self, policy_state_batch, h0, len_seq, mask_seq):
 
         # Sample the hidden weights of the RNN
@@ -71,6 +72,7 @@ class SAC_Agent():
 
         return policy_loss_2
     
+    #This loss encourages the minimization of the firing rates for the linear and the RNN layer.
     def _policy_loss_3(self, policy_state_batch, h0, len_seq, mask_seq):
 
         #Find the loss encouraging the minimization of the firing rates for the linear and the RNN layer
@@ -83,6 +85,8 @@ class SAC_Agent():
 
         return policy_loss_3
 
+    #This loss encourages the minimization of the input and output weights of the RNN and the layers downstream/
+    #upstream of the RNN. 
     def _policy_loss_4(self):
 
         #Find the loss encouraging the minimization of the input and output weights of the RNN and the layers downstream
@@ -160,7 +164,8 @@ class SAC_Agent():
         min_qf_pi = torch.min(qf1_pi, qf2_pi)
 
         ### CALCULATE POLICY LOSS ###
-        policy_loss = ((self.alpha * log_prob_bat) - min_qf_pi).mean() # Jπ = 𝔼st∼D,εt∼N[α * logπ(f(εt;st)|st) − Q(st,f(εt;st))]
+        task_loss = ((self.alpha * log_prob_bat) - min_qf_pi).mean() # Jπ = 𝔼st∼D,εt∼N[α * logπ(f(εt;st)|st) − Q(st,f(εt;st))]
+        policy_loss = task_loss
 
         ############################
         # ADDITIONAL POLICY LOSSES #
@@ -168,12 +173,12 @@ class SAC_Agent():
 
         if self.multi_policy_loss:
 
-            policy_loss_2 = self._policy_loss_2(policy_state_batch, h0, len_seq, mask_seq)
-            policy_loss_3 = self._policy_loss_3(policy_state_batch, h0, len_seq, mask_seq)
-            policy_loss_4 = self._policy_loss_4()
+            loss_simple_dynamics = self._policy_loss_2(policy_state_batch, h0, len_seq, mask_seq)
+            loss_activations_min = self._policy_loss_3(policy_state_batch, h0, len_seq, mask_seq)
+            loss_weights_min = self._policy_loss_4()
 
             ### CALCULATE FINAL POLICY LOSS ###
-            policy_loss += (0.1*(policy_loss_2)) + (0.01*(policy_loss_3)) + (0.001*(policy_loss_4))
+            policy_loss += (0.1*(loss_simple_dynamics)) + (0.01*(loss_activations_min)) + (0.001*(loss_weights_min))
 
         ### TAKE GRADIENT STEP ###
         self.actor_optim.zero_grad()
