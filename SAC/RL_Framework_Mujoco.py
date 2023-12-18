@@ -41,36 +41,50 @@ def convert_observation_to_space(observation):
 class MujocoEnv(gym.Env):
     """Superclass for all MuJoCo environments.
     """
-    def __init__(self, model_path, params_file_path, frame_skip):
+    def __init__(self, model_path, params_file_path, frame_skip, n_exp_conds):
 
         self.frame_skip= frame_skip
+        self.n_exp_conds = n_exp_conds
         self.model = mujoco_py.load_model_from_path(model_path)
 
         self.sim= mujoco_py.MjSim(self.model)
         self.data= self.sim.data 
 
+        #Load the experimental kinematics x and y coordinates from the data
+        #Load the kinematics (x and y from the data)
+        n_exp_conds = n_exp_conds
+
+        x_coord_cond_cum = [] 
+        y_coord_cond_cum = [] 
+        for i_condition in range(n_exp_conds):
+            x_coord_c = np.load(f'{data_path}/x_coord_{i_condition+1}.npy')
+            y_coord_c = np.load(f'{data_path}/y_coord_{i_condition+1}.npy')
+
+            x_coord_cond_cum.append(x_coord_c)
+            y_coord_cond_cum.append(y_coord_c)
+
         #Load the kinematics (x and y coordinates from the data)
-        x_coord_1319 = np.load(f'{data_path}/x_coord_1319.npy')
-        y_coord_1319 = np.load(f'{data_path}/y_coord_1319.npy')
+        # x_coord_1319 = np.load(f'{data_path}/x_coord_1319.npy')
+        # y_coord_1319 = np.load(f'{data_path}/y_coord_1319.npy')
 
-        x_coord_1106 = np.load(f'{data_path}/x_coord_1106.npy')
-        y_coord_1106 = np.load(f'{data_path}/y_coord_1106.npy')
+        # x_coord_1106 = np.load(f'{data_path}/x_coord_1106.npy')
+        # y_coord_1106 = np.load(f'{data_path}/y_coord_1106.npy')
 
-        x_coord_932 = np.load(f'{data_path}/x_coord_932.npy')
-        y_coord_932 = np.load(f'{data_path}/y_coord_932.npy')
+        # x_coord_932 = np.load(f'{data_path}/x_coord_932.npy')
+        # y_coord_932 = np.load(f'{data_path}/y_coord_932.npy')
 
-        x_coord_803 = np.load(f'{data_path}/x_coord_803.npy')
-        y_coord_803 = np.load(f'{data_path}/y_coord_803.npy')
+        # x_coord_803 = np.load(f'{data_path}/x_coord_803.npy')
+        # y_coord_803 = np.load(f'{data_path}/y_coord_803.npy')
 
-        x_coord_702 = np.load(f'{data_path}/x_coord_702.npy')
-        y_coord_702 = np.load(f'{data_path}/y_coord_702.npy')
+        # x_coord_702 = np.load(f'{data_path}/x_coord_702.npy')
+        # y_coord_702 = np.load(f'{data_path}/y_coord_702.npy')
 
-        x_coord_619 = np.load(f'{data_path}/x_coord_619.npy')
-        y_coord_619 = np.load(f'{data_path}/y_coord_619.npy')
+        # x_coord_619 = np.load(f'{data_path}/x_coord_619.npy')
+        # y_coord_619 = np.load(f'{data_path}/y_coord_619.npy')
 
         #Meta parameters for the simulation
         self.n_fixedsteps= 5
-        self.timestep_limit= (619 * 1) + self.n_fixedsteps
+        self.timestep_limit= (1319 * 1) + self.n_fixedsteps
         # self._max_episode_steps= self.timestep_limit/ 2
         self._max_episode_steps= (619 * 1) + self.n_fixedsteps   #Do not matter. It is being set in the main.py where the total number of steps are being changed.
         self.radius= 0.038   #0.075
@@ -84,44 +98,54 @@ class MujocoEnv(gym.Env):
 
         #Now change the x_coord and y_coord matrices to adjust for the self.radius and self.center
         d_radius = 1/self.radius
-        x_coord_1319 = x_coord_1319/d_radius
-        y_coord_1319 = y_coord_1319/d_radius 
+        for i_cond in range(n_exp_conds):
+            x_coord_cond_cum[i_cond] = (x_coord_cond_cum[i_cond] / d_radius) + self.center[0]
+            y_coord_cond_cum[i_cond] = (y_coord_cond_cum[i_cond] / d_radius) + self.center[0]
 
-        x_coord_1106 = x_coord_1106/d_radius
-        y_coord_1106 = y_coord_1106/d_radius 
 
-        x_coord_932 = x_coord_932/d_radius
-        y_coord_932 = y_coord_932/d_radius 
+        # #Now change the x_coord and y_coord matrices to adjust for the self.radius and self.center
+        # d_radius = 1/self.radius
+        # x_coord_1319 = x_coord_1319/d_radius
+        # y_coord_1319 = y_coord_1319/d_radius 
 
-        x_coord_803 = x_coord_803/d_radius
-        y_coord_803 = y_coord_803/d_radius 
+        # x_coord_1106 = x_coord_1106/d_radius
+        # y_coord_1106 = y_coord_1106/d_radius 
 
-        x_coord_702 = x_coord_702/d_radius
-        y_coord_702 = y_coord_702/d_radius 
+        # x_coord_932 = x_coord_932/d_radius
+        # y_coord_932 = y_coord_932/d_radius 
 
-        x_coord_619 = x_coord_619/d_radius
-        y_coord_619 = y_coord_619/d_radius 
+        # x_coord_803 = x_coord_803/d_radius
+        # y_coord_803 = y_coord_803/d_radius 
 
-        self.x_coord_1319 = x_coord_1319 + self.center[0]
-        self.y_coord_1319 = y_coord_1319 + self.center[1]
+        # x_coord_702 = x_coord_702/d_radius
+        # y_coord_702 = y_coord_702/d_radius 
 
-        self.x_coord_1106 = x_coord_1106 + self.center[0]
-        self.y_coord_1106 = y_coord_1106 + self.center[1]
+        # x_coord_619 = x_coord_619/d_radius
+        # y_coord_619 = y_coord_619/d_radius 
 
-        self.x_coord_932 = x_coord_932 + self.center[0]
-        self.y_coord_932 = y_coord_932 + self.center[1]
+        # self.x_coord_1319 = x_coord_1319 + self.center[0]
+        # self.y_coord_1319 = y_coord_1319 + self.center[1]
 
-        self.x_coord_803 = x_coord_803 + self.center[0]
-        self.y_coord_803 = y_coord_803 + self.center[1]
+        # self.x_coord_1106 = x_coord_1106 + self.center[0]
+        # self.y_coord_1106 = y_coord_1106 + self.center[1]
 
-        self.x_coord_702 = x_coord_702 + self.center[0]
-        self.y_coord_702 = y_coord_702 + self.center[1]
+        # self.x_coord_932 = x_coord_932 + self.center[0]
+        # self.y_coord_932 = y_coord_932 + self.center[1]
 
-        self.x_coord_619 = x_coord_619 + self.center[0]
-        self.y_coord_619 = y_coord_619 + self.center[1]
+        # self.x_coord_803 = x_coord_803 + self.center[0]
+        # self.y_coord_803 = y_coord_803 + self.center[1]
 
-        self.x_coord = self.x_coord_619
-        self.y_coord = self.y_coord_619
+        # self.x_coord_702 = x_coord_702 + self.center[0]
+        # self.y_coord_702 = y_coord_702 + self.center[1]
+
+        # self.x_coord_619 = x_coord_619 + self.center[0]
+        # self.y_coord_619 = y_coord_619 + self.center[1]
+
+        self.x_coord_cond_cum = x_coord_cond_cum
+        self.y_coord_cond_cum = y_coord_cond_cum
+
+        self.x_coord = self.x_coord_cond_cum[0]
+        self.y_coord = self.y_coord_cond_cum[0]
 
         self.viewer= None 
         self._viewers= {}
@@ -174,7 +198,13 @@ class MujocoEnv(gym.Env):
 
     # -----------------------------
 
-    def reset(self):
+    def reset(self, i_episode):
+
+        #Set the experimental condition for training
+        cond_to_select = i_episode % self.n_exp_conds
+        self.x_coord = self.x_coord_cond_cum[cond_to_select]
+        self.y_coord = self.y_coord_cond_cum[cond_to_select]
+
         self.istep= 0
         self.theta= np.pi
         self.threshold= self.threshold_user
@@ -266,9 +296,9 @@ class MujocoEnv(gym.Env):
 
 class Muscle_Env(MujocoEnv, utils.EzPickle):
 
-    def __init__(self, model_path, params_file_path, frame_skip):
+    def __init__(self, model_path, params_file_path, frame_skip, n_exp_conds):
         utils.EzPickle.__init__(self)
-        MujocoEnv.__init__(self, model_path, params_file_path, frame_skip)
+        MujocoEnv.__init__(self, model_path, params_file_path, frame_skip, n_exp_conds)
 
     def get_cost(self, action):
         scaler= 1/50

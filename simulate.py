@@ -81,7 +81,7 @@ class Simulate():
         """
 
         ### Load Custom Gym Environment ###
-        self.env = env(muscle_path, muscle_params_path, 5)
+        self.env = env(muscle_path, muscle_params_path, 1, 6)
         self.observation_shape = self.env.observation_space.shape[0]+3+3
 
         ### Load SAC Agent ###
@@ -141,7 +141,7 @@ class Simulate():
         done = False
 
         ### GET INITAL STATE + RESET MODEL BY POSE
-        state = self.env.reset()
+        state = self.env.reset(episode)
 
         #num_layers specified in the policy model 
         h_prev = torch.zeros(size=(1, 1, self.hidden_size))
@@ -204,7 +204,7 @@ class Simulate():
             done = False                # determines if episode is terminated
 
             ### GET INITAL STATE + RESET MODEL BY POSE
-            state = self.env.reset()
+            state = self.env.reset(episode)
 
             ep_trajectory = []  # used to store (s_t, a_t, r_t, s_t+1) tuple for replay storage
 
