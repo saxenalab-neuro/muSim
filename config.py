@@ -112,6 +112,11 @@ def config_parser():
                         default='monkey/params_monkey.pckl',
                         help='path of musculoskeletal model parameters')
 
+    parser.add_argument('--kinematics_path', 
+                        type=str, 
+                        default='monkey/monkey_data_xycoord',
+                        help='path to kinematics data')
+
     parser.add_argument('--test_data_filename', 
                         type=str, 
                         default='',

@@ -1,6 +1,7 @@
 ### MUSCLE MODEL ###
 muscle_path = monkey/monkeyArm_current_scaled.xml
 muscle_params_path = monkey/params_monkey.pckl
+kinematics_path = monkey/monkey_data_xycoord
 
 ### SAC TRAINING ###
 model = rnn
@@ -15,9 +16,10 @@ hidden_size = 256
 policy_replay_size = 50000
 multi_policy_loss = True
 batch_iters = 1
-cuda = True
 total_episodes = 1000000
 
 ### SAVING ###
 save_iter = 1000
-checkpoint_path = checkpoint/monkey.pth
+root_dir = ""
+checkpoint_folder = ""
+checkpoint_file = ""

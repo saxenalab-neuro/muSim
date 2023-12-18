@@ -10,9 +10,9 @@ import pickle
 
 import numpy as np
 from gym import utils
-from . import Utils
+from . import utils
 
-from .Utils import load_data, set_parameters
+from .utils import load_data, set_parameters
 
 try:
     import mujoco_py
@@ -20,8 +20,6 @@ except ImportError as e:
     raise error.DependencyNotInstalled("{}. (HINT: you need to install mujoco_py, and also perform the setup instructions here: https://github.com/openai/mujoco-py/.)".format(e))
 
 DEFAULT_SIZE = 500
-
-data_path = 'monkey/monkey_data_xycoord'
 
 def convert_observation_to_space(observation):
     if isinstance(observation, dict):
@@ -41,17 +39,17 @@ def convert_observation_to_space(observation):
 class MujocoEnv(gym.Env):
     """Superclass for all MuJoCo environments.
     """
-    def __init__(self, model_path, params_file_path, frame_skip, n_exp_conds):
+    def __init__(self, model_path, params_file_path, frame_skip, n_exp_conds, data_path):
 
-        self.frame_skip= frame_skip
+        self.frame_skip = frame_skip
         self.n_exp_conds = n_exp_conds
         self.model = mujoco_py.load_model_from_path(model_path)
 
-        self.sim= mujoco_py.MjSim(self.model)
-        self.data= self.sim.data 
+        self.sim = mujoco_py.MjSim(self.model)
+        self.data = self.sim.data 
 
-        #Load the experimental kinematics x and y coordinates from the data
-        #Load the kinematics (x and y from the data)
+        # Load the experimental kinematics x and y coordinates from the data
+        # Load the kinematics (x and y from the data)
         n_exp_conds = n_exp_conds
 
         x_coord_cond_cum = [] 
@@ -59,42 +57,19 @@ class MujocoEnv(gym.Env):
         for i_condition in range(n_exp_conds):
             x_coord_c = np.load(f'{data_path}/x_coord_{i_condition+1}.npy')
             y_coord_c = np.load(f'{data_path}/y_coord_{i_condition+1}.npy')
-
             x_coord_cond_cum.append(x_coord_c)
             y_coord_cond_cum.append(y_coord_c)
 
-        #Load the kinematics (x and y coordinates from the data)
-        # x_coord_1319 = np.load(f'{data_path}/x_coord_1319.npy')
-        # y_coord_1319 = np.load(f'{data_path}/y_coord_1319.npy')
-
-        # x_coord_1106 = np.load(f'{data_path}/x_coord_1106.npy')
-        # y_coord_1106 = np.load(f'{data_path}/y_coord_1106.npy')
-
-        # x_coord_932 = np.load(f'{data_path}/x_coord_932.npy')
-        # y_coord_932 = np.load(f'{data_path}/y_coord_932.npy')
-
-        # x_coord_803 = np.load(f'{data_path}/x_coord_803.npy')
-        # y_coord_803 = np.load(f'{data_path}/y_coord_803.npy')
-
-        # x_coord_702 = np.load(f'{data_path}/x_coord_702.npy')
-        # y_coord_702 = np.load(f'{data_path}/y_coord_702.npy')
-
-        # x_coord_619 = np.load(f'{data_path}/x_coord_619.npy')
-        # y_coord_619 = np.load(f'{data_path}/y_coord_619.npy')
-
         #Meta parameters for the simulation
-        self.n_fixedsteps= 5
-        self.timestep_limit= (1319 * 1) + self.n_fixedsteps
-        # self._max_episode_steps= self.timestep_limit/ 2
-        self._max_episode_steps= (619 * 1) + self.n_fixedsteps   #Do not matter. It is being set in the main.py where the total number of steps are being changed.
-        self.radius= 0.038   #0.075
-        self.theta= np.pi
-        self.center= [0.06, 0.083]
+        self.n_fixedsteps = 5
+        self.timestep_limit = (1319 * 1) + self.n_fixedsteps
+        self._max_episode_steps = (619 * 1) + self.n_fixedsteps   #Do not matter. It is being set in the main.py where the total number of steps are being changed.
+        self.radius = 0.038   #0.075
+        self.theta = np.pi
+        self.center = [0.06, 0.083]
 
         #The threshold is varied dynamically in the step and reset functions 
-        self.threshold_user= 0.064   #Previously it was 0.1
-        # self.threshold_user= 10.0 
-
+        self.threshold_user = 0.064   #Previously it was 0.1
 
         #Now change the x_coord and y_coord matrices to adjust for the self.radius and self.center
         d_radius = 1/self.radius
@@ -102,61 +77,22 @@ class MujocoEnv(gym.Env):
             x_coord_cond_cum[i_cond] = (x_coord_cond_cum[i_cond] / d_radius) + self.center[0]
             y_coord_cond_cum[i_cond] = (y_coord_cond_cum[i_cond] / d_radius) + self.center[0]
 
-
-        # #Now change the x_coord and y_coord matrices to adjust for the self.radius and self.center
-        # d_radius = 1/self.radius
-        # x_coord_1319 = x_coord_1319/d_radius
-        # y_coord_1319 = y_coord_1319/d_radius 
-
-        # x_coord_1106 = x_coord_1106/d_radius
-        # y_coord_1106 = y_coord_1106/d_radius 
-
-        # x_coord_932 = x_coord_932/d_radius
-        # y_coord_932 = y_coord_932/d_radius 
-
-        # x_coord_803 = x_coord_803/d_radius
-        # y_coord_803 = y_coord_803/d_radius 
-
-        # x_coord_702 = x_coord_702/d_radius
-        # y_coord_702 = y_coord_702/d_radius 
-
-        # x_coord_619 = x_coord_619/d_radius
-        # y_coord_619 = y_coord_619/d_radius 
-
-        # self.x_coord_1319 = x_coord_1319 + self.center[0]
-        # self.y_coord_1319 = y_coord_1319 + self.center[1]
-
-        # self.x_coord_1106 = x_coord_1106 + self.center[0]
-        # self.y_coord_1106 = y_coord_1106 + self.center[1]
-
-        # self.x_coord_932 = x_coord_932 + self.center[0]
-        # self.y_coord_932 = y_coord_932 + self.center[1]
-
-        # self.x_coord_803 = x_coord_803 + self.center[0]
-        # self.y_coord_803 = y_coord_803 + self.center[1]
-
-        # self.x_coord_702 = x_coord_702 + self.center[0]
-        # self.y_coord_702 = y_coord_702 + self.center[1]
-
-        # self.x_coord_619 = x_coord_619 + self.center[0]
-        # self.y_coord_619 = y_coord_619 + self.center[1]
-
         self.x_coord_cond_cum = x_coord_cond_cum
         self.y_coord_cond_cum = y_coord_cond_cum
 
         self.x_coord = self.x_coord_cond_cum[0]
         self.y_coord = self.y_coord_cond_cum[0]
 
-        self.viewer= None 
-        self._viewers= {}
+        self.viewer = None 
+        self._viewers = {}
 
         self.metadata = {
             'render.modes': ['human', 'rgb_array', 'depth_array'],
             'video.frames_per_second': int(np.round(1.0 / self.dt))
         }
 
-        self.init_qpos= np.load('SAC/qpos_1.npy')
-        self.init_qvel= np.load('SAC/qvel_1.npy')
+        self.init_qpos = np.load('SAC/qpos_1.npy')
+        self.init_qvel = np.load('SAC/qvel_1.npy')
 
         self._set_action_space()
         
@@ -294,11 +230,10 @@ class MujocoEnv(gym.Env):
         ])
 
 
-class Muscle_Env(MujocoEnv, utils.EzPickle):
+class Muscle_Env(MujocoEnv):
 
-    def __init__(self, model_path, params_file_path, frame_skip, n_exp_conds):
-        utils.EzPickle.__init__(self)
-        MujocoEnv.__init__(self, model_path, params_file_path, frame_skip, n_exp_conds)
+    def __init__(self, model_path, params_file_path, frame_skip, n_exp_conds, data_path):
+        MujocoEnv.__init__(self, model_path, params_file_path, frame_skip, n_exp_conds, data_path)
 
     def get_cost(self, action):
         scaler= 1/50
@@ -340,7 +275,6 @@ class Muscle_Env(MujocoEnv, utils.EzPickle):
                 return False
         else:
             return True
-
 
     def step(self, action):
         self.istep += 1
@@ -414,17 +348,12 @@ class Muscle_Env(MujocoEnv, utils.EzPickle):
                 target_x = self.x_coord[int(((self.x_coord.shape[0]-1)/(self._max_episode_steps-self.n_fixedsteps)) * (self.istep - self.n_fixedsteps))]
                 target_y = self.y_coord[int(((self.y_coord.shape[0]-1)/(self._max_episode_steps-self.n_fixedsteps)) * (self.istep - self.n_fixedsteps))]
         else:
-            # target_x = self.x_coord[int(((self.x_coord.shape[0]-1)/(self._max_episode_steps)) * (self.istep % self._max_episode_steps))]
-            # target_y = self.y_coord[int(((self.y_coord.shape[0]-1)/(self._max_episode_steps)) * (self.istep % self._max_episode_steps))]
             target_x = self.x_coord[int(((self.x_coord.shape[0]-1)/(self._max_episode_steps-self.n_fixedsteps)) * ((self.istep - self.n_fixedsteps) % (self._max_episode_steps - self.n_fixedsteps)))]
             target_y = self.y_coord[int(((self.y_coord.shape[0]-1)/(self._max_episode_steps-self.n_fixedsteps)) * ((self.istep - self.n_fixedsteps) % (self._max_episode_steps - self.n_fixedsteps)))]
 
 
         x_joint_i= self.model.get_joint_qpos_addr("box:x")
         y_joint_i= self.model.get_joint_qpos_addr("box:y")
-
-        # target_x = (0.5*self.radius* np.cos(self.theta)) + self.center[0]
-        # target_y = self.radius* -np.sin(self.theta) + self.center[1]
 
         crnt_state= self.sim.get_state()
 

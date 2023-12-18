@@ -2,7 +2,7 @@ import os
 import torch
 import torch.nn.functional as F
 from torch.optim import Adam
-from .utils1 import soft_update, hard_update
+from .utils import soft_update, hard_update
 from .model import Actor, Critic
 from torch.nn.utils.rnn import pad_sequence
 import numpy as np

@@ -4,11 +4,20 @@ import config
 
 def main():
 
+    """ Train an agent to control a musculoskeletal system using DRL and RNNs
+        ---------------------------------------------------------------------
+    * Simulate object runs training
+    * Specify whether testing or not in config file, along with the preferred file to save testing statistics
+    * To ensure model is saved properly, specify your preferred directories for storing state_dict
+    * A list of possible commands with their functions is given in the config.py file as well as the simulate.py file
+    * Specify kinematics by choosing kinematics_path in config file, monkey data is currently provided by default
+    """
+
     ### PARAMETERS ###
     parser = config.config_parser()
     args = parser.parse_args()
 
-    ### Training Object ###
+    ### TRAINING OBJECT ###
     trainer = Simulate(
         Muscle_Env,
         args.model,
@@ -31,7 +40,8 @@ def main():
         args.total_episodes,
         args.save_iter,
         args.muscle_path,
-        args.muscle_params_path
+        args.muscle_params_path,
+        args.kinematics_path
     )
 
     ### TRAIN OR TEST ###

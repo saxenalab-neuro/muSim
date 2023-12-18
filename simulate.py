@@ -2,12 +2,13 @@ import numpy as np
 import torch
 from SAC.sac import SAC_Agent
 from SAC.replay_memory import PolicyReplayMemory
+from SAC.RL_Framework_Mujoco import Muscle_Env
 import pickle
 import os
 
 class Simulate():
     def __init__(self, 
-                 env: str,
+                 env: Muscle_Env,
                  model: str,
                  gamma: float,
                  tau: float,
@@ -28,7 +29,8 @@ class Simulate():
                  episodes: int,
                  save_iter: int,
                  muscle_path: str,
-                 muscle_params_path: str):
+                 muscle_params_path: str,
+                 kinematics_path: str):
 
         """Train a soft actor critic agent to control a musculoskeletal model to follow a kinematic trajectory.
 
@@ -80,11 +82,11 @@ class Simulate():
             path for musculoskeletal model parameters
         """
 
-        ### Load Custom Gym Environment ###
-        self.env = env(muscle_path, muscle_params_path, 1, 6)
+        ### LOAD CUSTOM GYM ENVIRONMENT ###
+        self.env = env(muscle_path, muscle_params_path, 1, 6, kinematics_path)
         self.observation_shape = self.env.observation_space.shape[0]+3+3
 
-        ### Load SAC Agent ###
+        ### SAC AGENT ###
         self.agent = SAC_Agent(self.observation_shape, 
                                self.env.action_space, 
                                hidden_size, 
@@ -97,10 +99,10 @@ class Simulate():
                                multi_policy_loss,
                                cuda)
 
-        ### Load Replay Memory ###
+        ### REPLAY MEMORY ###
         self.policy_memory = PolicyReplayMemory(policy_replay_size, seed)
 
-        ### Specify Training Variables ###
+        ### TRAINING VARIABLES ###
         self.episodes = episodes
         self.hidden_size = hidden_size
         self.policy_batch_size = policy_batch_size
@@ -111,7 +113,12 @@ class Simulate():
         self.batch_iters = batch_iters
         self.save_iter = save_iter
 
-        ### Set Seed for Training ###
+        ### ENSURE SAVING FILES ARE ACCURATE ###
+        assert isinstance(self.root_dir, str)
+        assert isinstance(self.checkpoint_folder, str)
+        assert isinstance(self.checkpoint_file, str)
+
+        ### SEED ###
         torch.manual_seed(seed)
         np.random.seed(seed)
 
@@ -129,12 +136,18 @@ class Simulate():
                     - list containing the rnn activity during testing
         """
 
+        ### LOAD SAVED MODEL ###
+        f = os.path.join(self.root_dir, self.checkpoint_folder, self.checkpoint_file)
+        self.agent.actor.load_state_dict(torch.load(f))
+
+        ### TESTING PERFORMANCE ###
         Test_Values = {
             "hidden_act": [],
             "kinematics": [],
             "episode_reward": 0,
         }
 
+        ### TRACKING VARIABLES ###
         episode_reward = 0
         episode_steps = 0
         hidden_activity = []
@@ -143,13 +156,13 @@ class Simulate():
         ### GET INITAL STATE + RESET MODEL BY POSE
         state = self.env.reset(episode)
 
-        #num_layers specified in the policy model 
+        # Num_layers specified in the policy model 
         h_prev = torch.zeros(size=(1, 1, self.hidden_size))
 
         ### STEPS PER EPISODE ###
         for timestep in range(self.env._max_episode_steps):
 
-            ### Select Action ###
+            ### SELECT ACTION ###
             with torch.no_grad():
                 action, h_current, rnn_act = self.agent.select_action(state, h_prev, evaluate=True)
                 hidden_activity.append(rnn_act)
@@ -183,7 +196,7 @@ class Simulate():
         """ Train an RNN based SAC agent to follow kinematic trajectory
         """
 
-        ### Dictionary for Storing Training Data ###
+        ### TRAINING DATA DICTIONARY ###
         Statistics = {
             "rewards": [],
             "steps": [],
@@ -193,7 +206,7 @@ class Simulate():
 
         highest_reward = -float("inf") # used for storing highest reward throughout training
 
-        ### Start Training ###
+        ### BEGIN TRAINING ###
         for episode in range(self.episodes):
 
             ### Gather Episode Data Variables ###
@@ -210,18 +223,18 @@ class Simulate():
 
             h_prev = torch.zeros(size=(1, 1, self.hidden_size)) # num_layers specified in the policy model
 
-            ### Loop Through Episode Timesteps ###
+            ### LOOP THROUGH EPISODE TIMESTEPS ###
             for t in range(self.env._max_episode_steps):
 
-                ### Select Action ###
+                ### SELECT ACTION ###
                 with torch.no_grad():
                     action, h_current, _ = self.agent.select_action(state, h_prev, evaluate=False)
 
-                ### Update Critic and Actor Parameters ###
+                ### UPDATE MODEL PARAMETERS ###
                 if len(self.policy_memory.buffer) > self.policy_batch_size:
                     for _ in range(self.batch_iters):
                         critic_1_loss, critic_2_loss, policy_loss = self.agent.update_parameters(self.policy_memory, self.policy_batch_size)
-                        ### Store Losses ###
+                        ### STORE LOSSES ###
                         policy_loss_tracker.append(policy_loss)
                         critic1_loss_tracker.append(critic_1_loss)
 
@@ -236,14 +249,14 @@ class Simulate():
 
                 mask = 1 if episode_steps == self.env._max_episode_steps else float(not done) # ensure mask is not 0 if episode ends
 
-                ### Store Tuple at Current Timestep ###
+                ### STORE CURRENT TIMESTEP TUPLE ###
                 ep_trajectory.append((state, 
                                         action, 
                                         reward, 
                                         next_state, 
                                         mask))  
 
-                ### Move to Next State ###
+                ### MOVE TO NEXT STATE ###
                 state = next_state
                 h_prev = h_current
 
@@ -251,7 +264,7 @@ class Simulate():
                 if done:
                     break
             
-            # Push the episode to replay
+            ### PUSH TO REPLAY ###
             self.policy_memory.push(ep_trajectory)
 
             ### TRACKING ###
@@ -260,27 +273,28 @@ class Simulate():
             Statistics["policy_loss"].append(np.mean(np.array(policy_loss_tracker)))
             Statistics["critic_loss"].append(np.mean(np.array(critic1_loss_tracker)))
 
-            ### Save to File ###
+            ### SAVE DATA TO FILE ###
             with open(f'statistics_{self.checkpoint_file}.pkl', 'wb') as f:
                 pickle.dump(Statistics, f)
                 print("Saved to %s" % 'statistics.pkl')
                 print('--------------------------\n')
 
-            ### Determine Highest Reward ###
+            ### HIGHEST REWARD ###
             if episode_reward > highest_reward:
                 highest_reward = episode_reward 
             
             ### SAVING STATE DICT OF TRAINING ###
-            f = os.path.join(self.root_dir, self.checkpoint_folder, self.checkpoint_file)
-            if episode % self.save_iter == 0 and len(self.policy_memory.buffer) > self.policy_batch_size:
-                torch.save({
-                    'iteration': episode,
-                    'agent_state_dict': self.agent.actor.state_dict(),
-                    'critic_state_dict': self.agent.critic.state_dict(),
-                    'critic_target_state_dict': self.agent.critic_target.state_dict(),
-                    'agent_optimizer_state_dict': self.agent.actor_optim.state_dict(),
-                    'critic_optimizer_state_dict': self.agent.critic_optim.state_dict(),
-                }, f + '.pth')
+            if len(self.root_dir) != 0 and len(self.checkpoint_foler) != 0 and len(self.checkpoint_file) != 0:
+                f = os.path.join(self.root_dir, self.checkpoint_folder, self.checkpoint_file)
+                if episode % self.save_iter == 0 and len(self.policy_memory.buffer) > self.policy_batch_size:
+                    torch.save({
+                        'iteration': episode,
+                        'agent_state_dict': self.agent.actor.state_dict(),
+                        'critic_state_dict': self.agent.critic.state_dict(),
+                        'critic_target_state_dict': self.agent.critic_target.state_dict(),
+                        'agent_optimizer_state_dict': self.agent.actor_optim.state_dict(),
+                        'critic_optimizer_state_dict': self.agent.critic_optim.state_dict(),
+                    }, f + '.pth')
 
             ### PRINT TRAINING OUTPUT ###
             print('-----------------------------------')
