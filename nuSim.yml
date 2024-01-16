@@ -6,7 +6,6 @@ channels:
 dependencies:
   - _libgcc_mutex=0.1=conda_forge
   - pip:
-    - admesh==0.98.9
     - cython<3.0
     - matplotlib
     - scipy
