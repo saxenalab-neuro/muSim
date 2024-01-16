@@ -28,7 +28,7 @@ First you will need to install Mujoco (older version). Please make sure that Ana
 
 5. Once in the .bashrc file, add the following line replacing the path with your true home directory:
 
-    export LD_LIBRARY_PATH=/home/user-name/.mujoco/mujoco210/bin
+    `export LD_LIBRARY_PATH=/home/user-name/.mujoco/mujoco210/bin`
 
 6. If your system has an nvidia GPU, add this line as well:
 
