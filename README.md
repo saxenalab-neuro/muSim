@@ -44,7 +44,15 @@ First you will need to install Mujoco (older version). Please make sure that Ana
 
 9. Reboot your system to ensure changes are made
 
-10. If you are on linux (and may apply to Mac as well), there will likely be additional packages necessary. Here is a list of possible packages:
+10. To create a conda environment automatically use:
+
+    `conda env create --name nuSim --file=nuSim_env.yml`
+
+11. Activate the conda environment using:
+
+   `conda activate nuSim`
+
+11. If you are on linux (and may apply to Mac as well), there will likely be additional packages necessary. Here is a list of possible packages:
 
     * patchelf
     * python3-dev
@@ -62,7 +70,7 @@ First you will need to install Mujoco (older version). Please make sure that Ana
 
     If facing errors, adding these packages may help.
 
-11. Lastly, within the conda environment there are additional packages necessary to ensure the training can run:
+12. Lastly, within the conda environment there are additional packages necessary to ensure the training can run:
 
     * cython
     * matplotlib
