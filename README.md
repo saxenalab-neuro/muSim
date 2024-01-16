@@ -1,7 +1,6 @@
 # 𝜂𝜇Sim
 
-![Fig1_github](https://github.com/saxenalab-neuro/Biomechanical-DRL/assets/77393494/81d334ca-7d20-4985-80f5-a281120deae6)
-
+![Fig1_github](https://github.com/saxenalab-neuro/Biomechanical-DRL/assets/77393494/a191621f-8f0d-45ed-8206-d4c7a452ca1b)
 
 Training LSTMs and ANNs to perform tasks with musculoskeletal models. 
 Environments include human arms performing reaching and a monkey model performing cycling.
@@ -9,6 +8,7 @@ Environments include human arms performing reaching and a monkey model performin
 Link to corresponding EMBC paper (https://ieeexplore.ieee.org/document/9871085)
 
 ## Installation
+
 
 First you will need to install Mujoco (older version). Please make sure that Anaconda as well as git are also installed on your system.
 
