@@ -7,6 +7,9 @@ dependencies:
   - _libgcc_mutex=0.1=conda_forge
   - pip
   - python=3.8
+  - mesalib=conda_forge
+  - glew=conda_forge
+  - glfw=conda_forge
   - pip:
     - 'cython<3.0'
     - matplotlib
