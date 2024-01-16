@@ -1,4 +1,4 @@
-name: O2MConverter
+name: nuSim
 channels:
   - conda-forge
   - https://conda.anaconda.org/conda-forge/
