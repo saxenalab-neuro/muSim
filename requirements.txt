@@ -17,3 +17,4 @@ dependencies:
     - pandas
     - pyquaternion
     - scikit-video
+    - mujoco-py<2.2,>=2.1
