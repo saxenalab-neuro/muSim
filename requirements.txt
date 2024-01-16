@@ -1,4 +1,3 @@
-name: nuSim
 channels:
   - conda-forge
   - https://conda.anaconda.org/conda-forge/
