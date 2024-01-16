@@ -44,13 +44,13 @@ First you will need to install Mujoco (older version). Please make sure that Ana
 
 9. Reboot your system to ensure changes are made
 
-10. To create a conda environment automatically use:
+10. To create a conda environment with dependencies installed automatically use:
 
     `conda env create --name nuSim --file=nuSim_env.yml`
 
 11. Activate the conda environment using:
 
-   `conda activate nuSim`
+    `conda activate nuSim`
 
 11. If you are on linux (and may apply to Mac as well), there will likely be additional packages necessary. Here is a list of possible packages:
 
