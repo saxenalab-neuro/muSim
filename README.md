@@ -54,7 +54,8 @@ First you will need to install Mujoco (older version). Please make sure that Ana
 
 **Note:** **Skip the following steps, if installed environment using the yml file.**
 **If facing errors, manually installing the following dependencies may help**
-11. If you are on linux (and may apply to Mac as well), there will likely be additional packages necessary. Here is a list of possible packages:
+
+1. If you are on linux (and may apply to Mac as well), there will likely be additional packages necessary. Here is a list of possible packages:
 
     * patchelf
     * python3-dev
@@ -72,7 +73,7 @@ First you will need to install Mujoco (older version). Please make sure that Ana
 
     If facing errors, adding these packages may help.
 
-12. Lastly, within the conda environment there are additional packages necessary to ensure the training can run:
+2. Lastly, within the conda environment there are additional packages necessary to ensure the training can run:
 
     * cython
     * matplotlib
