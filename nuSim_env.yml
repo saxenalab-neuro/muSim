@@ -1,6 +1,7 @@
 name: nuSim_env
 channels:
   - conda-forge
+  - menpo
   - https://conda.anaconda.org/conda-forge/
   - defaults
 dependencies:
@@ -9,7 +10,7 @@ dependencies:
   - python=3.8
   - mesalib
   - glew
-  - glfw
+  - glfw3
   - pip:
     - 'cython<3.0'
     - matplotlib
