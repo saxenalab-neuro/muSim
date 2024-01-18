@@ -99,9 +99,11 @@ add your root directory `root_dir = your_root_name`, name of the folder you crea
 ## Neural Analysis
 
 For CCA and PCA, run
+
 `python ./Neural_Analysis/CCA.py`
 
 For Linear Regression Analysis (LRA), run
+
 `python ./Neural_Analysis/LRA.py`
 
 To perform the neural analysis on your dataset, please consult Training/Saving Neural Activities.txt for saving data format
