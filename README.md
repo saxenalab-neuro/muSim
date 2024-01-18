@@ -1,6 +1,6 @@
 # 𝜂𝜇Sim
 
-![Fig1_github](https://github.com/saxenalab-neuro/Biomechanical-DRL/assets/77393494/a191621f-8f0d-45ed-8206-d4c7a452ca1b)
+![Fig1_github](https://github.com/saxenalab-neuro/Biomechanical-DRL/assets/77393494/ceb5478b-c260-4bcd-b344-d87f0b30d3a5)
 
 Training LSTMs and ANNs to perform tasks with musculoskeletal models. 
 Environments include human arms performing reaching and a monkey model performing cycling.
