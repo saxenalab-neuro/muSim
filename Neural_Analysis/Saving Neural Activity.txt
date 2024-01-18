@@ -1,0 +1,29 @@
+Save the activities of the experimental data, nusim, open-loop RNN, emg and kinematics in the training and testing folders
+in the following format
+
+1. Save the activities of each model in a dict with
+
+	i. keys should correspond to the condition number
+	ii. values should correspond to the neural activity as a numpy array with the following shape: [timepoints, number of neurons/dimensions]
+
+2. Name the activities of the models as follows:
+
+	For Training, save the activities in the Training folder with following names
+		
+		i. exp_train.pkl  
+		ii. nusim_train.pkl
+		iii. RNN_train.pkl
+		iii. emg_train.pkl
+		iv. kin_train.pkl
+
+	For Testing, save the activities in the Testing folder with following names
+
+		i. exp_test.pkl  
+		ii. nusim_test.pkl
+		iii. RNN_test.pkl
+		iii. emg_test.pkl
+		iv. kin_test.pkl
+
+3. For CCA and PCA, run CCA.py
+4. For LRA, run LRA.py
+		
