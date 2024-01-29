@@ -42,6 +42,7 @@ class MujocoEnv(gym.Env):
     def __init__(self, model_path, params_file_path, frame_skip, n_exp_conds, data_path):
 
         self.frame_skip = frame_skip
+        self.frame_repeat = 10
         self.n_exp_conds = n_exp_conds
         self.model = mujoco_py.load_model_from_path(model_path)
 
