@@ -239,9 +239,13 @@ class Simulate():
                         critic1_loss_tracker.append(critic_1_loss)
 
                 ### SIMULATION ###
-                next_state, reward, done, _ = self.env.step(action)
+                reward = 0
+                for _ in range(self.env.frame_repeat):
+                    next_state, inter_reward, done, _ = self.env.step(action)
+                    reward += inter_reward
+                    episode_steps += 1
+
                 episode_reward += reward
-                episode_steps += 1
 
                 ### VISUALIZE MODEL ###
                 if self.visualize == True:
@@ -284,7 +288,7 @@ class Simulate():
                 highest_reward = episode_reward 
             
             ### SAVING STATE DICT OF TRAINING ###
-            if len(self.root_dir) != 0 and len(self.checkpoint_foler) != 0 and len(self.checkpoint_file) != 0:
+            if len(self.root_dir) != 0 and len(self.checkpoint_folder) != 0 and len(self.checkpoint_file) != 0:
                 f = os.path.join(self.root_dir, self.checkpoint_folder, self.checkpoint_file)
                 if episode % self.save_iter == 0 and len(self.policy_memory.buffer) > self.policy_batch_size:
                     torch.save({
