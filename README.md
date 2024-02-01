@@ -106,4 +106,4 @@ For Linear Regression Analysis (LRA), run
 
 `python ./Neural_Analysis/LRA.py`
 
-To perform the neural analysis on your dataset, please consult Training/Saving Neural Activities.txt for saving data format
+To perform the neural analysis on your dataset, please consult ./Neural_Analysis/Training/Saving Neural Activities.txt for saving data format
