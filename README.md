@@ -5,7 +5,7 @@
 Training LSTMs and ANNs to perform tasks with musculoskeletal models. 
 Environments include human arms performing reaching and a monkey model performing cycling.
 
-Link to corresponding EMBC paper (https://ieeexplore.ieee.org/document/9871085)
+Link to corresponding paper (https://www.biorxiv.org/content/10.1101/2024.02.02.578628v1)
 
 ## Installation
 
