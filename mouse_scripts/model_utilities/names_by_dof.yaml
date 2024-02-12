@@ -1,0 +1,72 @@
+---
+HIND:
+  Hip:
+  - AB
+  - AL
+  - AM
+  - BFA
+  - CF
+  - GEM
+  - GM_dorsal
+  - GM_mid
+  - GM_ventral
+  - ILI
+  - OE
+  - OI
+  - PECT
+  - PMA
+  - PMI
+  - QF
+  Hip_Knee:
+  - BFP_cranial
+  - BFP_mid
+  - BFP_caudal
+  - GA
+  - GP
+  - RF
+  - SM
+  - ST
+  Knee:
+  - POP
+  - VI
+  - VL
+  - VM
+  Ankle_Knee:
+  - LG
+  - MG
+  - PLANT
+  Ankle:
+  - EDL
+  - EHL
+  - FDL
+  - PB
+  - PDQA
+  - PDQI
+  - PL
+  - PT
+  - SOL
+  - TA
+  - TP
+FORE:
+  Shoulder:
+  - COR
+  Elbow_Shoulder:
+  - BBL
+  - TBL
+  Elbow:
+  - AN
+  - BBS
+  - BRA
+  - PTE
+  - TBM
+  - TBO
+  Elbow_Wrist:
+  - ECRB
+  - ECRL
+  - ECU
+  - EIP1
+  - EIP2
+  - FCR
+  - FCU
+  - PLO
+  Wrist: []

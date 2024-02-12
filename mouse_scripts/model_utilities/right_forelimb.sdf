@@ -1,0 +1,941 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="world">
+    <model name="right_forelimb">
+      <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+      <link name="RScapula">
+        <pose>0.006875171279907227 0.06127949371337891 -0.005020601272583008 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>0.0016226295847445729 -0.00587867759168148 0.0005878449883311987 0.0 0.0 0.0</pose>
+          <mass>0.00044481664732829443</mass>
+          <inertia>
+            <ixx>1.0398263289204255e-08</ixx>
+            <ixy>1.6155871338926322e-24</ixy>
+            <ixz>-1.5146129380243427e-25</ixz>
+            <iyy>2.482088095766546e-09</iyy>
+            <iyz>-6.058451752097371e-25</iyz>
+            <izz>9.194521135662776e-09</izz>
+          </inertia>
+        </inertial>
+        <collision name="RScapula_collision">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RScapula.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="RScapula_visual">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RScapula.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+          <material/>
+        </visual>
+      </link>
+      <link name="RHumerus_interim_0">
+        <pose>0.006875171279907227 0.06127949371337891 -0.005020601272583008 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <mass>0.0</mass>
+          <inertia>
+            <ixx>0.0</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>0.0</iyy>
+            <iyz>0.0</iyz>
+            <izz>0.0</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <link name="RHumerus_interim_1">
+        <pose>0.006875171279907227 0.06127949371337891 -0.005020601272583008 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <mass>0.0</mass>
+          <inertia>
+            <ixx>0.0</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>0.0</iyy>
+            <iyz>0.0</iyz>
+            <izz>0.0</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <link name="RHumerus">
+        <pose>0.006875171279907227 0.06127949371337891 -0.005020601272583008 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>0.0009191925637423991 0.0004900172352790833 -0.006320039392448961 0.0 0.0 0.0</pose>
+          <mass>0.000245755141175969</mass>
+          <inertia>
+            <ixx>5.42165456186613e-09</ixx>
+            <ixy>-1.2621774483536189e-26</ixy>
+            <ixz>-4.0389678347315804e-25</ixz>
+            <iyy>5.308522821523396e-09</iyy>
+            <iyz>-2.0194839173657902e-25</iyz>
+            <izz>6.515931269487601e-10</izz>
+          </inertia>
+        </inertial>
+        <collision name="RHumerus_collision">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RHumerus.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="RHumerus_visual">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RHumerus.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+          <material/>
+        </visual>
+      </link>
+      <link name="RUlna">
+        <pose>0.006783241319656372 0.06143634605407715 -0.01839754161834717 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>0.0002688474487513304 -0.0007947981357574465 -0.006914304103702307 0.0 0.0 0.0</pose>
+          <mass>0.00013897424686489557</mass>
+          <inertia>
+            <ixx>4.654670090588528e-09</ixx>
+            <ixy>6.3108872417680944e-27</ixy>
+            <ixz>-5.0487097934144756e-26</ixz>
+            <iyy>4.568507436159687e-09</iyy>
+            <iyz>-3.0292258760486853e-25</iyz>
+            <izz>1.8432704269376027e-10</izz>
+          </inertia>
+        </inertial>
+        <collision name="RUlna_collision">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RUlna.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="RUlna_visual">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RUlna.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+          <material/>
+        </visual>
+      </link>
+      <link name="RRadius">
+        <pose>0.007285 0.06143634605407715 -0.019305 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>-0.00026494148187339295 0.0002949330955743789 -0.0076426547020673734 0.0 0.0 0.0</pose>
+          <mass>6.022190638114071e-05</mass>
+          <inertia>
+            <ixx>1.2879320777318582e-09</ixx>
+            <ixy>-1.5777218104420236e-27</ixy>
+            <ixz>2.5243548967072378e-26</ixz>
+            <iyy>1.2769456290203297e-09</iyy>
+            <iyz>-5.0487097934144756e-26</iyz>
+            <izz>3.965955144523731e-11</izz>
+          </inertia>
+        </inertial>
+        <collision name="RRadius_collision">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RRadius.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="RRadius_visual">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RRadius.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+          <material/>
+        </visual>
+      </link>
+      <link name="RRadius_interim">
+        <pose>0.007285 0.061466000974178314 -0.03515385836362839 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <mass>0.0</mass>
+          <inertia>
+            <ixx>0.0</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>0.0</iyy>
+            <iyz>0.0</iyz>
+            <izz>0.0</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <link name="RCarpus_interim_0">
+        <pose>0.007089654588699341 0.061950042724609376 -0.03418806991577148 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <mass>0.0</mass>
+          <inertia>
+            <ixx>0.0</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>0.0</iyy>
+            <iyz>0.0</iyz>
+            <izz>0.0</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <link name="RCarpus_interim_1">
+        <pose>0.007089654588699341 0.061950042724609376 -0.03418806991577148 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <mass>0.0</mass>
+          <inertia>
+            <ixx>0.0</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>0.0</iyy>
+            <iyz>0.0</iyz>
+            <izz>0.0</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <link name="RCarpus">
+        <pose>0.007089654588699341 0.061950042724609376 -0.03418806991577148 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>6.016367115080359e-05 -0.0005923230201005937 -0.0012237355113029482 0.0 0.0 0.0</pose>
+          <mass>4.613299496637037e-06</mass>
+          <inertia>
+            <ixx>1.401978361184886e-12</ixx>
+            <ixy>0.0</ixy>
+            <ixz>4.930380657631324e-29</ixz>
+            <iyy>3.6637411123878235e-12</iyy>
+            <iyz>-3.944304526105059e-28</iyz>
+            <izz>3.216798500705688e-12</izz>
+          </inertia>
+        </inertial>
+        <collision name="RCarpus_collision">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RCarpus.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="RCarpus_visual">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RCarpus.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+          <material/>
+        </visual>
+      </link>
+      <link name="RMetaCarpus1">
+        <pose>0.008051368141174317 0.061946549224853514 -0.0357238037109375 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>0.0004552532918751239 -0.0006132107228040695 -0.0013067666441202164 0.0 0.0 0.0</pose>
+          <mass>1.6703396473923101e-06</mass>
+          <inertia>
+            <ixx>8.745479416241285e-13</ixx>
+            <ixy>-9.860761315262648e-29</ixy>
+            <ixz>-3.944304526105059e-28</ixz>
+            <iyy>9.17516753400165e-13</iyy>
+            <iyz>3.944304526105059e-28</iyz>
+            <izz>1.9908502143833716e-13</izz>
+          </inertia>
+        </inertial>
+        <collision name="RMetaCarpus1_collision">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RMetaCarpus1.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="RMetaCarpus1_visual">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RMetaCarpus1.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+          <material/>
+        </visual>
+      </link>
+      <link name="RMetaCarpus2">
+        <pose>0.007654710960388183 0.06200901184082031 -0.03568852081298828 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>0.00017202994786202908 -0.0006763916462659835 -0.0019438602030277252 0.0 0.0 0.0</pose>
+          <mass>2.551895299194388e-06</mass>
+          <inertia>
+            <ixx>2.556154004898216e-12</ixx>
+            <ixy>-9.860761315262648e-29</ixy>
+            <ixz>0.0</ixz>
+            <iyy>2.4535306516303483e-12</iyy>
+            <iyz>1.1832913578315177e-27</iyz>
+            <izz>3.4336920089760857e-13</izz>
+          </inertia>
+        </inertial>
+        <collision name="RMetaCarpus2_collision">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RMetaCarpus2.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="RMetaCarpus2_visual">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RMetaCarpus2.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+          <material/>
+        </visual>
+      </link>
+      <link name="RMetaCarpus3">
+        <pose>0.007058908891677857 0.062005047225952147 -0.03571275787353516 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>5.683861672878266e-06 -0.0006633810698986052 -0.0019474327564239495 0.0 0.0 0.0</pose>
+          <mass>2.6809757356704003e-06</mass>
+          <inertia>
+            <ixx>2.7133997539194273e-12</ixx>
+            <ixy>-1.3866695599588098e-29</ixy>
+            <ixz>2.465190328815662e-29</ixz>
+            <iyy>2.5976007668246765e-12</iyy>
+            <iyz>1.1832913578315177e-27</iyz>
+            <izz>3.787014209719407e-13</izz>
+          </inertia>
+        </inertial>
+        <collision name="RMetaCarpus3_collision">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RMetaCarpus3.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="RMetaCarpus3_visual">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RMetaCarpus3.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+          <material/>
+        </visual>
+      </link>
+      <link name="RMetaCarpus4">
+        <pose>0.006334255933761596 0.06199851684570312 -0.03556435661315918 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>2.1944520995020866e-05 -0.000681823119521141 -0.0014977212995290754 0.0 0.0 0.0</pose>
+          <mass>1.930154059476886e-06</mass>
+          <inertia>
+            <ixx>1.0648340196154804e-12</ixx>
+            <ixy>2.465190328815662e-29</ixy>
+            <ixz>-1.232595164407831e-29</ixz>
+            <iyy>1.0770249859536699e-12</iyy>
+            <iyz>0.0</iyz>
+            <izz>2.567908172899354e-13</izz>
+          </inertia>
+        </inertial>
+        <collision name="RMetaCarpus4_collision">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RMetaCarpus4.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="RMetaCarpus4_visual">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RMetaCarpus4.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+          <material/>
+        </visual>
+      </link>
+      <link name="RMetaCarpus5">
+        <pose>0.006026011657714844 0.062006728744506835 -0.035590960121154785 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>-0.00012649060226976871 -0.0005467180162668227 -0.0007400903850793837 0.0 0.0 0.0</pose>
+          <mass>3.233439228980676e-07</mass>
+          <inertia>
+            <ixx>3.6057859940973805e-14</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>3.75529031022126e-14</iyy>
+            <iyz>7.395570986446986e-29</iyz>
+            <izz>1.7078840404595218e-14</izz>
+          </inertia>
+        </inertial>
+        <collision name="RMetaCarpus5_collision">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RMetaCarpus5.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="RMetaCarpus5_visual">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RMetaCarpus5.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+          <material/>
+        </visual>
+      </link>
+      <link name="RFPhalange1">
+        <pose>0.00854808382987976 0.06201289672851563 -0.03779798946380615 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>0.0002858731895685196 -0.0007839426398277283 -0.002113163471221924 0.0 0.0 0.0</pose>
+          <mass>2.692272913370208e-06</mass>
+          <inertia>
+            <ixx>3.2753826882154224e-12</ixx>
+            <ixy>0.0</ixy>
+            <ixz>-1.9721522630525295e-28</ixz>
+            <iyy>3.2578199514350214e-12</iyy>
+            <iyz>7.888609052210118e-28</iyz>
+            <izz>3.252602727842491e-13</izz>
+          </inertia>
+        </inertial>
+        <collision name="RFPhalange1_collision">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RFPhalange1.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="RFPhalange1_visual">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RFPhalange1.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+          <material/>
+        </visual>
+      </link>
+      <link name="RFPhalange2">
+        <pose>0.007831985235214233 0.062064762878417966 -0.03890017051696777 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>0.00015049451030790803 -0.0009438581764698027 -0.002814145758748054 0.0 0.0 0.0</pose>
+          <mass>4.845275568332112e-06</mass>
+          <inertia>
+            <ixx>1.073390786667759e-11</ixx>
+            <ixy>-1.9721522630525295e-28</ixy>
+            <ixz>0.0</ixz>
+            <iyy>1.0410230795122782e-11</iyy>
+            <iyz>7.888609052210118e-27</iyz>
+            <izz>8.448814415788793e-13</izz>
+          </inertia>
+        </inertial>
+        <collision name="RFPhalange2_collision">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RFPhalange2.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="RFPhalange2_visual">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RFPhalange2.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+          <material/>
+        </visual>
+      </link>
+      <link name="RFPhalange3">
+        <pose>0.0069295316219329835 0.06212633399963379 -0.0389000581741333 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>1.4119315892457967e-05 -0.0010289009660482409 -0.0028000511229038243 0.0 0.0 0.0</pose>
+          <mass>4.708099754965052e-06</mass>
+          <inertia>
+            <ixx>1.038913587483826e-11</ixx>
+            <ixy>-2.465190328815662e-29</ixy>
+            <ixz>-1.9721522630525295e-28</ixz>
+            <iyy>1.0067084903688537e-11</iyy>
+            <iyz>-1.5777218104420236e-27</iyz>
+            <izz>8.054279959184287e-13</izz>
+          </inertia>
+        </inertial>
+        <collision name="RFPhalange3_collision">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RFPhalange3.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="RFPhalange3_visual">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RFPhalange3.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+          <material/>
+        </visual>
+      </link>
+      <link name="RFPhalange4">
+        <pose>0.006122016763687134 0.062030806350708005 -0.03784713764190674 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>-0.00022285664454102516 -0.0008708387613296508 -0.002374865114688873 0.0 0.0 0.0</pose>
+          <mass>4.691462438106352e-06</mass>
+          <inertia>
+            <ixx>7.41257025441754e-12</ixx>
+            <ixy>0.0</ixy>
+            <ixz>7.888609052210118e-28</ixz>
+            <iyy>7.637229498533776e-12</iyy>
+            <iyz>3.1554436208840472e-27</iyz>
+            <izz>8.908348107732969e-13</izz>
+          </inertia>
+        </inertial>
+        <collision name="RFPhalange4_collision">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RFPhalange4.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="RFPhalange4_visual">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RFPhalange4.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+          <material/>
+        </visual>
+      </link>
+      <link name="RFPhalange5">
+        <pose>0.005733825612068176 0.06200577926635742 -0.03652340927124023 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>-0.0001636417582631111 -0.0005709044635295867 -0.001191604882478714 0.0 0.0 0.0</pose>
+          <mass>7.448479084574695e-07</mass>
+          <inertia>
+            <ixx>2.374334989772511e-13</ixx>
+            <ixy>3.697785493223493e-29</ixy>
+            <ixz>0.0</ixz>
+            <iyy>2.6162067675319995e-13</iyy>
+            <iyz>0.0</iyz>
+            <izz>5.4522754667390254e-14</izz>
+          </inertia>
+        </inertial>
+        <collision name="RFPhalange5_collision">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RFPhalange5.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+        </collision>
+        <visual name="RFPhalange5_visual">
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <geometry>
+            <mesh>
+              <uri>../meshes/stl/RFPhalange5.stl</uri>
+              <scale>1.0 1.0 1.0</scale>
+            </mesh>
+          </geometry>
+          <material/>
+        </visual>
+      </link>
+      <link name="world">
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <mass>0.0</mass>
+          <inertia>
+            <ixx>0.0</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>0.0</iyy>
+            <iyz>0.0</iyz>
+            <izz>0.0</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <link name="prismatic_support_1">
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <mass>0.0</mass>
+          <inertia>
+            <ixx>0.0</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>0.0</iyy>
+            <iyz>0.0</iyz>
+            <izz>0.0</izz>
+          </inertia>
+        </inertial>
+      </link>
+      <link name="prismatic_support_2">
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <inertial>
+          <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+          <mass>0.0</mass>
+          <inertia>
+            <ixx>0.0</ixx>
+            <ixy>0.0</ixy>
+            <ixz>0.0</ixz>
+            <iyy>0.0</iyy>
+            <iyz>0.0</iyz>
+            <izz>0.0</izz>
+          </inertia>
+        </inertial>
+      </link>
+
+      <joint name="prismatic_support_1" type="fixed">
+        <parent>world</parent>
+        <child>prismatic_support_1</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>0.0 1.0 0.0</xyz>
+          <limit>
+            <lower>1.0</lower>
+            <upper>-1.0</upper>
+            <effort>0.0</effort>
+            <velocity>100.0</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="prismatic_support_2" type="fixed">
+        <parent>prismatic_support_1</parent>
+        <child>prismatic_support_2</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>0.0 0.0 1.0</xyz>
+          <limit>
+            <lower>1.0</lower>
+            <upper>-1.0</upper>
+            <effort>0.0</effort>
+            <velocity>100.0</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="fixed_support_1" type="fixed">
+        <parent>prismatic_support_2</parent>
+        <child>RScapula</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>1.0 0.0 0.0</xyz>
+        </axis>
+      </joint>
+      <joint name="RShoulder_rotation" type="revolute">
+        <parent>RScapula</parent>
+        <child>RHumerus_interim_0</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>0.0 0.0 1.0</xyz>
+          <limit>
+            <lower>-0.05235987755982989</lower>
+            <upper>0.6283185307179586</upper>
+            <effort>10000000000.0</effort>
+            <velocity>628.3185307179587</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="RShoulder_adduction" type="revolute">
+        <parent>RHumerus_interim_0</parent>
+        <child>RHumerus_interim_1</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>0.0 1.0 0.0</xyz>
+          <limit>
+            <lower>-0.6981317007977318</lower>
+            <upper>0.24434609527920614</upper>
+            <effort>10000000000.0</effort>
+            <velocity>628.3185307179587</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="RShoulder_flexion" type="revolute">
+        <parent>RHumerus_interim_1</parent>
+        <child>RHumerus</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>1.0 0.0 0.0</xyz>
+          <limit>
+            <lower>-0.5410520681182421</lower>
+            <upper>1.6929693744344996</upper>
+            <effort>10000000000.0</effort>
+            <velocity>628.3185307179587</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="RElbow_flexion" type="revolute">
+        <parent>RHumerus</parent>
+        <child>RUlna</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>1.0 0.0 0.0</xyz>
+          <limit>
+            <lower>0.5235987755982988</lower>
+            <upper>2.1467549799530254</upper>
+            <effort>10000000000.0</effort>
+            <velocity>628.3185307179587</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="RElbow_supination" type="revolute">
+        <parent>RUlna</parent>
+        <child>RRadius</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>0.0 0.0 1.0</xyz>
+          <limit>
+            <lower>-0.3490658503988659</lower>
+            <upper>-0.3490658503988659</upper>
+            <effort>10000000000.0</effort>
+            <velocity>628.3185307179587</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="RRadius_interim_joint" type="revolute">
+        <parent>RRadius</parent>
+        <child>RRadius_interim</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>0.0 0.0 1.0</xyz>
+          <limit>
+            <lower>-3.141592653589793</lower>
+            <upper>3.141592653589793</upper>
+            <effort>10000000000.0</effort>
+            <velocity>628.3185307179587</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="RWrist_inversion" type="revolute">
+        <parent>RRadius_interim</parent>
+        <child>RCarpus_interim_0</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>0.0 0.0 1.0</xyz>
+          <limit>
+            <lower>-0.3490658503988659</lower>
+            <upper>0.3490658503988659</upper>
+            <effort>10000000000.0</effort>
+            <velocity>628.3185307179587</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="RWrist_adduction" type="revolute">
+        <parent>RCarpus_interim_0</parent>
+        <child>RCarpus_interim_1</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>0.0 1.0 0.0</xyz>
+          <limit>
+            <lower>-0.3490658503988659</lower>
+            <upper>0.3490658503988659</upper>
+            <effort>10000000000.0</effort>
+            <velocity>628.3185307179587</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="RWrist_flexion" type="revolute">
+        <parent>RCarpus_interim_1</parent>
+        <child>RCarpus</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>1.0 0.0 0.0</xyz>
+          <limit>
+            <lower>0.3490658503988659</lower>
+            <upper>-0.8726646259971648</upper>
+            <effort>10000000000.0</effort>
+            <velocity>628.3185307179587</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="RMetaCarpus1_flexion" type="revolute">
+        <parent>RCarpus</parent>
+        <child>RMetaCarpus1</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>1.0 0.0 0.0</xyz>
+          <limit>
+            <lower>-0.08726646259971647</lower>
+            <upper>0.08726646259971647</upper>
+            <effort>10000000000.0</effort>
+            <velocity>628.3185307179587</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="RMetaCarpus2_flexion" type="revolute">
+        <parent>RCarpus</parent>
+        <child>RMetaCarpus2</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>1.0 0.0 0.0</xyz>
+          <limit>
+            <lower>-0.08726646259971647</lower>
+            <upper>0.08726646259971647</upper>
+            <effort>10000000000.0</effort>
+            <velocity>628.3185307179587</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="RMetaCarpus3_flexion" type="revolute">
+        <parent>RCarpus</parent>
+        <child>RMetaCarpus3</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>1.0 0.0 0.0</xyz>
+          <limit>
+            <lower>-0.08726646259971647</lower>
+            <upper>0.08726646259971647</upper>
+            <effort>10000000000.0</effort>
+            <velocity>628.3185307179587</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="RMetaCarpus4_flexion" type="revolute">
+        <parent>RCarpus</parent>
+        <child>RMetaCarpus4</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>1.0 0.0 0.0</xyz>
+          <limit>
+            <lower>-0.08726646259971647</lower>
+            <upper>0.08726646259971647</upper>
+            <effort>10000000000.0</effort>
+            <velocity>628.3185307179587</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="RMetaCarpus5_flexion" type="revolute">
+        <parent>RCarpus</parent>
+        <child>RMetaCarpus5</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>1.0 0.0 0.0</xyz>
+          <limit>
+            <lower>-0.08726646259971647</lower>
+            <upper>0.08726646259971647</upper>
+            <effort>10000000000.0</effort>
+            <velocity>628.3185307179587</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="RFPhalange1_flexion" type="revolute"> 
+        <parent>RMetaCarpus1</parent>
+        <child>RFPhalange1</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>1.0 0.0 0.0</xyz>
+          <limit>
+            <lower>-0.08726646259971647</lower>
+            <upper>0.08726646259971647</upper>
+            <effort>10000000000.0</effort>
+            <velocity>628.3185307179587</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="RFPhalange2_flexion" type="revolute">
+        <parent>RMetaCarpus2</parent>
+        <child>RFPhalange2</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>1.0 0.0 0.0</xyz>
+          <limit>
+            <lower>-0.08726646259971647</lower>
+            <upper>0.08726646259971647</upper>
+            <effort>10000000000.0</effort>
+            <velocity>628.3185307179587</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="RFPhalange3_flexion" type="revolute">
+        <parent>RMetaCarpus3</parent>
+        <child>RFPhalange3</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>1.0 0.0 0.0</xyz>
+          <limit>
+            <lower>-0.08726646259971647</lower>
+            <upper>0.08726646259971647</upper>
+            <effort>10000000000.0</effort>
+            <velocity>628.3185307179587</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="RFPhalange4_flexion" type="revolute">
+        <parent>RMetaCarpus4</parent>
+        <child>RFPhalange4</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>1.0 0.0 0.0</xyz>
+          <limit>
+            <lower>-0.08726646259971647</lower>
+            <upper>0.08726646259971647</upper>
+            <effort>10000000000.0</effort>
+            <velocity>628.3185307179587</velocity>
+          </limit>
+        </axis>
+      </joint>
+      <joint name="RFPhalange5_flexion" type="revolute">
+        <parent>RMetaCarpus5</parent>
+        <child>RFPhalange5</child>
+        <pose>0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <axis>
+          <xyz>1.0 0.0 0.0</xyz>
+          <limit>
+            <lower>-0.08726646259971647</lower>
+            <upper>0.08726646259971647</upper>
+            <effort>10000000000.0</effort>
+            <velocity>628.3185307179587</velocity>
+          </limit>
+        </axis>
+      </joint>
+    </model>
+  </world>
+</sdf>

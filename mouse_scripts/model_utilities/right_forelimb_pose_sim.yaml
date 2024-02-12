@@ -1,0 +1,11 @@
+#can play around with values
+RShoulder_rotation: 0.0
+RShoulder_adduction: -20.0
+RShoulder_flexion: -20.0
+
+RElbow_flexion: 85.0
+RElbow_supination: 0.0
+
+#RWrist_inversion: 0.0
+RWrist_adduction: 0.0
+RWrist_flexion: 0.0
