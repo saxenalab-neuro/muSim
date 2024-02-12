@@ -141,6 +141,7 @@ class MujocoEnv(gym.Env):
 
         #The threshold is varied dynamically in the step and reset functions 
         self.threshold_user = 0.064   #Previously it was 0.1
+        self.coord_idx=0
 
         #Now change the x_coord and y_coord matrices to adjust for the self.radius and self.center
         d_radius = 1/self.radius
@@ -215,6 +216,7 @@ class MujocoEnv(gym.Env):
         self.neural_activity = self.neural_activity_cum[cond_to_select]
 
         self.istep= 0
+        self.coord_idx = 0
         self.theta= np.pi
         self.threshold= self.threshold_user
         self.sim.reset()
@@ -417,12 +419,15 @@ class Muscle_Env(MujocoEnv):
             if self.istep <= self.n_fixedsteps:
                 target_x = self.x_coord[0]
                 target_y = self.y_coord[0]
+                self.coord_idx=0
             else:
                 target_x = self.x_coord[int(((self.x_coord.shape[0]-1)/(self._max_episode_steps-self.n_fixedsteps)) * (self.istep - self.n_fixedsteps))]
                 target_y = self.y_coord[int(((self.y_coord.shape[0]-1)/(self._max_episode_steps-self.n_fixedsteps)) * (self.istep - self.n_fixedsteps))]
+                self.coord_idx= int(((self.y_coord.shape[0]-1)/(self._max_episode_steps-self.n_fixedsteps)) * (self.istep - self.n_fixedsteps))
         else:
             target_x = self.x_coord[int(((self.x_coord.shape[0]-1)/(self._max_episode_steps-self.n_fixedsteps)) * ((self.istep - self.n_fixedsteps) % (self._max_episode_steps - self.n_fixedsteps)))]
             target_y = self.y_coord[int(((self.y_coord.shape[0]-1)/(self._max_episode_steps-self.n_fixedsteps)) * ((self.istep - self.n_fixedsteps) % (self._max_episode_steps - self.n_fixedsteps)))]
+            self.coord_idx= int(((self.y_coord.shape[0]-1)/(self._max_episode_steps-self.n_fixedsteps)) * ((self.istep - self.n_fixedsteps) % (self._max_episode_steps - self.n_fixedsteps)))
 
 
         x_joint_i= self.model.get_joint_qpos_addr("box:x")

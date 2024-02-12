@@ -231,6 +231,9 @@ class Simulate():
                 ### SELECT ACTION ###
                 with torch.no_grad():
                     action, h_current, _ = self.agent.select_action(state, h_prev, evaluate=False)
+                    
+                    #Now query the neural activity idx from the simulator
+                    na_idx= self.env.coord_idx
 
                 ### UPDATE MODEL PARAMETERS ###
                 if len(self.policy_memory.buffer) > self.policy_batch_size:
