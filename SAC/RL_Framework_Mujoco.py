@@ -58,8 +58,11 @@ class MujocoEnv(gym.Env):
         # 1: for testing
         self.mode = 0
 
-        #Load the kinematics with the following shapes
+        #Load the kinematics
         #[2, timepoints] = [x/y, timepoints]
+
+        #Load the neural activities
+        #[timepoints, n_neurons= 49]
 
         with open('./monkey/monkey_data/kinematics_train.pkl', 'rb') as f:
             kinematics_train = pickle.load(f)
@@ -67,9 +70,17 @@ class MujocoEnv(gym.Env):
         with open('./monkey/monkey_data/kinematics_test.pkl', 'rb') as f:
             kinematics_test = pickle.load(f)
 
+        with open('./monkey/monkey_data/neural_activity_train.pkl', 'rb') as f:
+            na_train = pickle.load(f)
+    
+        with open('./monkey/monkey_data/neural_activity_test.pkl', 'rb') as f:
+            na_test = pickle.load(f)
+
 
         x_coord_cond_cum = [] 
         y_coord_cond_cum = [] 
+
+        neural_activity_cum = []
 
 
         #Load only the training conditions if mode = 0
@@ -82,6 +93,11 @@ class MujocoEnv(gym.Env):
                 # y_coord_c = np.load(f'{data_path}/y_coord_{i_condition+1}.npy')
                 x_coord_cond_cum.append(x_coord_c)
                 y_coord_cond_cum.append(y_coord_c)
+
+
+                #Now normalize the neural activity and append it
+                na_c = na_train[i_condition] / np.max(na_train[i_condition])
+                neural_activity_cum.append(na_c)
 
         #Load the training and testing conditions if mode = 1
         elif self.mode == 1:
@@ -96,6 +112,10 @@ class MujocoEnv(gym.Env):
                 x_coord_cond_cum.append(x_coord_c)
                 y_coord_cond_cum.append(y_coord_c)
 
+                #Now normalize the neural activity and append it
+                na_c = na_train[i_condition] / np.max(na_train[i_condition])
+                neural_activity_cum.append(na_c)
+
             #Then append the testing conditions
             for i_condition in range(len(kinematics_test)):
                 x_coord_c = kinematics_test[i_condition][0, :]
@@ -104,6 +124,10 @@ class MujocoEnv(gym.Env):
                 # y_coord_c = np.load(f'{data_path}/y_coord_{i_condition+1}.npy')
                 x_coord_cond_cum.append(x_coord_c)
                 y_coord_cond_cum.append(y_coord_c)
+
+                #Now normalize the neural activity and append it
+                na_c = na_test[i_condition] / np.max(na_test[i_condition])
+                neural_activity_cum.append(na_c)
 
 
 
@@ -126,6 +150,7 @@ class MujocoEnv(gym.Env):
 
         self.x_coord_cond_cum = x_coord_cond_cum
         self.y_coord_cond_cum = y_coord_cond_cum
+        self.neural_activity_cum = neural_activity_cum
 
         self.x_coord = self.x_coord_cond_cum[0]
         self.y_coord = self.y_coord_cond_cum[0]
@@ -187,6 +212,7 @@ class MujocoEnv(gym.Env):
         cond_to_select = i_episode % self.n_exp_conds
         self.x_coord = self.x_coord_cond_cum[cond_to_select]
         self.y_coord = self.y_coord_cond_cum[cond_to_select]
+        self.neural_activity = self.neural_activity_cum[cond_to_select]
 
         self.istep= 0
         self.theta= np.pi
