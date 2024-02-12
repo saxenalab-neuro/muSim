@@ -42,7 +42,7 @@ class MujocoEnv(gym.Env):
     def __init__(self, model_path, params_file_path, frame_skip, n_exp_conds, data_path):
 
         self.frame_skip = frame_skip
-        self.frame_repeat = 10
+        self.frame_repeat = 5
         self.n_exp_conds = n_exp_conds
         self.model = mujoco_py.load_model_from_path(model_path)
 
@@ -53,13 +53,59 @@ class MujocoEnv(gym.Env):
         # Load the kinematics (x and y from the data)
         n_exp_conds = n_exp_conds
 
+        #Set the mode for the env
+        # 0: for training
+        # 1: for testing
+        self.mode = 0
+
+        #Load the kinematics with the following shapes
+        #[2, timepoints] = [x/y, timepoints]
+
+        with open('./monkey/monkey_data/kinematics_train.pkl', 'rb') as f:
+            kinematics_train = pickle.load(f)
+    
+        with open('./monkey/monkey_data/kinematics_test.pkl', 'rb') as f:
+            kinematics_test = pickle.load(f)
+
+
         x_coord_cond_cum = [] 
         y_coord_cond_cum = [] 
-        for i_condition in range(n_exp_conds):
-            x_coord_c = np.load(f'{data_path}/x_coord_{i_condition+1}.npy')
-            y_coord_c = np.load(f'{data_path}/y_coord_{i_condition+1}.npy')
-            x_coord_cond_cum.append(x_coord_c)
-            y_coord_cond_cum.append(y_coord_c)
+
+
+        #Load only the training conditions if mode = 0
+        if self.mode == 0:
+            self.n_exp_conds = len(kinematics_train)
+            for i_condition in range(len(kinematics_train)):
+                x_coord_c = kinematics_train[i_condition][0, :] #kinematics_shape: [x, timepoints]
+                y_coord_c = kinematics_train[i_condition][1, :] 
+                # x_coord_c = np.load(f'{data_path}/x_coord_{i_condition+1}.npy')
+                # y_coord_c = np.load(f'{data_path}/y_coord_{i_condition+1}.npy')
+                x_coord_cond_cum.append(x_coord_c)
+                y_coord_cond_cum.append(y_coord_c)
+
+        #Load the training and testing conditions if mode = 1
+        elif self.mode == 1:
+            self.n_exp_conds = len(kinematics_train) + len(kinematics_test)
+
+            #First append the training conditions
+            for i_condition in range(len(kinematics_train)):
+                x_coord_c = kinematics_train[i_condition][0, :]
+                y_coord_c = kinematics_train[i_condition][1, :]
+                # x_coord_c = np.load(f'{data_path}/x_coord_{i_condition+1}.npy')
+                # y_coord_c = np.load(f'{data_path}/y_coord_{i_condition+1}.npy')
+                x_coord_cond_cum.append(x_coord_c)
+                y_coord_cond_cum.append(y_coord_c)
+
+            #Then append the testing conditions
+            for i_condition in range(len(kinematics_test)):
+                x_coord_c = kinematics_test[i_condition][0, :]
+                y_coord_c = kinematics_test[i_condition][1, :]
+                # x_coord_c = np.load(f'{data_path}/x_coord_{i_condition+1}.npy')
+                # y_coord_c = np.load(f'{data_path}/y_coord_{i_condition+1}.npy')
+                x_coord_cond_cum.append(x_coord_c)
+                y_coord_cond_cum.append(y_coord_c)
+
+
 
         #Meta parameters for the simulation
         self.n_fixedsteps = 25
@@ -74,7 +120,7 @@ class MujocoEnv(gym.Env):
 
         #Now change the x_coord and y_coord matrices to adjust for the self.radius and self.center
         d_radius = 1/self.radius
-        for i_cond in range(n_exp_conds):
+        for i_cond in range(self.n_exp_conds):
             x_coord_cond_cum[i_cond] = (x_coord_cond_cum[i_cond] / d_radius) + self.center[0]
             y_coord_cond_cum[i_cond] = (y_coord_cond_cum[i_cond] / d_radius) + self.center[0]
 
