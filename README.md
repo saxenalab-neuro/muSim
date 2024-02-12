@@ -1,11 +1,11 @@
 # 𝜂𝜇Sim
+![Fig1_github](https://github.com/saxenalab-neuro/muSim/assets/77393494/aefcb769-7427-4654-be72-08e1d6f59642)
 
-![Fig1_github](https://github.com/saxenalab-neuro/Biomechanical-DRL/assets/77393494/ceb5478b-c260-4bcd-b344-d87f0b30d3a5)
 
 Training LSTMs and ANNs to perform tasks with musculoskeletal models. 
-Environments include human arms performing reaching and a monkey model performing cycling.
+Environments include monkey model performing cycling.
 
-Link to corresponding EMBC paper (https://ieeexplore.ieee.org/document/9871085)
+Link to corresponding paper (https://www.biorxiv.org/content/10.1101/2024.02.02.578628v1)
 
 ## Installation
 
@@ -106,4 +106,4 @@ For Linear Regression Analysis (LRA), run
 
 `python ./Neural_Analysis/LRA.py`
 
-To perform the neural analysis on your dataset, please consult Training/Saving Neural Activities.txt for saving data format
+To perform the neural analysis on your dataset, please consult ./Neural_Analysis/Training/Saving Neural Activities.txt for saving data format

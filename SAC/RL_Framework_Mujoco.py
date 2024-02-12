@@ -62,7 +62,7 @@ class MujocoEnv(gym.Env):
             y_coord_cond_cum.append(y_coord_c)
 
         #Meta parameters for the simulation
-        self.n_fixedsteps = 5
+        self.n_fixedsteps = 25
         self.timestep_limit = (1319 * 1) + self.n_fixedsteps
         self._max_episode_steps = (619 * 1) + self.n_fixedsteps   #Do not matter. It is being set in the main.py where the total number of steps are being changed.
         self.radius = 0.038   #0.075
