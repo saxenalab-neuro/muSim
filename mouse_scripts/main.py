@@ -100,11 +100,6 @@ def train_episode(mouseEnv, agent, policy_memory, episode_reward, episode_steps,
     state = mouseEnv.get_start_state()
     ep_trajectory = []
 
-    policy_loss_tracker = []
-    policy_loss_2_tracker = []
-    policy_loss_3_tracker = []
-    policy_loss_4_tracker = []
-
     #num_layers specified in the policy model 
     h_prev = torch.zeros(size=(1, 1, args.hidden_size))
     c_prev = torch.zeros(size=(1, 1, args.hidden_size))
@@ -130,14 +125,8 @@ def train_episode(mouseEnv, agent, policy_memory, episode_reward, episode_steps,
                 if args.type == 'rnn':
                     critic_1_loss, critic_2_loss, policy_loss, policy_loss_2, policy_loss_3, policy_loss_4, ent_loss, alpha = agent.update_parameters(policy_memory, args.policy_batch_size)
 
-                    policy_loss_2_tracker.append(policy_loss_2)
-                    policy_loss_3_tracker.append(policy_loss_3)
-                    policy_loss_4_tracker.append(policy_loss_4)
-
                 elif args.type == 'lstm':
                     critic_1_loss, critic_2_loss, policy_loss, ent_loss, alpha = agent.update_parameters(policy_memory, args.policy_batch_size)
-
-                policy_loss_tracker.append(policy_loss)
 
         ### TRACKING REWARD + EXPERIENCE TUPLE###
         next_state, reward, done = mouseEnv.step(action, i)
@@ -159,7 +148,7 @@ def train_episode(mouseEnv, agent, policy_memory, episode_reward, episode_steps,
         if done:
             break
 
-    return ep_trajectory, episode_reward, episode_steps, policy_loss_tracker, policy_loss_2_tracker, policy_loss_3_tracker, policy_loss_4_tracker
+    return ep_trajectory, episode_reward, episode_steps
 
 def test(mouseEnv, agent, episode_reward, episode_steps, args):
 
@@ -305,17 +294,7 @@ def main():
     ### 1SEC REAL TIME = 1 ms SIMULATION ###
     p.setTimeStep(.001)
 
-    ### INITIALIZE ALL VALUES TO TRACK ###
-    reward_tracker_slow = []
-    reward_tracker_fast = []
-    reward_tracker_1 = []
-
     highest_reward = 0
-
-    policy_loss_tracker = []
-    policy_loss_2_tracker = []
-    policy_loss_3_tracker = []
-    policy_loss_4_tracker = []
 
     ### BEGIN TRAINING LOOP
     for i_episode in itertools.count(1):
@@ -344,19 +323,7 @@ def main():
                 continue
             
             # Run the episode
-            ep_trajectory, episode_reward, episode_steps, policy_loss, policy_loss_2, policy_loss_3, policy_loss_4 = train_episode(mouseEnv, agent, policy_memory, episode_reward, episode_steps, one_cycle_len, args)
-
-            if len(policy_memory.buffer) > args.policy_batch_size:
-
-                policy_loss_tracker.append(policy_loss)
-                policy_loss_2_tracker.append(policy_loss_2)
-                policy_loss_3_tracker.append(policy_loss_3)
-                policy_loss_4_tracker.append(policy_loss_4)
-
-                np.save(f'mouse_experiments/data/policy_loss_{args.model_save_name}', policy_loss_tracker)
-                np.save(f'mouse_experiments/data/policy_loss_2_{args.model_save_name}', policy_loss_2_tracker)
-                np.save(f'mouse_experiments/data/policy_loss_3_{args.model_save_name}', policy_loss_3_tracker)
-                np.save(f'mouse_experiments/data/policy_loss_4_{args.model_save_name}', policy_loss_4_tracker)
+            ep_trajectory, episode_reward, episode_steps = train_episode(mouseEnv, agent, policy_memory, episode_reward, episode_steps, one_cycle_len, args)
 
             ### SAVING MODELS + TRACKING VARIABLES ###
             if episode_reward > highest_reward:
@@ -385,24 +352,24 @@ def main():
                     x_kinematics = np.array(x_kinematics)
                     lstm_activity = np.array(lstm_activity)
                     print(f'New highest reward for data_1: {episode_reward}')
-                    np.save('mouse_experiments/data/mouse_1', x_kinematics)
-                    np.save('mouse_experiments/data/mouse_1_activity', lstm_activity)
+                    np.save('mouse_experiments/mouse_1', x_kinematics)
+                    np.save('mouse_experiments/mouse_1_activity', lstm_activity)
                     highest_reward_1 = episode_reward
 
             elif episode_reward > highest_reward_slow and data_curr == 'data_slow':
                     x_kinematics = np.array(x_kinematics)
                     lstm_activity = np.array(lstm_activity)
                     print(f'New highest reward for data_slow: {episode_reward}')
-                    np.save('mouse_experiments/data/mouse_slow', x_kinematics)
-                    np.save('mouse_experiments/data/mouse_slow_activity', lstm_activity)
+                    np.save('mouse_experiments/mouse_slow', x_kinematics)
+                    np.save('mouse_experiments/mouse_slow_activity', lstm_activity)
                     highest_reward_slow = episode_reward
 
             elif episode_reward > highest_reward_fast and data_curr == 'data_fast':
                     x_kinematics = np.array(x_kinematics)
                     lstm_activity = np.array(lstm_activity)
                     print(f'New highest reward for data_fast: {episode_reward}')
-                    np.save('mouse_experiments/data/mouse_fast', x_kinematics)
-                    np.save('mouse_experiments/data/mouse_fast_activity', lstm_activity)
+                    np.save('mouse_experiments/mouse_fast', x_kinematics)
+                    np.save('mouse_experiments/mouse_fast_activity', lstm_activity)
                     highest_reward_fast = episode_reward
 
     mouseEnv.close() #disconnects server

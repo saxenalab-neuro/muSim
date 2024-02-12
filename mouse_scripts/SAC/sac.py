@@ -25,7 +25,7 @@ class SAC(object):
     def select_action(self, state, h_prev, c_prev, evaluate=False):
         pass
 
-    def update_parametersRNN(self, policy_memory, policy_batch_size):
+    def update_parameters(self, policy_memory, policy_batch_size):
         pass
 
     # Save model parameters
