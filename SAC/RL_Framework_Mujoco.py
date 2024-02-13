@@ -81,48 +81,19 @@ class MujocoEnv(gym.Env):
         neural_activity_cum = []
 
 
-        #Load only the training conditions if mode = 0
-        if self.mode == 0:
-            self.n_exp_conds = len(kinematics_train)
-            for i_condition in range(len(kinematics_train)):
-                x_coord_c = kinematics_train[i_condition][0, :] #kinematics_shape: [x, timepoints]
-                y_coord_c = kinematics_train[i_condition][1, :] 
-                
-                x_coord_cond_cum.append(x_coord_c)
-                y_coord_cond_cum.append(y_coord_c)
+        
+        self.n_exp_conds = len(kinematics_train)
+        for i_condition in range(len(kinematics_train)):
+            x_coord_c = kinematics_train[i_condition][0, :] #kinematics_shape: [x, timepoints]
+            y_coord_c = kinematics_train[i_condition][1, :] 
+            
+            x_coord_cond_cum.append(x_coord_c)
+            y_coord_cond_cum.append(y_coord_c)
 
 
-                #Now normalize the neural activity and append it
-                na_c = na_train[i_condition] / np.max(na_train[i_condition])
-                neural_activity_cum.append(na_c)
-
-        #Load the training and testing conditions if mode = 1
-        elif self.mode == 1:
-            self.n_exp_conds = len(kinematics_train) + len(kinematics_test)
-
-            #First append the training conditions
-            for i_condition in range(len(kinematics_train)):
-                x_coord_c = kinematics_train[i_condition][0, :]
-                y_coord_c = kinematics_train[i_condition][1, :]
-                
-                x_coord_cond_cum.append(x_coord_c)
-                y_coord_cond_cum.append(y_coord_c)
-
-                #Now normalize the neural activity and append it
-                na_c = na_train[i_condition] / np.max(na_train[i_condition])
-                neural_activity_cum.append(na_c)
-
-            #Then append the testing conditions
-            for i_condition in range(len(kinematics_test)):
-                x_coord_c = kinematics_test[i_condition][0, :]
-                y_coord_c = kinematics_test[i_condition][1, :]
-                
-                x_coord_cond_cum.append(x_coord_c)
-                y_coord_cond_cum.append(y_coord_c)
-
-                #Now normalize the neural activity and append it
-                na_c = na_test[i_condition] / np.max(na_test[i_condition])
-                neural_activity_cum.append(na_c)
+            #Now normalize the neural activity and append it
+            na_c = na_train[i_condition] / np.max(na_train[i_condition])
+            neural_activity_cum.append(na_c)
 
 
 
@@ -167,6 +138,67 @@ class MujocoEnv(gym.Env):
         self._set_observation_space(self._get_obs())
 
         self.seed()
+
+
+    def update_kinematics_for_test(self):
+
+        with open('./monkey/monkey_data/kinematics_train.pkl', 'rb') as f:
+            kinematics_train = pickle.load(f)
+    
+        with open('./monkey/monkey_data/kinematics_test.pkl', 'rb') as f:
+            kinematics_test = pickle.load(f)
+
+        with open('./monkey/monkey_data/neural_activity_train.pkl', 'rb') as f:
+            na_train = pickle.load(f)
+    
+        with open('./monkey/monkey_data/neural_activity_test.pkl', 'rb') as f:
+            na_test = pickle.load(f)
+
+
+        x_coord_cond_cum = [] 
+        y_coord_cond_cum = [] 
+
+        neural_activity_cum = []
+
+        self.n_exp_conds = len(kinematics_train) + len(kinematics_test)
+
+        #First append the training conditions
+        for i_condition in range(len(kinematics_train)):
+            x_coord_c = kinematics_train[i_condition][0, :]
+            y_coord_c = kinematics_train[i_condition][1, :]
+            
+            x_coord_cond_cum.append(x_coord_c)
+            y_coord_cond_cum.append(y_coord_c)
+
+            #Now normalize the neural activity and append it
+            na_c = na_train[i_condition] / np.max(na_train[i_condition])
+            neural_activity_cum.append(na_c)
+
+        #Then append the testing conditions
+        for i_condition in range(len(kinematics_test)):
+            x_coord_c = kinematics_test[i_condition][0, :]
+            y_coord_c = kinematics_test[i_condition][1, :]
+            
+            x_coord_cond_cum.append(x_coord_c)
+            y_coord_cond_cum.append(y_coord_c)
+
+            #Now normalize the neural activity and append it
+            na_c = na_test[i_condition] / np.max(na_test[i_condition])
+            neural_activity_cum.append(na_c)
+
+        #Now change the x_coord and y_coord matrices to adjust for the self.radius and self.center
+        d_radius = 1/self.radius
+        for i_cond in range(self.n_exp_conds):
+            x_coord_cond_cum[i_cond] = (x_coord_cond_cum[i_cond] / d_radius) + self.center[0]
+            y_coord_cond_cum[i_cond] = (y_coord_cond_cum[i_cond] / d_radius) + self.center[1]
+
+        self.x_coord_cond_cum = x_coord_cond_cum
+        self.y_coord_cond_cum = y_coord_cond_cum
+        self.neural_activity_cum = neural_activity_cum
+
+        self.x_coord = self.x_coord_cond_cum[0]
+        self.y_coord = self.y_coord_cond_cum[0]
+
 
     def _set_action_space(self):
         bounds = self.model.actuator_ctrlrange.copy().astype(np.float32)

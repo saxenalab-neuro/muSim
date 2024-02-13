@@ -135,8 +135,10 @@ class Simulate():
                 hidden_activity: list
                     - list containing the rnn activity during testing
         """
-        #specify the self.env.mode = 1 for testing
-        self.env.mode = 1
+
+        #Update the environment kinematics to both the training and testing conditions
+        self.env.update_kinematics_for_test()
+
         ### LOAD SAVED MODEL ###
         f = os.path.join(self.root_dir, self.checkpoint_folder, self.checkpoint_file)
         self.agent.actor.load_state_dict(torch.load(f))
@@ -198,8 +200,7 @@ class Simulate():
 
         """ Train an RNN based SAC agent to follow kinematic trajectory
         """
-        #Specify the env mode as 0 for training
-        self.env.mode = 0
+
         ### TRAINING DATA DICTIONARY ###
         Statistics = {
             "rewards": [],
