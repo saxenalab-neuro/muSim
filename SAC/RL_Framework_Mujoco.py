@@ -39,11 +39,10 @@ def convert_observation_to_space(observation):
 class MujocoEnv(gym.Env):
     """Superclass for all MuJoCo environments.
     """
-    def __init__(self, model_path, frame_skip, n_exp_conds, data_path):
+    def __init__(self, model_path, frame_skip, data_path):
 
         self.frame_skip = frame_skip
         self.frame_repeat = 5
-        self.n_exp_conds = n_exp_conds
         self.model = mujoco_py.load_model_from_path(model_path)
 
         self.sim = mujoco_py.MjSim(self.model)
@@ -51,7 +50,6 @@ class MujocoEnv(gym.Env):
 
         # Load the experimental kinematics x and y coordinates from the data
         # Load the kinematics (x and y from the data)
-        n_exp_conds = n_exp_conds
 
         #Set the mode for the env
         # 0: for training
@@ -314,8 +312,8 @@ class MujocoEnv(gym.Env):
 
 class Muscle_Env(MujocoEnv):
 
-    def __init__(self, model_path, frame_skip, n_exp_conds, data_path):
-        MujocoEnv.__init__(self, model_path, frame_skip, n_exp_conds, data_path)
+    def __init__(self, model_path, frame_skip, data_path):
+        MujocoEnv.__init__(self, model_path, frame_skip, data_path)
 
     def get_cost(self, action):
         scaler= 1/50
