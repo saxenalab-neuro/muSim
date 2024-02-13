@@ -147,7 +147,7 @@ class MujocoEnv(gym.Env):
         d_radius = 1/self.radius
         for i_cond in range(self.n_exp_conds):
             x_coord_cond_cum[i_cond] = (x_coord_cond_cum[i_cond] / d_radius) + self.center[0]
-            y_coord_cond_cum[i_cond] = (y_coord_cond_cum[i_cond] / d_radius) + self.center[0]
+            y_coord_cond_cum[i_cond] = (y_coord_cond_cum[i_cond] / d_radius) + self.center[1]
 
         self.x_coord_cond_cum = x_coord_cond_cum
         self.y_coord_cond_cum = y_coord_cond_cum
