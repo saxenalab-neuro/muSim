@@ -269,7 +269,10 @@ class Simulate():
                                         action, 
                                         reward, 
                                         next_state, 
-                                        mask))  
+                                        mask,
+                                        h_current.squeeze(0).cpu().numpy(),
+                                        self.env.neural_activity[na_idx],
+                                        np.array([na_idx])))
 
                 ### MOVE TO NEXT STATE ###
                 state = next_state

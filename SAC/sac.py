@@ -122,7 +122,7 @@ class SAC_Agent():
     def update_parameters(self, policy_memory: PolicyReplayMemory, policy_batch_size: int) -> (int, int, int):
 
         ### SAMPLE FROM REPLAY ###
-        state_batch, action_batch, reward_batch, next_state_batch, mask_batch, policy_state_batch = policy_memory.sample(batch_size=policy_batch_size)
+        state_batch, action_batch, reward_batch, next_state_batch, mask_batch, h_batch, policy_state_batch, neural_activity_batch, na_idx_batch = policy_memory.sample(batch_size=policy_batch_size)
 
         ### CONVERT DATA TO TENSOR ###
         state_batch = torch.FloatTensor(state_batch).to(self.device)
@@ -130,6 +130,9 @@ class SAC_Agent():
         action_batch = torch.FloatTensor(action_batch).to(self.device)
         reward_batch = torch.FloatTensor(reward_batch).to(self.device).unsqueeze(1)
         mask_batch = torch.FloatTensor(mask_batch).to(self.device).unsqueeze(1)
+        h_batch = torch.FloatTensor(h_batch).to(self.device).permute(1, 0, 2)
+        neural_activity_batch = torch.FloatTensor(neural_activity_batch).to(self.device)
+        na_idx_batch = torch.FloatTensor(na_idx_batch).to(self.device)
 
         h0 = torch.zeros(size=(1, next_state_batch.shape[0], self.hidden_size)).to(self.device)
         ### SAMPLE NEXT Q VALUE FOR CRITIC LOSS ###
