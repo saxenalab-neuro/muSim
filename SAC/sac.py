@@ -103,6 +103,25 @@ class SAC_Agent():
 
         return policy_loss_4
 
+    #Define a loss function that constraints a subset of the RNN nodes to the experimental neural data
+    def _policy_loss_exp_neural_constrain(self, policy_state_batch, h0, len_seq, neural_activity_batch, na_idx_batch, mask_seq):
+        #Find the loss for neural activity constrainting
+        lstm_out = self.actor.forward_lstm(policy_state_batch, h0, sampling= False, len_seq= len_seq)
+        lstm_out = lstm_out.reshape(-1, lstm_out.size()[-1])[mask_seq]
+        lstm_activity = lstm_out[:, 0:49]
+
+        #Now filter the neural activity batch and lstm activity batch using the na_idx batch
+        with torch.no_grad():
+            na_idx_batch = na_idx_batch.squeeze(-1) > 0
+   
+        lstm_activity = lstm_activity[na_idx_batch]
+        neural_activity_batch = neural_activity_batch[na_idx_batch]
+
+        policy_loss_exp_c = F.mse_loss(lstm_activity, neural_activity_batch)
+
+        return policy_loss_exp_c
+
+
     def select_action(self, state: np.ndarray, h_prev: torch.Tensor, evaluate=False) -> (np.ndarray, torch.Tensor, np.ndarray):
 
         state = torch.FloatTensor(state).to(self.device).unsqueeze(0).unsqueeze(0)
@@ -137,7 +156,7 @@ class SAC_Agent():
         h0 = torch.zeros(size=(1, next_state_batch.shape[0], self.hidden_size)).to(self.device)
         ### SAMPLE NEXT Q VALUE FOR CRITIC LOSS ###
         with torch.no_grad():
-            next_state_action, next_state_log_pi, _, _, _, _ = self.actor.sample(next_state_batch.unsqueeze(1), h0, sampling=True)
+            next_state_action, next_state_log_pi, _, _, _, _ = self.actor.sample(next_state_batch.unsqueeze(1), h_batch, sampling=True)
             qf1_next_target, qf2_next_target = self.critic_target(next_state_batch, next_state_action)
             min_qf_next_target = torch.min(qf1_next_target, qf2_next_target) - self.alpha * next_state_log_pi
             next_q_value = reward_batch + mask_batch * self.gamma * (min_qf_next_target)
@@ -179,9 +198,10 @@ class SAC_Agent():
             loss_simple_dynamics = self._policy_loss_2(policy_state_batch, h0, len_seq, mask_seq)
             loss_activations_min = self._policy_loss_3(policy_state_batch, h0, len_seq, mask_seq)
             loss_weights_min = self._policy_loss_4()
+            loss_exp_constrain = self._policy_loss_exp_neural_constrain(policy_state_batch, h0, len_seq, neural_activity_batch, na_idx_batch, mask_seq)
 
             ### CALCULATE FINAL POLICY LOSS ###
-            policy_loss += (0.1*(loss_simple_dynamics)) + (0.01*(loss_activations_min)) + (0.001*(loss_weights_min))
+            policy_loss += (0.1*(loss_simple_dynamics)) + (0.01*(loss_activations_min)) + (0.001*(loss_weights_min)) + (1e+04*(loss_exp_constrain))
 
         ### TAKE GRADIENT STEP ###
         self.actor_optim.zero_grad()
