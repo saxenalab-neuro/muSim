@@ -215,6 +215,11 @@ class MujocoEnv(gym.Env):
         self.y_coord = self.y_coord_cond_cum[cond_to_select]
         self.neural_activity = self.neural_activity_cum[cond_to_select]
 
+        #Set the high-level task scalar signal
+        self.condition_scalar = (self.x_coord.shape[0] - 600) / (1319 - 600)
+        #Set the max episode steps to reset after one cycle for multiple cycles
+        self._max_episode_steps = self.x_coord.shape[0] + self.n_fixedsteps
+
         self.istep= 0
         self.coord_idx = 0
         self.theta= np.pi

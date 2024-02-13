@@ -84,7 +84,7 @@ class Simulate():
 
         ### LOAD CUSTOM GYM ENVIRONMENT ###
         self.env = env(muscle_path, muscle_params_path, 1, 6, kinematics_path)
-        self.observation_shape = self.env.observation_space.shape[0]+3+3
+        self.observation_shape = self.env.observation_space.shape[0]+3+3+1
 
         ### SAC AGENT ###
         self.agent = SAC_Agent(self.observation_shape, 
@@ -156,6 +156,7 @@ class Simulate():
 
         ### GET INITAL STATE + RESET MODEL BY POSE
         state = self.env.reset(episode)
+        state = [*state, self.env.condition_scalar]
 
         # Num_layers specified in the policy model 
         h_prev = torch.zeros(size=(1, 1, self.hidden_size))
@@ -170,6 +171,7 @@ class Simulate():
 
             ### TRACKING REWARD + EXPERIENCE TUPLE###
             next_state, reward, done, info, episode_reward, episode_steps = self._step(action, timestep, episode_reward, episode_steps)
+            next_state = [*next_state, self.env.condition_scalar]
             episode_reward += reward
 
             ### VISUALIZE MODEL ###
@@ -220,6 +222,8 @@ class Simulate():
 
             ### GET INITAL STATE + RESET MODEL BY POSE
             state = self.env.reset(episode)
+            #Append the high-level task scalar signal
+            state = [*state, self.env.condition_scalar]
 
             ep_trajectory = []  # used to store (s_t, a_t, r_t, s_t+1) tuple for replay storage
 
@@ -247,6 +251,8 @@ class Simulate():
                 reward = 0
                 for _ in range(self.env.frame_repeat):
                     next_state, inter_reward, done, _ = self.env.step(action)
+                    next_state = [*next_state, self.env.condition_scalar]
+
                     reward += inter_reward
                     episode_steps += 1
 
