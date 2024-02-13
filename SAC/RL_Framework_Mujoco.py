@@ -39,7 +39,7 @@ def convert_observation_to_space(observation):
 class MujocoEnv(gym.Env):
     """Superclass for all MuJoCo environments.
     """
-    def __init__(self, model_path, frame_skip, data_path):
+    def __init__(self, model_path, frame_skip):
 
         self.frame_skip = frame_skip
         self.frame_repeat = 5
@@ -87,8 +87,7 @@ class MujocoEnv(gym.Env):
             for i_condition in range(len(kinematics_train)):
                 x_coord_c = kinematics_train[i_condition][0, :] #kinematics_shape: [x, timepoints]
                 y_coord_c = kinematics_train[i_condition][1, :] 
-                # x_coord_c = np.load(f'{data_path}/x_coord_{i_condition+1}.npy')
-                # y_coord_c = np.load(f'{data_path}/y_coord_{i_condition+1}.npy')
+                
                 x_coord_cond_cum.append(x_coord_c)
                 y_coord_cond_cum.append(y_coord_c)
 
@@ -105,8 +104,7 @@ class MujocoEnv(gym.Env):
             for i_condition in range(len(kinematics_train)):
                 x_coord_c = kinematics_train[i_condition][0, :]
                 y_coord_c = kinematics_train[i_condition][1, :]
-                # x_coord_c = np.load(f'{data_path}/x_coord_{i_condition+1}.npy')
-                # y_coord_c = np.load(f'{data_path}/y_coord_{i_condition+1}.npy')
+                
                 x_coord_cond_cum.append(x_coord_c)
                 y_coord_cond_cum.append(y_coord_c)
 
@@ -118,8 +116,7 @@ class MujocoEnv(gym.Env):
             for i_condition in range(len(kinematics_test)):
                 x_coord_c = kinematics_test[i_condition][0, :]
                 y_coord_c = kinematics_test[i_condition][1, :]
-                # x_coord_c = np.load(f'{data_path}/x_coord_{i_condition+1}.npy')
-                # y_coord_c = np.load(f'{data_path}/y_coord_{i_condition+1}.npy')
+                
                 x_coord_cond_cum.append(x_coord_c)
                 y_coord_cond_cum.append(y_coord_c)
 
@@ -312,8 +309,8 @@ class MujocoEnv(gym.Env):
 
 class Muscle_Env(MujocoEnv):
 
-    def __init__(self, model_path, frame_skip, data_path):
-        MujocoEnv.__init__(self, model_path, frame_skip, data_path)
+    def __init__(self, model_path, frame_skip):
+        MujocoEnv.__init__(self, model_path, frame_skip)
 
     def get_cost(self, action):
         scaler= 1/50
