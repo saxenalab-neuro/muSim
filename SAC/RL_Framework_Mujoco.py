@@ -245,7 +245,9 @@ class MujocoEnv(gym.Env):
     def do_simulation(self, ctrl, n_frames):
         self.sim.data.ctrl[:]= ctrl 
         for _ in range(n_frames):
-            self.sim.step() 
+            self.sim.data.ctrl[:]= ctrl
+            self.sim.step()
+            self.sim.forward()
 
     def render(self,
                mode='human',
@@ -359,11 +361,11 @@ class Muscle_Env(MujocoEnv):
     def step(self, action):
         self.istep += 1
 
-        if self.istep > self.n_fixedsteps and self.istep < 20:
+        if self.istep > self.n_fixedsteps and self.istep < 100:
             self.threshold = 0.032
-        elif self.istep >= 20 and self.istep<30:
+        elif self.istep >= 100 and self.istep<150:
             self.threshold = 0.016
-        elif self.istep >=30:
+        elif self.istep >=150:
             self.threshold = 0.008
 
         prev_hand_xpos= self.sim.data.get_body_xpos("hand").copy()
@@ -377,7 +379,7 @@ class Muscle_Env(MujocoEnv):
 
         reward= self.get_reward()
         cost= self.get_cost(action)
-        final_reward= (5*reward) - (0.5*cost)
+        final_reward= (5*reward) #- (0.5*cost)
 
         done= self.is_done()
 
