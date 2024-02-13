@@ -39,7 +39,7 @@ def convert_observation_to_space(observation):
 class MujocoEnv(gym.Env):
     """Superclass for all MuJoCo environments.
     """
-    def __init__(self, model_path, params_file_path, frame_skip, n_exp_conds, data_path):
+    def __init__(self, model_path, frame_skip, n_exp_conds, data_path):
 
         self.frame_skip = frame_skip
         self.frame_repeat = 5
@@ -314,8 +314,8 @@ class MujocoEnv(gym.Env):
 
 class Muscle_Env(MujocoEnv):
 
-    def __init__(self, model_path, params_file_path, frame_skip, n_exp_conds, data_path):
-        MujocoEnv.__init__(self, model_path, params_file_path, frame_skip, n_exp_conds, data_path)
+    def __init__(self, model_path, frame_skip, n_exp_conds, data_path):
+        MujocoEnv.__init__(self, model_path, frame_skip, n_exp_conds, data_path)
 
     def get_cost(self, action):
         scaler= 1/50

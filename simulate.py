@@ -83,7 +83,7 @@ class Simulate():
         """
 
         ### LOAD CUSTOM GYM ENVIRONMENT ###
-        self.env = env(muscle_path, muscle_params_path, 1, 6, kinematics_path)
+        self.env = env(muscle_path, 1, 6, kinematics_path)
         self.observation_shape = self.env.observation_space.shape[0]+3+3+1
 
         ### SAC AGENT ###
