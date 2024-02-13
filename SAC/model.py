@@ -59,7 +59,7 @@ class Actor(nn.Module):
         if sampling == True:
             x = x.squeeze(1)
 
-        x = F.relu(x)
+        # x = F.relu(x)
         mean = self.mean_linear(x)
         log_std = self.log_std_linear(x)
         log_std = torch.clamp(log_std, min=LOG_SIG_MIN, max=LOG_SIG_MAX)
@@ -124,10 +124,29 @@ class Actor(nn.Module):
         if sampling == False:
            x, _ = pad_packed_sequence(x, batch_first= True)
 
-        x = F.relu(x)
+        # x = F.relu(x)
 
         return x, x_l1
 
+
+    def forward_lstm(self, state, h_prev, sampling, len_seq= None):
+
+        x = F.tanh(self.linear1(state))
+
+        if sampling == False:
+            assert len_seq!=None, "Proved the len_seq"
+
+            x = pack_padded_sequence(x, len_seq, batch_first= True, enforce_sorted= False)
+
+        x, (h_current) = self.rnn(x, (h_prev))
+
+        if sampling == False:
+           x, len_x_seq = pad_packed_sequence(x, batch_first= True)
+
+        if sampling == True:
+            x = x.squeeze(1)
+
+        return x
 
 class Critic(nn.Module):
     def __init__(self, num_inputs, num_actions, hidden_dim):
