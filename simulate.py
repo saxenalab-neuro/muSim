@@ -185,7 +185,6 @@ class Simulate():
                 kinematics_hand.append(self.env.sim.data.get_body_xpos("hand").copy())          #[3, ]
                 kinematics_target.append(self.env.sim.data.get_body_xpos("target").copy())      #[3, ]
 
-
                 ### VISUALIZE MODEL ###
                 if self.visualize == True:
                     self.env.render()
@@ -197,6 +196,7 @@ class Simulate():
                 #For testing we do not need early termination
                 # if done:
                 #     break
+            
             print(episode_reward)
             # TODO get kinematics
             Test_Values["hidden_act"] = hidden_activity
@@ -311,7 +311,11 @@ class Simulate():
 
             ### HIGHEST REWARD ###
             if episode_reward > highest_reward:
-                highest_reward = episode_reward 
+                highest_reward = episode_reward
+
+                #Save the model at the highest reward
+                f = os.path.join(self.root_dir, self.checkpoint_folder, self.checkpoint_file)
+                torch.save(self.agent.actor.state_dict(), f + '.pth')
             
             ### SAVING STATE DICT OF TRAINING ###
             if len(self.root_dir) != 0 and len(self.checkpoint_folder) != 0 and len(self.checkpoint_file) != 0:
@@ -325,7 +329,7 @@ class Simulate():
                     #     'agent_optimizer_state_dict': self.agent.actor_optim.state_dict(),
                     #     'critic_optimizer_state_dict': self.agent.critic_optim.state_dict(),
                     # }, f + '.pth')
-                    torch.save(self.agent.actor.state_dict(), f + '.pth')
+                    torch.save(self.agent.actor.state_dict(), f + '_latest.pth')
 
             ### PRINT TRAINING OUTPUT ###
             print('-----------------------------------')
