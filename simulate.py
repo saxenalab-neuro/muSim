@@ -151,6 +151,11 @@ class Simulate():
             "episode_reward": 0,
         }
 
+        hidden_activity_cum = []
+        kinematics_hand_cum = []
+        kinematics_target_cum = []
+        episode_reward_cum = []
+
         for episode in range(self.env.n_exp_conds):
 
             ### TRACKING VARIABLES ###
@@ -174,7 +179,7 @@ class Simulate():
                 ### SELECT ACTION ###
                 with torch.no_grad():
                     action, h_current, rnn_act = self.agent.select_action(state, h_prev, evaluate=True)
-                    hidden_activity.append(rnn_act)
+                    hidden_activity.append(rnn_act[0, :])  # [1, n_hidden_units] --> [n_hidden_units,]
 
                 ### TRACKING REWARD + EXPERIENCE TUPLE###
                 next_state, reward, done, _ = self.env.step(action)
@@ -196,13 +201,23 @@ class Simulate():
                 #For testing we do not need early termination
                 # if done:
                 #     break
-            
-            print(episode_reward)
-            # TODO get kinematics
-            Test_Values["hidden_act"] = hidden_activity
-            Test_Values["episode_reward"] = episode_reward
+                
+            hidden_activity = np.array(hidden_activity)   #shape: [ep_timepoints, n_hidden_units]
+            kinematics_hand = np.array(kinematics_hand)    #shape: [ep_timepoints, 3]
+            kinematics_target = np.array(kinematics_target) #shape: [ep_timepoints, 3]
+
+            hidden_activity_cum.append(hidden_activity)
+            kinematics_hand_cum.append(kinematics_hand)
+            kinematics_target_cum.append(kinematics_target)
+
+        # TODO get kinematics
+        Test_Values["hidden_act"] = hidden_activity_cum
+        Test_Values["kinematics_hand"] = kinematics_hand_cum
+        Test_Values["kinematics_target"] = kinematics_target_cum
+        Test_Values["episode_reward"] = episode_reward
         
-        with open(f'{save_name}.pkl', 'wb') as f:
+        # with open(f'{save_name}.pkl', 'wb') as f:
+        with open('test_statistics.pkl', 'wb') as f:
             pickle.dump(Test_Values, f)
             print("Saved to %s" % f'{save_name}.pkl')
             print('--------------------------\n')
