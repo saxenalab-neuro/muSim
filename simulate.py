@@ -146,50 +146,61 @@ class Simulate():
         ### TESTING PERFORMANCE ###
         Test_Values = {
             "hidden_act": [],
-            "kinematics": [],
+            "kinematics_hand": [],
+            "kinematics_target": [],
             "episode_reward": 0,
         }
 
-        ### TRACKING VARIABLES ###
-        episode_reward = 0
-        episode_steps = 0
-        hidden_activity = []
-        done = False
+        for episode in range(self.env.n_exp_conds):
 
-        ### GET INITAL STATE + RESET MODEL BY POSE
-        state = self.env.reset(episode)
-        state = [*state, self.env.condition_scalar]
+            ### TRACKING VARIABLES ###
+            episode_reward = 0
+            episode_steps = 0
+            hidden_activity = []
+            kinematics_hand = []
+            kinematics_target = []
+            done = False
 
-        # Num_layers specified in the policy model 
-        h_prev = torch.zeros(size=(1, 1, self.hidden_size))
+            ### GET INITAL STATE + RESET MODEL BY POSE
+            state = self.env.reset(episode)
+            state = [*state, self.env.condition_scalar]
 
-        ### STEPS PER EPISODE ###
-        for timestep in range(self.env._max_episode_steps):
+            # Num_layers specified in the policy model 
+            h_prev = torch.zeros(size=(1, 1, self.hidden_size))
 
-            ### SELECT ACTION ###
-            with torch.no_grad():
-                action, h_current, rnn_act = self.agent.select_action(state, h_prev, evaluate=True)
-                hidden_activity.append(rnn_act)
+            ### STEPS PER EPISODE ###
+            for timestep in range(self.env.timestep_limit):
 
-            ### TRACKING REWARD + EXPERIENCE TUPLE###
-            next_state, reward, done, info, episode_reward, episode_steps = self._step(action, timestep, episode_reward, episode_steps)
-            next_state = [*next_state, self.env.condition_scalar]
-            episode_reward += reward
+                ### SELECT ACTION ###
+                with torch.no_grad():
+                    action, h_current, rnn_act = self.agent.select_action(state, h_prev, evaluate=True)
+                    hidden_activity.append(rnn_act)
 
-            ### VISUALIZE MODEL ###
-            if self.visualize == True:
-                self.env.render()
+                ### TRACKING REWARD + EXPERIENCE TUPLE###
+                next_state, reward, done, _ = self.env.step(action)
+                next_state = [*next_state, self.env.condition_scalar]
+                episode_reward += reward
 
-            state = next_state
-            h_prev = h_current
+                #now append the kinematics of the hand and the target
+                kinematics_hand.append(self.env.sim.data.get_body_xpos("hand").copy())          #[3, ]
+                kinematics_target.append(self.env.sim.data.get_body_xpos("target").copy())      #[3, ]
 
-            ### EARLY TERMINATION OF EPISODE
-            if done:
-                break
-        
-        # TODO get kinematics
-        Test_Values["hidden_act"] = hidden_activity
-        Test_Values["episode_reward"] = episode_reward
+
+                ### VISUALIZE MODEL ###
+                if self.visualize == True:
+                    self.env.render()
+
+                state = next_state
+                h_prev = h_current
+
+                ### EARLY TERMINATION OF EPISODE
+                #For testing we do not need early termination
+                # if done:
+                #     break
+            
+            # TODO get kinematics
+            Test_Values["hidden_act"] = hidden_activity
+            Test_Values["episode_reward"] = episode_reward
         
         with open(f'{save_name}.pkl', 'wb') as f:
             pickle.dump(Test_Values, f)

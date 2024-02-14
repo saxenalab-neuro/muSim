@@ -51,11 +51,6 @@ class MujocoEnv(gym.Env):
         # Load the experimental kinematics x and y coordinates from the data
         # Load the kinematics (x and y from the data)
 
-        #Set the mode for the env
-        # 0: for training
-        # 1: for testing
-        self.mode = 0
-
         #Load the kinematics
         #[2, timepoints] = [x/y, timepoints]
 
