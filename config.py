@@ -97,10 +97,10 @@ def config_parser():
                         default=1000, 
                         help='number of episodes until checkpoint is saved')
 
-    parser.add_argument('--test', 
-                        type=bool, 
-                        default=False, 
-                        help='test a model')
+    parser.add_argument('--mode', 
+                        type=str, 
+                        default="train", 
+                        help='select whether to train or test a model (train, test)')
 
     parser.add_argument('--muscle_path', 
                         type=str, 

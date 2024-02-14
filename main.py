@@ -45,10 +45,12 @@ def main():
     )
 
     ### TRAIN OR TEST ###
-    if args.test == False:
+    if args.mode == "train":
         trainer.train()
-    else:
+    elif args.mode == "test":
         trainer.test(args.test_data_filename)
+    else:
+        raise NotImplementedError
 
 if __name__ == '__main__':
     main()

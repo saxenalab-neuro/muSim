@@ -141,7 +141,7 @@ class Simulate():
 
         ### LOAD SAVED MODEL ###
         f = os.path.join(self.root_dir, self.checkpoint_folder, self.checkpoint_file + '.pth')
-        self.agent.actor.load_state_dict(torch.load(f))
+        self.agent.actor.load_state_dict(torch.load(f['agent_state_dict']))
 
         ### TESTING PERFORMANCE ###
         Test_Values = {
@@ -196,11 +196,6 @@ class Simulate():
 
                 state = next_state
                 h_prev = h_current
-
-                ### EARLY TERMINATION OF EPISODE
-                #For testing we do not need early termination
-                # if done:
-                #     break
                 
             hidden_activity = np.array(hidden_activity)   #shape: [ep_timepoints, n_hidden_units]
             kinematics_hand = np.array(kinematics_hand)    #shape: [ep_timepoints, 3]
@@ -210,17 +205,16 @@ class Simulate():
             kinematics_hand_cum.append(kinematics_hand)
             kinematics_target_cum.append(kinematics_target)
 
-        # TODO get kinematics
+        ### SAVE TESTING STATS ###
         Test_Values["hidden_act"] = hidden_activity_cum
         Test_Values["kinematics_hand"] = kinematics_hand_cum
         Test_Values["kinematics_target"] = kinematics_target_cum
         Test_Values["episode_reward"] = episode_reward
         
-        # with open(f'{save_name}.pkl', 'wb') as f:
-        with open('test_statistics.pkl', 'wb') as f:
-            pickle.dump(Test_Values, f)
-            print("Saved to %s" % f'{save_name}.pkl')
-            print('--------------------------\n')
+        np.save(f'test_hidden_act_{save_name}.npy', Test_Values['hidden_act'])
+        np.save(f'test_kinematics_hand_{save_name}.npy', Test_Values['kinematics_hand'])
+        np.save(f'test_kinematics_target_{save_name}.npy', Test_Values['kinematics_target'])
+        np.save(f'test_episode_reward_{save_name}.npy', Test_Values['episode_reward'])
 
     def train(self):
 
@@ -318,33 +312,37 @@ class Simulate():
             Statistics["policy_loss"].append(np.mean(np.array(policy_loss_tracker)))
             Statistics["critic_loss"].append(np.mean(np.array(critic1_loss_tracker)))
 
-            ### SAVE DATA TO FILE ###
-            with open(f'statistics_{self.checkpoint_file}.pkl', 'wb') as f:
-                pickle.dump(Statistics, f)
-                print("Saved to %s" % 'statistics.pkl')
-                print('--------------------------\n')
+            ### SAVE DATA TO FILE (in root project folder) ###
+            if len(self.root_dir) != 0 and len(self.checkpoint_folder) != 0 and len(self.checkpoint_file) != 0:
+                np.save(f'rewards_{self.checkpoint_file}.npy', Statistics['rewards'])
+                np.save(f'steps_{self.checkpoint_file}.npy', Statistics['steps'])
+                np.save(f'policy_loss_{self.checkpoint_file}.npy', Statistics['policy_loss'])
+                np.save(f'critic_loss_{self.checkpoint_file}.npy', Statistics['critic_loss'])
 
-            ### HIGHEST REWARD ###
             if episode_reward > highest_reward:
                 highest_reward = episode_reward
 
-                #Save the model at the highest reward
-                f = os.path.join(self.root_dir, self.checkpoint_folder, self.checkpoint_file)
-                torch.save(self.agent.actor.state_dict(), f + '.pth')
-            
             ### SAVING STATE DICT OF TRAINING ###
             if len(self.root_dir) != 0 and len(self.checkpoint_folder) != 0 and len(self.checkpoint_file) != 0:
                 f = os.path.join(self.root_dir, self.checkpoint_folder, self.checkpoint_file)
                 if episode % self.save_iter == 0 and len(self.policy_memory.buffer) > self.policy_batch_size:
-                    # torch.save({
-                    #     'iteration': episode,
-                    #     'agent_state_dict': self.agent.actor.state_dict(),
-                    #     'critic_state_dict': self.agent.critic.state_dict(),
-                    #     'critic_target_state_dict': self.agent.critic_target.state_dict(),
-                    #     'agent_optimizer_state_dict': self.agent.actor_optim.state_dict(),
-                    #     'critic_optimizer_state_dict': self.agent.critic_optim.state_dict(),
-                    # }, f + '.pth')
-                    torch.save(self.agent.actor.state_dict(), f + '_latest.pth')
+                    torch.save({
+                         'iteration': episode,
+                         'agent_state_dict': self.agent.actor.state_dict(),
+                         'critic_state_dict': self.agent.critic.state_dict(),
+                         'critic_target_state_dict': self.agent.critic_target.state_dict(),
+                         'agent_optimizer_state_dict': self.agent.actor_optim.state_dict(),
+                         'critic_optimizer_state_dict': self.agent.critic_optim.state_dict(),
+                     }, f + '.pth')
+                if episode_reward > highest_reward:
+                    torch.save({
+                            'iteration': episode,
+                            'agent_state_dict': self.agent.actor.state_dict(),
+                            'critic_state_dict': self.agent.critic.state_dict(),
+                            'critic_target_state_dict': self.agent.critic_target.state_dict(),
+                            'agent_optimizer_state_dict': self.agent.actor_optim.state_dict(),
+                            'critic_optimizer_state_dict': self.agent.critic_optim.state_dict(),
+                        }, f + '_best.pth')
 
             ### PRINT TRAINING OUTPUT ###
             print('-----------------------------------')

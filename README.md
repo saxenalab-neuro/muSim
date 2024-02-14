@@ -93,8 +93,7 @@ with the corresponding config file of your choice. The corresponding commands ar
 
 `configs/config_file_name.txt`, 
 
-add your root directory `root_dir = your_root_name`, name of the folder you created `checkpoint_folder = your_checkpoint_folder`, as well as the name of the file to save the model `checkpoint_file = model_name`. Your model will then be saved for training and can be tested on afterwards by setting `test = True` in the config file. While training, a statistics file will be saved in the project folder as well, containing rewards and agent losses.
-
+add your root directory `root_dir = your_root_name`, name of the folder you created `checkpoint_folder = your_checkpoint_folder`, as well as the name of the file to save the model `checkpoint_file = model_name`. Your model will then be saved for training and can be tested on afterwards by setting `mode = "test"` in the config file, while making sure to specify how to save your testing data (kinematics, rnn activity, etc.) by selecting `test_data_filename = filename`. While training, a statistics file will be saved in the project folder as well, containing rewards and agent losses.
 
 ## Neural Analysis
 
