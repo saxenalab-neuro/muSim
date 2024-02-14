@@ -140,7 +140,7 @@ class Simulate():
         self.env.update_kinematics_for_test()
 
         ### LOAD SAVED MODEL ###
-        f = os.path.join(self.root_dir, self.checkpoint_folder, self.checkpoint_file)
+        f = os.path.join(self.root_dir, self.checkpoint_folder, self.checkpoint_file + '.pth')
         self.agent.actor.load_state_dict(torch.load(f))
 
         ### TESTING PERFORMANCE ###
@@ -197,7 +197,7 @@ class Simulate():
                 #For testing we do not need early termination
                 # if done:
                 #     break
-            
+            print(episode_reward)
             # TODO get kinematics
             Test_Values["hidden_act"] = hidden_activity
             Test_Values["episode_reward"] = episode_reward
@@ -317,14 +317,15 @@ class Simulate():
             if len(self.root_dir) != 0 and len(self.checkpoint_folder) != 0 and len(self.checkpoint_file) != 0:
                 f = os.path.join(self.root_dir, self.checkpoint_folder, self.checkpoint_file)
                 if episode % self.save_iter == 0 and len(self.policy_memory.buffer) > self.policy_batch_size:
-                    torch.save({
-                        'iteration': episode,
-                        'agent_state_dict': self.agent.actor.state_dict(),
-                        'critic_state_dict': self.agent.critic.state_dict(),
-                        'critic_target_state_dict': self.agent.critic_target.state_dict(),
-                        'agent_optimizer_state_dict': self.agent.actor_optim.state_dict(),
-                        'critic_optimizer_state_dict': self.agent.critic_optim.state_dict(),
-                    }, f + '.pth')
+                    # torch.save({
+                    #     'iteration': episode,
+                    #     'agent_state_dict': self.agent.actor.state_dict(),
+                    #     'critic_state_dict': self.agent.critic.state_dict(),
+                    #     'critic_target_state_dict': self.agent.critic_target.state_dict(),
+                    #     'agent_optimizer_state_dict': self.agent.actor_optim.state_dict(),
+                    #     'critic_optimizer_state_dict': self.agent.critic_optim.state_dict(),
+                    # }, f + '.pth')
+                    torch.save(self.agent.actor.state_dict(), f + '.pth')
 
             ### PRINT TRAINING OUTPUT ###
             print('-----------------------------------')
