@@ -6,6 +6,9 @@ from SAC.RL_Framework_Mujoco import Muscle_Env
 import pickle
 import os
 
+#Set the current working directory
+os.chdir(os.getcwd())
+
 class Simulate():
     def __init__(self, 
                  env: Muscle_Env,

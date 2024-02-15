@@ -20,8 +20,8 @@ total_episodes = 1000000
 mode = "train"
 
 ### SAVING ###
-save_iter = 1000
+save_iter = 100
 root_dir = ""
-checkpoint_folder = ""
-checkpoint_file = ""
-test_data_filename = ""
+checkpoint_folder = "./checkpoint"
+checkpoint_file = "policy_net"
+test_data_filename = "statistics"
