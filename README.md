@@ -83,6 +83,14 @@ First you will need to install Mujoco (older version). Please make sure that Ana
     * pyquaternion
     * scikit-video
 
+##Basic Usage for the Monkey Cycling Task
+
+1. To train the controller, run the following in terminal:
+
+`python main.py --config configs/config_file_name.txt`
+
+This will save the controller in the ./checkpoint file.
+
 ## Usage
 
 To train an agent, run 
