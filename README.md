@@ -83,7 +83,7 @@ First you will need to install Mujoco (older version). Please make sure that Ana
     * pyquaternion
     * scikit-video
 
-**## Basic Usage for the Monkey Cycling Task**
+## Basic Usage for the Monkey Cycling Task
 
 1. To train the controller, run the following in terminal:
 
