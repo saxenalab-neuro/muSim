@@ -33,7 +33,8 @@ class Simulate():
                  save_iter: int,
                  muscle_path: str,
                  muscle_params_path: str,
-                 kinematics_path: str):
+                 kinematics_path: str,
+                 condition_selection_strategy: str):
 
         """Train a soft actor critic agent to control a musculoskeletal model to follow a kinematic trajectory.
 
@@ -115,6 +116,7 @@ class Simulate():
         self.checkpoint_folder = checkpoint_folder
         self.batch_iters = batch_iters
         self.save_iter = save_iter
+        self.condition_selection_strategy = condition_selection_strategy
 
         ### ENSURE SAVING FILES ARE ACCURATE ###
         assert isinstance(self.root_dir, str)
@@ -171,7 +173,8 @@ class Simulate():
             done = False
 
             ### GET INITAL STATE + RESET MODEL BY POSE
-            state = self.env.reset(episode)
+            cond_to_select = episode % self.env.n_exp_conds
+            state = self.env.reset(cond_to_select)
             state = [*state, self.env.condition_scalar]
 
             # Num_layers specified in the policy model 
@@ -235,6 +238,12 @@ class Simulate():
 
         highest_reward = -float("inf") # used for storing highest reward throughout training
 
+        #Average reward across conditions initialization
+        cond_train_count= np.ones((self.env.n_exp_conds,))
+        cond_avg_reward = np.zeros((self.env.n_exp_conds,))
+        cond_cum_reward = np.zeros((self.env.n_exp_conds,))
+        cond_cum_count = np.zeros((self.env.n_exp_conds,))
+
         ### BEGIN TRAINING ###
         for episode in range(self.episodes):
 
@@ -246,7 +255,19 @@ class Simulate():
             done = False                # determines if episode is terminated
 
             ### GET INITAL STATE + RESET MODEL BY POSE
-            state = self.env.reset(episode)
+            if self.condition_selection_strategy != "reward":
+                cond_to_select = episode % self.env.n_exp_conds
+                state = self.env.reset(cond_to_select)
+                print(self.env.x_coord.shape)
+
+            else:
+
+                cond_indx = np.nonzero(cond_train_count>0)[0][0]
+                cond_train_count[cond_indx] = cond_train_count[cond_indx] - 1
+                state = self.env.reset(cond_indx)
+                print(self.env.x_coord.shape)
+
+
             #Append the high-level task scalar signal
             state = [*state, self.env.condition_scalar]
 
@@ -309,6 +330,16 @@ class Simulate():
             
             ### PUSH TO REPLAY ###
             self.policy_memory.push(ep_trajectory)
+
+            if self.condition_selection_strategy == "reward":
+
+                cond_cum_reward[cond_indx] = cond_cum_reward[cond_indx] + episode_reward
+                cond_cum_count[cond_indx] = cond_cum_count[cond_indx] + 1
+
+                #Check if there are all zeros in the cond_train_count array
+                if np.all((cond_train_count == 0)):
+                    cond_avg_reward = cond_cum_reward / cond_cum_count
+                    cond_train_count = np.ceil((np.max(cond_avg_reward)*np.ones((self.env.n_exp_conds,)))/cond_avg_reward)
 
             ### TRACKING ###
             Statistics["rewards"].append(episode_reward)

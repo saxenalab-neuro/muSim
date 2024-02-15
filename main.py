@@ -41,7 +41,8 @@ def main():
         args.save_iter,
         args.muscle_path,
         args.muscle_params_path,
-        args.kinematics_path
+        args.kinematics_path,
+        args.condition_selection_strategy
     )
 
     ### TRAIN OR TEST ###

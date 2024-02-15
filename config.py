@@ -121,5 +121,10 @@ def config_parser():
                         type=str, 
                         default='',
                         help='filename for saving the testing data')
+                        
+    parser.add_argument('--condition_selection_strategy', 
+                        type=str, 
+                        default='reward',
+                        help='whether to select the next condition based on the corresponding average reward accumulated so far')
 
     return parser

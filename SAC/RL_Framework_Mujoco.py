@@ -229,10 +229,10 @@ class MujocoEnv(gym.Env):
 
     # -----------------------------
 
-    def reset(self, i_episode):
+    def reset(self, cond_to_select):
 
         #Set the experimental condition for training
-        cond_to_select = i_episode % self.n_exp_conds
+        
         self.x_coord = self.x_coord_cond_cum[cond_to_select]
         self.y_coord = self.y_coord_cond_cum[cond_to_select]
         self.neural_activity = self.neural_activity_cum[cond_to_select]
