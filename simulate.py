@@ -146,8 +146,8 @@ class Simulate():
 
         ### LOAD SAVED MODEL ###
         f = os.path.join(self.root_dir, self.checkpoint_folder, self.checkpoint_file + '.pth')
-        # self.agent.actor.load_state_dict(torch.load(f['agent_state_dict']))
-        self.agent.actor.load_state_dict(torch.load(f))
+        self.agent.actor.load_state_dict(torch.load(f)['agent_state_dict'])
+        # self.agent.actor.load_state_dict(torch.load(f))
 
         ### TESTING PERFORMANCE ###
         Test_Values = {
@@ -375,6 +375,7 @@ class Simulate():
                             'agent_optimizer_state_dict': self.agent.actor_optim.state_dict(),
                             'critic_optimizer_state_dict': self.agent.critic_optim.state_dict(),
                         }, f + '_best.pth')
+
 
             ### PRINT TRAINING OUTPUT ###
             print('-----------------------------------')
