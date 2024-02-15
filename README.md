@@ -91,6 +91,8 @@ First you will need to install Mujoco (older version). Please make sure that Ana
 
     This will save the controller in the ./checkpoint file.
 
+2. For the CCA / LRA analysis, see CCA_LRA.ipynb notebook.
+
 ## Usage
 
 To train an agent, run 
