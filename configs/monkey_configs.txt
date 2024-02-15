@@ -21,7 +21,7 @@ mode = "train"
 
 ### SAVING ###
 save_iter = 100
-root_dir = ""
+root_dir = "."
 checkpoint_folder = "./checkpoint"
 checkpoint_file = "policy_net"
 test_data_filename = "statistics"
