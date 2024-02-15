@@ -87,9 +87,9 @@ First you will need to install Mujoco (older version). Please make sure that Ana
 
 1. To train the controller, run the following in terminal:
 
-`python main.py --config configs/config_file_name.txt`
+    `python main.py --config configs/monkey_configs.txt`
 
-This will save the controller in the ./checkpoint file.
+    This will save the controller in the ./checkpoint file.
 
 ## Usage
 
