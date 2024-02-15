@@ -258,15 +258,12 @@ class Simulate():
             if self.condition_selection_strategy != "reward":
                 cond_to_select = episode % self.env.n_exp_conds
                 state = self.env.reset(cond_to_select)
-                print(self.env.x_coord.shape)
 
             else:
 
                 cond_indx = np.nonzero(cond_train_count>0)[0][0]
                 cond_train_count[cond_indx] = cond_train_count[cond_indx] - 1
                 state = self.env.reset(cond_indx)
-                print(self.env.x_coord.shape)
-
 
             #Append the high-level task scalar signal
             state = [*state, self.env.condition_scalar]
