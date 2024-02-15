@@ -95,7 +95,7 @@ This will save the controller in the ./checkpoint file.
 
 To train an agent, run 
 
-`python main.py --config configs/config_file_name.txt` 
+`python main.py --config configs/monkey_configs.txt` 
 
 with the corresponding config file of your choice. The corresponding commands are provided in the config.py file. To ensure your model saves (checkpoint containing parameters and optimizer states), create a folder with the name of your choosing in which to save the state_dict. In your configuration file 
 
