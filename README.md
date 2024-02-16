@@ -9,6 +9,7 @@ Link to corresponding paper (https://www.biorxiv.org/content/10.1101/2024.02.02.
 
 ## Installation
 
+We highly recommend a linux system for easy installation.
 
 First you will need to install Mujoco (older version). Please make sure that Anaconda as well as git are also installed on your system.
 
