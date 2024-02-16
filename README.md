@@ -95,7 +95,12 @@ First you will need to install Mujoco (older version). Please make sure that Ana
    ![Screenshot from 2024-02-15 21-00-41](https://github.com/saxenalab-neuro/muSim/assets/77393494/d3a7578c-035d-4a8c-b87b-853e3d03187c)
 
 
-3. For the CCA / LRA analysis, see CCA_LRA.ipynb notebook.
+3. For the CCA / LRA analysis plots on a successfully trained controller, see CCA_LRA.ipynb notebook.
+4. To test the controller after specific training iterations, run the following in the terminal:
+
+    `python main.py --config configs/monkey_configs.txt`
+
+5. For the trained controller, to plot the resulting kinematics (achieved vs. target) and LRA comparisons, see ./kinematics_LRA_test.ipynb.
 
 ## Usage
 
