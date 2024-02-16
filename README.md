@@ -98,7 +98,7 @@ First you will need to install Mujoco (older version). Please make sure that Ana
 3. For the CCA / LRA analysis plots on a successfully trained controller, see CCA_LRA.ipynb notebook.
 4. To test the controller after specific training iterations, run the following in the terminal:
 
-    `python main.py --config configs/monkey_configs.txt`
+    `python main.py --config configs/monkey_configs_test.txt`
 
 5. For the trained controller, to plot the resulting kinematics (achieved vs. target) and LRA comparisons, see ./kinematics_LRA_test.ipynb.
 
