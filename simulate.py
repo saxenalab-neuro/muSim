@@ -198,8 +198,8 @@ class Simulate():
                 kinematics_target.append(self.env.sim.data.get_body_xpos("target").copy())      #[3, ]
 
                 ### VISUALIZE MODEL ###
-                if self.visualize == True:
-                    self.env.render()
+                # if self.visualize == True:
+                #     self.env.render()
 
                 state = next_state
                 h_prev = h_current
@@ -218,10 +218,10 @@ class Simulate():
         Test_Values["kinematics_target"] = kinematics_target_cum
         Test_Values["episode_reward"] = episode_reward
         
-        np.save(f'test_hidden_act_{save_name}.npy', Test_Values['hidden_act'])
-        np.save(f'test_kinematics_hand_{save_name}.npy', Test_Values['kinematics_hand'])
-        np.save(f'test_kinematics_target_{save_name}.npy', Test_Values['kinematics_target'])
-        np.save(f'test_episode_reward_{save_name}.npy', Test_Values['episode_reward'])
+        np.save(f'hidden_act_{save_name}.npy', Test_Values['hidden_act'])
+        np.save(f'kinematics_hand_{save_name}.npy', Test_Values['kinematics_hand'])
+        np.save(f'kinematics_target_{save_name}.npy', Test_Values['kinematics_target'])
+        np.save(f'episode_reward_{save_name}.npy', Test_Values['episode_reward'])
 
     def train(self):
 
@@ -351,8 +351,6 @@ class Simulate():
                 np.save(f'policy_loss_{self.checkpoint_file}.npy', Statistics['policy_loss'])
                 np.save(f'critic_loss_{self.checkpoint_file}.npy', Statistics['critic_loss'])
 
-            if episode_reward > highest_reward:
-                highest_reward = episode_reward
 
             ### SAVING STATE DICT OF TRAINING ###
             if len(self.root_dir) != 0 and len(self.checkpoint_folder) != 0 and len(self.checkpoint_file) != 0:
@@ -376,6 +374,8 @@ class Simulate():
                             'critic_optimizer_state_dict': self.agent.critic_optim.state_dict(),
                         }, f + '_best.pth')
 
+            if episode_reward > highest_reward:
+                highest_reward = episode_reward
 
             ### PRINT TRAINING OUTPUT ###
             print('-----------------------------------')
