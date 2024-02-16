@@ -85,6 +85,8 @@ First you will need to install Mujoco (older version). Please make sure that Ana
 
 ## Basic Usage for the Monkey Cycling Task
 
+
+
 1. To train the controller, run the following in terminal:
 
     `python main.py --config configs/monkey_configs.txt`
