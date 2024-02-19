@@ -95,7 +95,7 @@ First you will need to install Mujoco (older version). Please make sure that Ana
     This will save the controller in the ./checkpoint file with training iterations. The highest reward should reach >= 55000 for kinematic accuracy.
 
    The episode reward with iterations (saved in ./rewards_policy_net.npy) should look like this:
-   (There may be slight variations due to random seeding but trend should look similar)
+   (There may be slight variations due to random seed but trend should look similar)
    
    <p align="center"> <img src="https://github.com/saxenalab-neuro/muSim/assets/77393494/d3a7578c-035d-4a8c-b87b-853e3d03187c" width="50%" height="50%"> </p>
 
