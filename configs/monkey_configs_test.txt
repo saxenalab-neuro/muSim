@@ -1,0 +1,29 @@
+### MUSCLE MODEL ###
+muscle_path = monkey/monkeyArm_current_scaled.xml
+muscle_params_path = monkey/params_monkey.pckl
+kinematics_path = monkey/monkey_data_xycoord
+
+### SAC TRAINING ###
+model = rnn
+gamma = 0.99
+tau = 0.005
+lr = 0.0003
+alpha = 0.20
+automatic_entropy_tuning = True
+seed = 123456
+policy_batch_size = 8
+hidden_size = 256
+policy_replay_size = 4000
+multi_policy_loss = True
+batch_iters = 1
+total_episodes = 1000000
+mode = "test"
+visualize= "False"
+condition_selection_strategy = "episode"
+
+### SAVING ###
+save_iter = 100
+root_dir = "."
+checkpoint_folder = "./checkpoint"
+checkpoint_file = "policy_net_best"
+test_data_filename = "test"
