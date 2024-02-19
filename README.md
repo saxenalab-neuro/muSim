@@ -84,7 +84,7 @@ First you will need to install Mujoco (older version). Please make sure that Ana
     * pyquaternion
     * scikit-video
 
-## Basic Usage for the Monkey Cycling Task
+## General Usage for the Monkey Cycling Task
 
 ![Cyclic Movement v2](https://github.com/saxenalab-neuro/muSim/assets/77393494/2073cc37-c44a-4558-82ae-a0c54e5573c4)
 
