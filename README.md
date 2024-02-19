@@ -87,7 +87,7 @@ First you will need to install Mujoco (older version). Please make sure that Ana
 ## Basic Usage for the Monkey Cycling Task
 
 ![Cyclic Movement v2](https://github.com/saxenalab-neuro/muSim/assets/77393494/2073cc37-c44a-4558-82ae-a0c54e5573c4)
-<img src="https://github.com/saxenalab-neuro/muSim/assets/77393494/2073cc37-c44a-4558-82ae-a0c54e5573c4" width="500" height="500">
+<img src="https://github.com/saxenalab-neuro/muSim/assets/77393494/2073cc37-c44a-4558-82ae-a0c54e5573c4" width="50%" height="50%">
 
 1. To train the controller, run the following in terminal:
 
