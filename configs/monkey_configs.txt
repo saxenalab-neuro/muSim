@@ -18,7 +18,7 @@ multi_policy_loss = True
 batch_iters = 1
 total_episodes = 1000000
 mode = "train"
-condition_selection_strategy = "episode"
+condition_selection_strategy = "reward"
 
 ### SAVING ###
 save_iter = 100
