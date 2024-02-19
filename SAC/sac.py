@@ -201,7 +201,8 @@ class SAC_Agent():
             loss_exp_constrain = self._policy_loss_exp_neural_constrain(policy_state_batch, h0, len_seq, neural_activity_batch, na_idx_batch, mask_seq)
 
             ### CALCULATE FINAL POLICY LOSS ###
-            policy_loss += (0.1*(loss_simple_dynamics)) + (0.01*(loss_activations_min)) + (0.001*(loss_weights_min)) + (1e+04*(loss_exp_constrain))
+            #To implement GDM use a weighting of 1e+04 with loss_exp_constrain
+            policy_loss += (0.1*(loss_simple_dynamics)) + (0.01*(loss_activations_min)) + (0.001*(loss_weights_min)) + (0*(loss_exp_constrain))
 
         ### TAKE GRADIENT STEP ###
         self.actor_optim.zero_grad()
