@@ -96,7 +96,7 @@ First you will need to install Mujoco (older version). Please make sure that Ana
 
    The episode reward with iterations (saved in ./rewards_policy_net.npy) should look like this:
    
-   <img src="https://github.com/saxenalab-neuro/muSim/assets/77393494/d3a7578c-035d-4a8c-b87b-853e3d03187c" width="50%" height="50%">
+   <p align="center"> <img src="https://github.com/saxenalab-neuro/muSim/assets/77393494/d3a7578c-035d-4a8c-b87b-853e3d03187c" width="50%" height="50%"> </p>
 
 3. For the CCA / LRA analysis plots on a successfully trained controller, see CCA_LRA.ipynb notebook.
 4. To test the controller after specific training iterations, run the following in the terminal:
