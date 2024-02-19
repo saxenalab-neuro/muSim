@@ -84,10 +84,9 @@ First you will need to install Mujoco (older version). Please make sure that Ana
     * pyquaternion
     * scikit-video
 
-## General Usage for the Monkey Cycling Task
+## Basic Usage for the Monkey Cycling Task
 
-![Cyclic Movement v2](https://github.com/saxenalab-neuro/muSim/assets/77393494/2073cc37-c44a-4558-82ae-a0c54e5573c4)
-
+<p align="center"> <img src="https://github.com/saxenalab-neuro/muSim/assets/77393494/2073cc37-c44a-4558-82ae-a0c54e5573c4" width="50%" height="50%"> </p>
 
 1. To train the controller, run the following in terminal:
 
@@ -96,8 +95,8 @@ First you will need to install Mujoco (older version). Please make sure that Ana
     This will save the controller in the ./checkpoint file with training iterations. The highest reward should reach >= 55000 for kinematic accuracy.
 
    The episode reward with iterations (saved in ./rewards_policy_net.npy) should look like this:
-   ![Screenshot from 2024-02-15 21-00-41](https://github.com/saxenalab-neuro/muSim/assets/77393494/d3a7578c-035d-4a8c-b87b-853e3d03187c)
-
+   
+   <p align="center"> <img src="https://github.com/saxenalab-neuro/muSim/assets/77393494/d3a7578c-035d-4a8c-b87b-853e3d03187c" width="50%" height="50%"> </p>
 
 3. For the CCA / LRA analysis plots on a successfully trained controller, see CCA_LRA.ipynb notebook.
 4. To test the controller after specific training iterations, run the following in the terminal:
@@ -106,7 +105,7 @@ First you will need to install Mujoco (older version). Please make sure that Ana
 
 5. For the trained controller, to plot the resulting kinematics (achieved vs. target) and LRA comparisons, see ./kinematics_LRA_test.ipynb.
 
-## Usage
+## General Usage
 
 To train an agent, run 
 
