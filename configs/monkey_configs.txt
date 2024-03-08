@@ -19,6 +19,7 @@ batch_iters = 1
 total_episodes = 1000000
 mode = "train"
 condition_selection_strategy = "reward"
+cuda = True
 
 ### SAVING ###
 save_iter = 100
