@@ -49,8 +49,6 @@ First you will need to install Mujoco (older version). Please make sure that Ana
 
     `conda activate nuSim`
 
-**Note:** **Skip the following steps, if installed environment using the yml file.**
-**If facing errors, manually installing the following dependencies may help**
 
 1. If you are on linux (and may apply to Mac as well), there will likely be additional packages necessary. Here is a list of possible packages:
 
