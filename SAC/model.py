@@ -51,6 +51,9 @@ class Actor(nn.Module):
             assert len_seq!=None, "Proved the len_seq"
             x = pack_padded_sequence(x, len_seq, batch_first= True, enforce_sorted= False)
 
+        #Tap RNN input for fixedpoint analysis
+        rnn_in = x
+
         x, (h_current) = self.rnn(x, (h_prev))
 
         if sampling == False:
@@ -64,11 +67,11 @@ class Actor(nn.Module):
         log_std = self.log_std_linear(x)
         log_std = torch.clamp(log_std, min=LOG_SIG_MIN, max=LOG_SIG_MAX)
 
-        return mean, log_std, h_current, x
+        return mean, log_std, h_current, x, rnn_in
 
     def sample(self, state, h_prev, sampling, len_seq=None):
 
-        mean, log_std, h_current, x = self.forward(state, h_prev, sampling, len_seq)
+        mean, log_std, h_current, x, rnn_in = self.forward(state, h_prev, sampling, len_seq)
         #if sampling == False; then mask the mean and log_std using len_seq
         if sampling == False:
             assert mean.size()[1] == log_std.size()[1], "There is a mismatch between and mean and sigma Sl_max"
@@ -106,7 +109,7 @@ class Actor(nn.Module):
         log_prob = log_prob.sum(1, keepdim=True)
         mean = torch.tanh(mean) * self.action_scale + self.action_bias
 
-        return action, log_prob, mean, h_current, mask_seq, x
+        return action, log_prob, mean, h_current, mask_seq, x, rnn_in
 
     def forward_for_simple_dynamics(self, state, h_prev, sampling, len_seq= None):
 
@@ -147,6 +150,29 @@ class Actor(nn.Module):
             x = x.squeeze(1)
 
         return x
+
+    def forward_for_neural_pert(self, state, h_prev, neural_pert= None):
+
+        x = F.tanh(self.linear1(state))
+
+        #Tap RNN input for fixedpoint analysis
+        rnn_in = x
+
+        x, (h_current) = self.rnn(x, (h_prev))
+
+        #Add the neural perturbation to the RNN output
+        x = x+neural_pert
+
+        x = x.squeeze(1)
+
+        mean = self.mean_linear(x)
+        log_std = self.log_std_linear(x)
+        log_std = torch.clamp(log_std, min=LOG_SIG_MIN, max=LOG_SIG_MAX)
+
+
+        action = torch.tanh(mean) * self.action_scale + self.action_bias
+
+        return action.detach().cpu().numpy()[0], h_current.detach(), x.detach().cpu().numpy(), rnn_in.detach().cpu().numpy()
 
 class Critic(nn.Module):
     def __init__(self, num_inputs, num_actions, hidden_dim):

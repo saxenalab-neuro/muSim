@@ -24,6 +24,6 @@ condition_selection_strategy = "episode"
 ### SAVING ###
 save_iter = 100
 root_dir = "."
-checkpoint_folder = "./checkpoint"
-checkpoint_file = "policy_net_best"
+checkpoint_folder = "checkpoint"
+checkpoint_file = "agent_networks"
 test_data_filename = "test"

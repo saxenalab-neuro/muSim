@@ -2,7 +2,9 @@ import configargparse
 
 def config_parser():
     parser = configargparse.ArgumentParser()
+    
     parser.add_argument("--config", is_config_file=True, help="config file path")
+    
     parser.add_argument('--model', 
                         type=str, 
                         default="rnn",
@@ -31,7 +33,7 @@ def config_parser():
 
     parser.add_argument('--automatic_entropy_tuning', 
                         type=bool, 
-                        default=False, 
+                        default=True, 
                         help='Automaically adjust α (default: False)')
 
     parser.add_argument('--seed', 
@@ -42,7 +44,7 @@ def config_parser():
     parser.add_argument('--policy_batch_size', 
                         type=int, 
                         default=8, 
-                        help='batch size (default: 6)')
+                        help='batch size (default: 8)')
 
     parser.add_argument('--hidden_size', 
                         type=int, 
@@ -71,7 +73,7 @@ def config_parser():
     parser.add_argument('--visualize', 
                         type=bool, 
                         default=False,
-                        help='visualize mouse')
+                        help='visualize monkey/mouse')
 
     parser.add_argument('--root_dir', 
                         type=str, 
@@ -80,12 +82,18 @@ def config_parser():
 
     parser.add_argument('--checkpoint_file', 
                         type=str, 
-                        default='',
+                        default='agent_networks',
                         help='specify the name of the file in which you would like to save model weights/training params (do not add extension). Also saves statistics file in root of project folder with same name')
 
     parser.add_argument('--checkpoint_folder', 
                         type=str, 
+                        default= 'checkpoint',
                         help='specify the name of the folder in which you would like to save the checkpoint file')
+
+    parser.add_argument('--statistics_folder', 
+                        type=str, 
+                        default= 'training_statistics',
+                        help='specify the name of the folder in which you would like to save the training statistics')
 
     parser.add_argument('--total_episodes', 
                         type=int, 
@@ -94,32 +102,42 @@ def config_parser():
 
     parser.add_argument('--save_iter', 
                         type=int, 
-                        default=1000, 
+                        default=100, 
                         help='number of episodes until checkpoint is saved')
 
     parser.add_argument('--mode', 
                         type=str, 
                         default="train", 
+                        help='select whether to train or test a model (train, test, SFE, sensory_pert, neural_pert, musculo_properties)')
+
+    parser.add_argument('--load_saved_nets_for_training', 
+                        type=bool, 
+                        default=False, 
                         help='select whether to train or test a model (train, test)')
 
-    parser.add_argument('--muscle_path', 
+    parser.add_argument('--musculoskeletal_model_path', 
                         type=str, 
-                        default='monkey/monkeyArm_current_scaled.xml',
+                        default='musculoskeletal_model/musculoskeletal_model.xml',
                         help='path of musculoskeletal model')
 
-    parser.add_argument('--muscle_params_path', 
+    parser.add_argument('--initial_pose_path', 
                         type=str, 
-                        default='monkey/params_monkey.pckl',
-                        help='path of musculoskeletal model parameters')
+                        default='initial_pose',
+                        help='path of musculoskeletal model')
 
     parser.add_argument('--kinematics_path', 
                         type=str, 
-                        default='monkey/monkey_data_xycoord',
+                        default='kinematics_data',
                         help='path to kinematics data')
+
+    parser.add_argument('--nusim_data_path', 
+                        type=str, 
+                        default='nusim_neural_data',
+                        help='path to nusim neural data for training and testing')
 
     parser.add_argument('--test_data_filename', 
                         type=str, 
-                        default='',
+                        default='test_data',
                         help='filename for saving the testing data')
                         
     parser.add_argument('--condition_selection_strategy', 

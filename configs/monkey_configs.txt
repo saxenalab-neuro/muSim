@@ -1,7 +1,8 @@
 ### MUSCLE MODEL ###
-muscle_path = monkey/monkeyArm_current_scaled.xml
-muscle_params_path = monkey/params_monkey.pckl
-kinematics_path = monkey/monkey_data_xycoord
+musculoskeletal_model_path = musculoskeletal_model/musculoskeletal_model.xml
+initial_pose_path = initial_pose
+kinematics_path = kinematics_data
+nusim_data_path = nusim_neural_data
 
 ### SAC TRAINING ###
 model = rnn
@@ -24,6 +25,8 @@ cuda = True
 ### SAVING ###
 save_iter = 100
 root_dir = "."
-checkpoint_folder = "./checkpoint"
-checkpoint_file = "policy_net"
-test_data_filename = "statistics"
+checkpoint_folder = "checkpoint"
+statistics_folder = "training_statistics"
+checkpoint_file = "agent_networks"
+test_data_filename = "test_data"
+load_saved_nets_for_training = "False"

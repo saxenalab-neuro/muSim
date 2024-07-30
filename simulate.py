@@ -3,8 +3,12 @@ import torch
 from SAC.sac import SAC_Agent
 from SAC.replay_memory import PolicyReplayMemory
 from SAC.RL_Framework_Mujoco import Muscle_Env
+from SAC import sensory_feedback_specs, kinematics_preprocessing_specs, neural_specs
 import pickle
 import os
+from numpy.core.records import fromarrays
+from scipy.io import savemat
+
 
 #Set the current working directory
 os.chdir(os.getcwd())
@@ -29,11 +33,15 @@ class Simulate():
                  root_dir: str,
                  checkpoint_file: str,
                  checkpoint_folder: str,
+                 statistics_folder: str,
                  episodes: int,
+                 load_saved_nets_for_training: bool,
                  save_iter: int,
-                 muscle_path: str,
-                 muscle_params_path: str,
+                 mode: str,
+                 musculoskeletal_model_path: str,
+                 initial_pose_path:str,
                  kinematics_path: str,
+                 nusim_data_path:str,
                  condition_selection_strategy: str):
 
         """Train a soft actor critic agent to control a musculoskeletal model to follow a kinematic trajectory.
@@ -86,9 +94,38 @@ class Simulate():
             path for musculoskeletal model parameters
         """
 
+        ### TRAINING VARIABLES ###
+        self.episodes = episodes
+        self.hidden_size = hidden_size
+        self.policy_batch_size = policy_batch_size
+        self.visualize = visualize
+        self.root_dir = root_dir
+        self.checkpoint_file = checkpoint_file
+        self.checkpoint_folder = checkpoint_folder
+        self.statistics_folder = statistics_folder
+        self.batch_iters = batch_iters
+        self.save_iter = save_iter
+        self.mode_to_sim = mode
+        self.condition_selection_strategy = condition_selection_strategy
+        self.load_saved_nets_for_training = load_saved_nets_for_training
+
+        ### ENSURE SAVING FILES ARE ACCURATE ###
+        assert isinstance(self.root_dir, str)
+        assert isinstance(self.checkpoint_folder, str)
+        assert isinstance(self.checkpoint_file, str)
+
+        ### SEED ###
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+
+
         ### LOAD CUSTOM GYM ENVIRONMENT ###
-        self.env = env(muscle_path, 1)
-        self.observation_shape = self.env.observation_space.shape[0]+3+3+1
+        if self.mode_to_sim in ["musculo_properties"]:
+            self.env = env(musculoskeletal_model_path[:-len('musculoskeletal_model.xml')] + 'musculo_targets_pert.xml', initial_pose_path, kinematics_path, nusim_data_path, self.mode_to_sim, 1)
+
+        else:
+            self.env = env(musculoskeletal_model_path[:-len('musculoskeletal_model.xml')] + 'musculo_targets.xml', initial_pose_path, kinematics_path, nusim_data_path, self.mode_to_sim, 1)
+        self.observation_shape = self.env.observation_space.shape[0]+len(sensory_feedback_specs.visual_velocity)*3+1
 
         ### SAC AGENT ###
         self.agent = SAC_Agent(self.observation_shape, 
@@ -106,26 +143,6 @@ class Simulate():
         ### REPLAY MEMORY ###
         self.policy_memory = PolicyReplayMemory(policy_replay_size, seed)
 
-        ### TRAINING VARIABLES ###
-        self.episodes = episodes
-        self.hidden_size = hidden_size
-        self.policy_batch_size = policy_batch_size
-        self.visualize = visualize
-        self.root_dir = root_dir
-        self.checkpoint_file = checkpoint_file
-        self.checkpoint_folder = checkpoint_folder
-        self.batch_iters = batch_iters
-        self.save_iter = save_iter
-        self.condition_selection_strategy = condition_selection_strategy
-
-        ### ENSURE SAVING FILES ARE ACCURATE ###
-        assert isinstance(self.root_dir, str)
-        assert isinstance(self.checkpoint_folder, str)
-        assert isinstance(self.checkpoint_file, str)
-
-        ### SEED ###
-        torch.manual_seed(seed)
-        np.random.seed(seed)
 
     def test(self, save_name):
 
@@ -145,37 +162,59 @@ class Simulate():
         self.env.update_kinematics_for_test()
 
         ### LOAD SAVED MODEL ###
-        f = os.path.join(self.root_dir, self.checkpoint_folder, self.checkpoint_file + '.pth')
-        self.agent.actor.load_state_dict(torch.load(f)['agent_state_dict'])
-        # self.agent.actor.load_state_dict(torch.load(f))
+        self.load_saved_nets_from_checkpoint(load_best = True)
 
-        ### TESTING PERFORMANCE ###
-        Test_Values = {
-            "hidden_act": [],
-            "kinematics_hand": [],
-            "kinematics_target": [],
-            "episode_reward": 0,
+        #Set the recurrent connections to zero if the mode is SFE
+        if self.mode_to_sim in ["SFE"] and "recurrent_connections" in sensory_feedback_specs.sf_elim:
+            self.agent.actor.rnn.weight_hh_l0 = torch.nn.Parameter(self.agent.actor.rnn.weight_hh_l0 * 0)
+
+        ### TESTING DATA ###
+        Test_Data = {
+            "emg": {},
+            "rnn_activity": {},
+            "rnn_input": {},
+            "rnn_input_fp": {},
+            "kinematics_mbodies": {},
+            "kinematics_mtargets": {}
         }
 
-        hidden_activity_cum = []
-        kinematics_hand_cum = []
-        kinematics_target_cum = []
-        episode_reward_cum = []
+        ###Data jPCA
+        activity_jpca = []
+        times_jpca = []
+        n_fixedsteps_jpca = []
+        condition_tpoints_jpca = []
 
-        for episode in range(self.env.n_exp_conds):
+        #Save the following after testing: EMG, RNN_activity, RNN_input, kin_musculo_bodies, kin_musculo_targets
+        emg = {}
+        rnn_activity = {}
+        rnn_input = {}
+        kin_mb = {}
+        kin_mt = {}
+        rnn_input_fp = {}
+
+        for i_cond_sim in range(self.env.n_exp_conds):
 
             ### TRACKING VARIABLES ###
             episode_reward = 0
-            episode_steps = 0
-            hidden_activity = []
-            kinematics_hand = []
-            kinematics_target = []
+            episode_steps = 0 
+
+            emg_cond = []
+            kin_mb_cond = []
+            kin_mt_cond = []
+            rnn_activity_cond = []
+            rnn_input_cond = []
+            rnn_input_fp_cond = []
+
             done = False
 
             ### GET INITAL STATE + RESET MODEL BY POSE
-            cond_to_select = episode % self.env.n_exp_conds
+            cond_to_select = i_cond_sim % self.env.n_exp_conds
             state = self.env.reset(cond_to_select)
-            state = [*state, self.env.condition_scalar]
+
+            if self.mode_to_sim in ["SFE"] and "task_scalar" in sensory_feedback_specs.sf_elim:
+                state = [*state, 0]
+            else:
+                state = [*state, self.env.condition_scalar]
 
             # Num_layers specified in the policy model 
             h_prev = torch.zeros(size=(1, 1, self.hidden_size))
@@ -185,48 +224,97 @@ class Simulate():
 
                 ### SELECT ACTION ###
                 with torch.no_grad():
-                    action, h_current, rnn_act = self.agent.select_action(state, h_prev, evaluate=True)
-                    hidden_activity.append(rnn_act[0, :])  # [1, n_hidden_units] --> [n_hidden_units,]
+
+                    if self.mode_to_sim in ["neural_pert"]:
+                        state = torch.FloatTensor(state).to(self.agent.device).unsqueeze(0).unsqueeze(0)
+                        h_prev = h_prev.to(self.agent.device)
+                        neural_pert = neural_specs.neural_pert[timestep % neural_specs.neural_pert.shape[0], :]
+                        neural_pert = torch.FloatTensor(neural_pert).to(self.agent.device).unsqueeze(0).unsqueeze(0) 
+                        action, h_current, rnn_act, rnn_in = self.agent.actor.forward_for_neural_pert(state, h_prev, neural_pert)
+
+                    elif self.mode_to_sim in ["SFE"] and "recurrent_connections" in sensory_feedback_specs.sf_elim:
+                        h_prev = h_prev*0
+                        action, h_current, rnn_act, rnn_in = self.agent.select_action(state, h_prev, evaluate=True)
+                    else:
+                        action, h_current, rnn_act, rnn_in = self.agent.select_action(state, h_prev, evaluate=True)
+
+                    
+                    emg_cond.append(action) #[n_muscles, ]
+                    rnn_activity_cond.append(rnn_act[0, :])  # [1, n_hidden_units] --> [n_hidden_units,]
+                    rnn_input_cond.append(state) #[n_inputs, ]
+                    rnn_input_fp_cond.append(rnn_in[0, 0, :])  #[1, 1, n_hidden_units] --> [n_hidden_units, ]
+
 
                 ### TRACKING REWARD + EXPERIENCE TUPLE###
                 next_state, reward, done, _ = self.env.step(action)
-                next_state = [*next_state, self.env.condition_scalar]
+                
+                if self.mode_to_sim in ["SFE"] and "task_scalar" in sensory_feedback_specs.sf_elim:
+                    next_state = [*next_state, 0]
+                else:
+                    next_state = [*next_state, self.env.condition_scalar]
+
                 episode_reward += reward
 
-                #now append the kinematics of the hand and the target
-                kinematics_hand.append(self.env.sim.data.get_body_xpos("hand").copy())          #[3, ]
-                kinematics_target.append(self.env.sim.data.get_body_xpos("target").copy())      #[3, ]
+                #now append the kinematics of the musculo body and the corresponding target
+                kin_mb_t = []
+                kin_mt_t = []
+                for musculo_body in kinematics_preprocessing_specs.musculo_tracking:
+                    kin_mb_t.append(self.env.sim.data.get_body_xpos(musculo_body[0]).copy())   #[3, ]    
+                    kin_mt_t.append(self.env.sim.data.get_body_xpos(musculo_body[1]).copy()) #[3, ]
+
+                kin_mb_cond.append(kin_mb_t)   # kin_mb_t : [n_targets, 3]
+                kin_mt_cond.append(kin_mt_t)   # kin_mt_t : [n_targets, 3]
 
                 ### VISUALIZE MODEL ###
-                # if self.visualize == True:
-                #     self.env.render()
+                if self.visualize == True:
+                    self.env.render()
 
                 state = next_state
                 h_prev = h_current
-                
-            hidden_activity = np.array(hidden_activity)   #shape: [ep_timepoints, n_hidden_units]
-            kinematics_hand = np.array(kinematics_hand)    #shape: [ep_timepoints, 3]
-            kinematics_target = np.array(kinematics_target) #shape: [ep_timepoints, 3]
+            
+            #Append the testing data
+            emg[i_cond_sim] = np.array(emg_cond)  # [timepoints, muscles]
+            rnn_activity[i_cond_sim] = np.array(rnn_activity_cond) # [timepoints, n_hidden_units]
+            rnn_input[i_cond_sim] = np.array(rnn_input_cond)  #[timepoints, n_inputs]
+            rnn_input_fp[i_cond_sim] = np.array(rnn_input_fp_cond)  #[timepoints, n_hidden_units]
+            kin_mb[i_cond_sim] = np.array(kin_mb_cond).transpose(1, 0, 2)   # kin_mb_cond: [timepoints, n_targets, 3] --> [n_targets, timepoints, 3]
+            kin_mt[i_cond_sim] = np.array(kin_mt_cond).transpose(1, 0, 2)   # kin_mt_cond: [timepoints, n_targets, 3] --> [n_targets, timepoints, 3]
 
-            hidden_activity_cum.append(hidden_activity)
-            kinematics_hand_cum.append(kinematics_hand)
-            kinematics_target_cum.append(kinematics_target)
+            ##Append the jpca data
+            activity_jpca.append(dict(A = rnn_activity_cond))
+            times_jpca.append(dict(times = np.arange(timestep)))    #the timestep is assumed to be 1ms
+            condition_tpoints_jpca.append(self.env.kin_to_sim[self.env.current_cond_to_sim].shape[-1])
+            n_fixedsteps_jpca.append(self.env.n_fixedsteps)
 
         ### SAVE TESTING STATS ###
-        Test_Values["hidden_act"] = hidden_activity_cum
-        Test_Values["kinematics_hand"] = kinematics_hand_cum
-        Test_Values["kinematics_target"] = kinematics_target_cum
-        Test_Values["episode_reward"] = episode_reward
+        Test_Data["emg"] = emg
+        Test_Data["rnn_activity"] = rnn_activity
+        Test_Data["rnn_input"] = rnn_input
+        Test_Data["rnn_input_fp"] = rnn_input_fp
+        Test_Data["kinematics_mbodies"] = kin_mb
+        Test_Data["kinematics_mtargets"] = kin_mt
+
+        ### Save the jPCA data
+        Data_jpca = fromarrays([activity_jpca, times_jpca], names=['A', 'times'])
+
+        #save test data
+        with open(save_name + '/test_data.pkl', 'wb') as f:
+            pickle.dump(Test_Data, f)
+
+        #save jpca data
+        savemat(save_name + '/Data_jpca.mat', {'Data' : Data_jpca})
+        savemat(save_name + '/n_fixedsteps_jpca.mat', {'n_fsteps' : n_fixedsteps_jpca})
+        savemat(save_name + '/condition_tpoints_jpca.mat', {'cond_tpoints': condition_tpoints_jpca})
         
-        np.save(f'hidden_act_{save_name}.npy', Test_Values['hidden_act'])
-        np.save(f'kinematics_hand_{save_name}.npy', Test_Values['kinematics_hand'])
-        np.save(f'kinematics_target_{save_name}.npy', Test_Values['kinematics_target'])
-        np.save(f'episode_reward_{save_name}.npy', Test_Values['episode_reward'])
 
     def train(self):
 
         """ Train an RNN based SAC agent to follow kinematic trajectory
         """
+
+        #Load the saved networks from the last training
+        if self.load_saved_nets_for_training:
+            self.load_saved_nets_from_checkpoint(load_best= False)
 
         ### TRAINING DATA DICTIONARY ###
         Statistics = {
@@ -273,11 +361,11 @@ class Simulate():
             h_prev = torch.zeros(size=(1, 1, self.hidden_size)) # num_layers specified in the policy model
 
             ### LOOP THROUGH EPISODE TIMESTEPS ###
-            for t in range(self.env._max_episode_steps):
+            while not(done):
 
                 ### SELECT ACTION ###
                 with torch.no_grad():
-                    action, h_current, _ = self.agent.select_action(state, h_prev, evaluate=False)
+                    action, h_current, _, _ = self.agent.select_action(state, h_prev, evaluate=False)
                     
                     #Now query the neural activity idx from the simulator
                     na_idx= self.env.coord_idx
@@ -298,6 +386,10 @@ class Simulate():
 
                     reward += inter_reward
                     episode_steps += 1
+
+                    ### EARLY TERMINATION OF EPISODE ###
+                    if done:
+                        break
 
                 episode_reward += reward
 
@@ -321,9 +413,6 @@ class Simulate():
                 state = next_state
                 h_prev = h_current
 
-                ### EARLY TERMINATION OF EPISODE ###
-                if done:
-                    break
             
             ### PUSH TO REPLAY ###
             self.policy_memory.push(ep_trajectory)
@@ -345,17 +434,18 @@ class Simulate():
             Statistics["critic_loss"].append(np.mean(np.array(critic1_loss_tracker)))
 
             ### SAVE DATA TO FILE (in root project folder) ###
-            if len(self.root_dir) != 0 and len(self.checkpoint_folder) != 0 and len(self.checkpoint_file) != 0:
-                np.save(f'rewards_{self.checkpoint_file}.npy', Statistics['rewards'])
-                np.save(f'steps_{self.checkpoint_file}.npy', Statistics['steps'])
-                np.save(f'policy_loss_{self.checkpoint_file}.npy', Statistics['policy_loss'])
-                np.save(f'critic_loss_{self.checkpoint_file}.npy', Statistics['critic_loss'])
+            if len(self.statistics_folder) != 0:
+                np.save(self.statistics_folder + f'/stats_rewards.npy', Statistics['rewards'])
+                np.save(self.statistics_folder + f'/stats_steps.npy', Statistics['steps'])
+                np.save(self.statistics_folder + f'/stats_policy_loss.npy', Statistics['policy_loss'])
+                np.save(self.statistics_folder + f'/stats_critic_loss.npy', Statistics['critic_loss'])
 
 
             ### SAVING STATE DICT OF TRAINING ###
-            if len(self.root_dir) != 0 and len(self.checkpoint_folder) != 0 and len(self.checkpoint_file) != 0:
-                f = os.path.join(self.root_dir, self.checkpoint_folder, self.checkpoint_file)
+            if len(self.checkpoint_folder) != 0 and len(self.checkpoint_file) != 0:
                 if episode % self.save_iter == 0 and len(self.policy_memory.buffer) > self.policy_batch_size:
+                    
+                    #Save the state dicts
                     torch.save({
                          'iteration': episode,
                          'agent_state_dict': self.agent.actor.state_dict(),
@@ -363,7 +453,12 @@ class Simulate():
                          'critic_target_state_dict': self.agent.critic_target.state_dict(),
                          'agent_optimizer_state_dict': self.agent.actor_optim.state_dict(),
                          'critic_optimizer_state_dict': self.agent.critic_optim.state_dict(),
-                     }, f + '.pth')
+                     }, self.checkpoint_folder + f'/{self.checkpoint_file}.pth')
+
+                    #Save the pickled model for fixedpoint finder analysis
+                    torch.save(self.agent.actor.rnn, self.checkpoint_folder + f'/actor_rnn_fpf.pth')
+
+                
                 if episode_reward > highest_reward:
                     torch.save({
                             'iteration': episode,
@@ -372,7 +467,10 @@ class Simulate():
                             'critic_target_state_dict': self.agent.critic_target.state_dict(),
                             'agent_optimizer_state_dict': self.agent.actor_optim.state_dict(),
                             'critic_optimizer_state_dict': self.agent.critic_optim.state_dict(),
-                        }, f + '_best.pth')
+                        }, self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')
+
+                    #Save the pickled model for fixedpoint finder analysis
+                    torch.save(self.agent.actor.rnn, self.checkpoint_folder + f'/actor_rnn_best_fpf.pth')
 
             if episode_reward > highest_reward:
                 highest_reward = episode_reward
@@ -381,3 +479,42 @@ class Simulate():
             print('-----------------------------------')
             print('highest reward: {} | reward: {} | timesteps completed: {}'.format(highest_reward, episode_reward, episode_steps))
             print('-----------------------------------\n')
+
+    def load_saved_nets_from_checkpoint(self, load_best: bool):
+
+        #Load the saved networks from the checkpoint file
+        #Saved networks include policy, critic, critic_target, policy_optimizer and critic_optimizer
+
+        if not load_best:
+
+            #Load the policy network
+            self.agent.actor.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['agent_state_dict'])
+
+            #Load the critic network
+            self.agent.critic.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['critic_state_dict'])
+
+            #Load the critic target network
+            self.agent.critic_target.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['critic_target_state_dict'])
+
+            #Load the policy optimizer 
+            self.agent.actor_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['agent_optimizer_state_dict'])
+
+            #Load the critic optimizer
+            self.agent.critic_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['critic_optimizer_state_dict'])
+
+        else:
+
+            #Load the policy network
+            self.agent.actor.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['agent_state_dict'])
+
+            #Load the critic network
+            self.agent.critic.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['critic_state_dict'])
+
+            #Load the critic target network
+            self.agent.critic_target.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['critic_target_state_dict'])
+
+            #Load the policy optimizer 
+            self.agent.actor_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['agent_optimizer_state_dict'])
+
+            #Load the critic optimizer
+            self.agent.critic_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['critic_optimizer_state_dict'])

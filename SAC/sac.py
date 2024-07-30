@@ -7,6 +7,7 @@ from .model import Actor, Critic
 from torch.nn.utils.rnn import pad_sequence
 import numpy as np
 from .replay_memory import PolicyReplayMemory
+from . import neural_specs
 
 class SAC_Agent():
     def __init__(self, 
@@ -130,13 +131,13 @@ class SAC_Agent():
         ### IF TRAINING ###
         if evaluate == False: 
             # get action sampled from gaussian
-            action, _, _, h_current, _, rnn_out = self.actor.sample(state, h_prev, sampling=True, len_seq=None)
+            action, _, _, h_current, _, rnn_out, rnn_in = self.actor.sample(state, h_prev, sampling=True, len_seq=None)
         ### IF TESTING ###
         else:
             # get the action without noise
-            _, _, action, h_current, _, rnn_out = self.actor.sample(state, h_prev, sampling=True, len_seq=None)
+            _, _, action, h_current, _, rnn_out, rnn_in = self.actor.sample(state, h_prev, sampling=True, len_seq=None)
 
-        return action.detach().cpu().numpy()[0], h_current.detach(), rnn_out.detach().cpu().numpy()
+        return action.detach().cpu().numpy()[0], h_current.detach(), rnn_out.detach().cpu().numpy(), rnn_in.detach().cpu().numpy()
 
     def update_parameters(self, policy_memory: PolicyReplayMemory, policy_batch_size: int) -> (int, int, int):
 
@@ -156,7 +157,7 @@ class SAC_Agent():
         h0 = torch.zeros(size=(1, next_state_batch.shape[0], self.hidden_size)).to(self.device)
         ### SAMPLE NEXT Q VALUE FOR CRITIC LOSS ###
         with torch.no_grad():
-            next_state_action, next_state_log_pi, _, _, _, _ = self.actor.sample(next_state_batch.unsqueeze(1), h_batch, sampling=True)
+            next_state_action, next_state_log_pi, _, _, _, _, _ = self.actor.sample(next_state_batch.unsqueeze(1), h_batch, sampling=True)
             qf1_next_target, qf2_next_target = self.critic_target(next_state_batch, next_state_action)
             min_qf_next_target = torch.min(qf1_next_target, qf2_next_target) - self.alpha * next_state_log_pi
             next_q_value = reward_batch + mask_batch * self.gamma * (min_qf_next_target)
@@ -176,7 +177,7 @@ class SAC_Agent():
         h0 = torch.zeros(size=(1, len(policy_state_batch), self.hidden_size)).to(self.device)
         len_seq = list(map(len, policy_state_batch))
         policy_state_batch = torch.FloatTensor(pad_sequence(policy_state_batch, batch_first= True)).to(self.device)
-        pi_action_bat, log_prob_bat, _, _, mask_seq, _  = self.actor.sample(policy_state_batch, h0, sampling=False, len_seq=len_seq)
+        pi_action_bat, log_prob_bat, _, _, mask_seq, _, _  = self.actor.sample(policy_state_batch, h0, sampling=False, len_seq=len_seq)
 
         ### MASK POLICY STATE BATCH ###
         policy_state_batch_pi = policy_state_batch.reshape(-1, policy_state_batch.size()[-1])[mask_seq]
@@ -202,7 +203,10 @@ class SAC_Agent():
 
             ### CALCULATE FINAL POLICY LOSS ###
             #To implement GDM use a weighting of 1e+04 with loss_exp_constrain
-            policy_loss += (0.1*(loss_simple_dynamics)) + (0.01*(loss_activations_min)) + (0.001*(loss_weights_min)) + (0*(loss_exp_constrain))
+            policy_loss += (neural_specs.alpha*(loss_simple_dynamics))  \
+                            + (neural_specs.beta*(loss_activations_min))  \
+                            + (neural_specs.gamma*(loss_weights_min))  \
+                            + (neural_specs.zeta*(loss_exp_constrain))
 
         ### TAKE GRADIENT STEP ###
         self.actor_optim.zero_grad()

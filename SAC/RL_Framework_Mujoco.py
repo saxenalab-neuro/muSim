@@ -10,14 +10,15 @@ import pickle
 
 import numpy as np
 from gym import utils
-from . import utils
-
-from .utils import load_data, set_parameters
+from . import sensory_feedback_specs, reward_function_specs
+from . import kinematics_preprocessing_specs
 
 try:
     import mujoco_py
 except ImportError as e:
     raise error.DependencyNotInstalled("{}. (HINT: you need to install mujoco_py, and also perform the setup instructions here: https://github.com/openai/mujoco-py/.)".format(e))
+
+import ipdb
 
 DEFAULT_SIZE = 500
 
@@ -39,83 +40,87 @@ def convert_observation_to_space(observation):
 class MujocoEnv(gym.Env):
     """Superclass for all MuJoCo environments.
     """
-    def __init__(self, model_path, frame_skip):
+    def __init__(self, model_path, initial_pose_path, kinematics_path, nusim_data_path, mode_to_sim, frame_skip):
 
+
+        self.model_path = model_path
+        self.initial_pose_path = initial_pose_path
+        self.kinematics_path = kinematics_path
+        self.nusim_data_path = nusim_data_path
+
+        self.mode_to_sim = mode_to_sim
         self.frame_skip = frame_skip
-        self.frame_repeat = 5
+        self.frame_repeat = kinematics_preprocessing_specs.frame_repeat
         self.model = mujoco_py.load_model_from_path(model_path)
 
         self.sim = mujoco_py.MjSim(self.model)
-        self.data = self.sim.data 
+        self.data = self.sim.data
+
+        #Set the simulation timestep
+        if kinematics_preprocessing_specs.sim_dt != 0:
+            self.model.opt.timestep = kinematics_preprocessing_specs.sim_dt
 
         # Load the experimental kinematics x and y coordinates from the data
-        # Load the kinematics (x and y from the data)
+        with open(self.kinematics_path + '/kinematics.pkl', 'rb') as f:
+            kin_train_test = pickle.load(f)
 
-        #Load the kinematics
-        #[2, timepoints] = [x/y, timepoints]
+        kin_train = kin_train_test['train'] #[num_conds][num_targets, num_coords, timepoints]
+        kin_test = kin_train_test['test'] #[num_conds][num_targets, num_coords, timepoints]
+
 
         #Load the neural activities
         #[timepoints, n_neurons= 49]
 
-        with open('./monkey/monkey_data/kinematics_train.pkl', 'rb') as f:
-            kinematics_train = pickle.load(f)
-    
-        with open('./monkey/monkey_data/kinematics_test.pkl', 'rb') as f:
-            kinematics_test = pickle.load(f)
-
-        with open('./monkey/monkey_data/neural_activity_train.pkl', 'rb') as f:
+        with open(self.nusim_data_path + '/neural_activity_train.pkl', 'rb') as f:
             na_train = pickle.load(f)
     
-        with open('./monkey/monkey_data/neural_activity_test.pkl', 'rb') as f:
+        with open(self.nusim_data_path + '/neural_activity_test.pkl', 'rb') as f:
             na_test = pickle.load(f)
 
 
-        x_coord_cond_cum = [] 
-        y_coord_cond_cum = [] 
-
         neural_activity_cum = []
-
-
         
-        self.n_exp_conds = len(kinematics_train)
-        for i_condition in range(len(kinematics_train)):
-            x_coord_c = kinematics_train[i_condition][0, :] #kinematics_shape: [x, timepoints]
-            y_coord_c = kinematics_train[i_condition][1, :] 
-            
-            x_coord_cond_cum.append(x_coord_c)
-            y_coord_cond_cum.append(y_coord_c)
-
+        for i_condition in range(len(na_train)):
 
             #Now normalize the neural activity and append it
             na_c = na_train[i_condition] / np.max(na_train[i_condition])
             neural_activity_cum.append(na_c)
 
-
-
-        #Meta parameters for the simulation
-        self.n_fixedsteps = 25
-        self.timestep_limit = (1319 * 3) + self.n_fixedsteps
-        self._max_episode_steps = (619 * 1) + self.n_fixedsteps   #Do not matter. It is being set in the reset function where the total number of steps are being changed.
-        self.radius = 0.038   #0.075
-        self.theta = np.pi
-        self.center = [0.06, 0.083]
+        self.n_fixedsteps = kinematics_preprocessing_specs.n_fixedsteps
+        self.timestep_limit = kinematics_preprocessing_specs.timestep_limit
+        self.radius = kinematics_preprocessing_specs.radius
+        self.center = kinematics_preprocessing_specs.center
 
         #The threshold is varied dynamically in the step and reset functions 
         self.threshold_user = 0.064   #Previously it was 0.1
+        
+        #Setup coord_idx for setting the neural activity loss during nusim training
         self.coord_idx=0
-
-        #Now change the x_coord and y_coord matrices to adjust for the self.radius and self.center
-        d_radius = 1/self.radius
-        for i_cond in range(self.n_exp_conds):
-            x_coord_cond_cum[i_cond] = (x_coord_cond_cum[i_cond] / d_radius) + self.center[0]
-            y_coord_cond_cum[i_cond] = (y_coord_cond_cum[i_cond] / d_radius) + self.center[1]
-
-        self.x_coord_cond_cum = x_coord_cond_cum
-        self.y_coord_cond_cum = y_coord_cond_cum
         self.neural_activity_cum = neural_activity_cum
 
-        self.x_coord = self.x_coord_cond_cum[0]
-        self.y_coord = self.y_coord_cond_cum[0]
+
+        #Kinematics preprocessing for training and testing kinematics
+        #Preprocess training kinematics
+        for i_target in range(kin_train[0].shape[0]):
+            for i_cond in range(len(kin_train)):
+                for i_coord in range(kin_train[i_cond].shape[1]):
+                    kin_train[i_cond][i_target, i_coord, :] = kin_train[i_cond][i_target, i_coord, :] / self.radius[i_target]
+                    kin_train[i_cond][i_target, i_coord, :] = kin_train[i_cond][i_target, i_coord, :] + self.center[i_target][i_coord]
+
+        #Preprocess testing kinematics
+        for i_target in range(kin_test[0].shape[0]):
+            for i_cond in range(len(kin_test)):
+                for i_coord in range(kin_test[i_cond].shape[1]):
+
+                    kin_test[i_cond][i_target, i_coord, :] = kin_test[i_cond][i_target, i_coord, :] / self.radius[i_target]
+                    kin_test[i_cond][i_target, i_coord, :] = kin_test[i_cond][i_target, i_coord, :] + self.center[i_target][i_coord]
+
+        self.kin_train = kin_train 
+        self.kin_test = kin_test 
+
+        self.kin_to_sim = self.kin_train
+        self.n_exp_conds = len(self.kin_to_sim)
+        self.current_cond_to_sim = 0
 
         self.viewer = None 
         self._viewers = {}
@@ -125,8 +130,9 @@ class MujocoEnv(gym.Env):
             'video.frames_per_second': int(np.round(1.0 / self.dt))
         }
 
-        self.init_qpos = np.load('SAC/qpos_1.npy')
-        self.init_qvel = np.load('SAC/qvel_1.npy')
+        self.init_qpos = np.load(initial_pose_path + '/initial_qpos_opt.npy')
+        #Start the musculo model with zero initial qvels
+        self.init_qvel = np.load(initial_pose_path + '/initial_qpos_opt.npy')*0
 
         self._set_action_space()
         
@@ -137,62 +143,42 @@ class MujocoEnv(gym.Env):
 
     def update_kinematics_for_test(self):
 
-        with open('./monkey/monkey_data/kinematics_train.pkl', 'rb') as f:
-            kinematics_train = pickle.load(f)
-    
-        with open('./monkey/monkey_data/kinematics_test.pkl', 'rb') as f:
-            kinematics_test = pickle.load(f)
-
-        with open('./monkey/monkey_data/neural_activity_train.pkl', 'rb') as f:
+        with open(self.nusim_data_path + '/neural_activity_train.pkl', 'rb') as f:
             na_train = pickle.load(f)
     
-        with open('./monkey/monkey_data/neural_activity_test.pkl', 'rb') as f:
+        with open(self.nusim_data_path + '/neural_activity_test.pkl', 'rb') as f:
             na_test = pickle.load(f)
 
 
-        x_coord_cond_cum = [] 
-        y_coord_cond_cum = [] 
-
         neural_activity_cum = []
 
-        self.n_exp_conds = len(kinematics_train) + len(kinematics_test)
-
         #First append the training conditions
-        for i_condition in range(len(kinematics_train)):
-            x_coord_c = kinematics_train[i_condition][0, :]
-            y_coord_c = kinematics_train[i_condition][1, :]
-            
-            x_coord_cond_cum.append(x_coord_c)
-            y_coord_cond_cum.append(y_coord_c)
+        for i_condition in range(len(self.kin_train)):
 
-            #Now normalize the neural activity and append it
+            #Normalize the neural activity and append it
             na_c = na_train[i_condition] / np.max(na_train[i_condition])
             neural_activity_cum.append(na_c)
 
         #Then append the testing conditions
-        for i_condition in range(len(kinematics_test)):
-            x_coord_c = kinematics_test[i_condition][0, :]
-            y_coord_c = kinematics_test[i_condition][1, :]
-            
-            x_coord_cond_cum.append(x_coord_c)
-            y_coord_cond_cum.append(y_coord_c)
+        for i_condition in range(len(self.kin_test)):
 
-            #Now normalize the neural activity and append it
+            #Normalize the neural activity and append it
             na_c = na_test[i_condition] / np.max(na_test[i_condition])
             neural_activity_cum.append(na_c)
 
-        #Now change the x_coord and y_coord matrices to adjust for the self.radius and self.center
-        d_radius = 1/self.radius
-        for i_cond in range(self.n_exp_conds):
-            x_coord_cond_cum[i_cond] = (x_coord_cond_cum[i_cond] / d_radius) + self.center[0]
-            y_coord_cond_cum[i_cond] = (y_coord_cond_cum[i_cond] / d_radius) + self.center[1]
 
-        self.x_coord_cond_cum = x_coord_cond_cum
-        self.y_coord_cond_cum = y_coord_cond_cum
         self.neural_activity_cum = neural_activity_cum
 
-        self.x_coord = self.x_coord_cond_cum[0]
-        self.y_coord = self.y_coord_cond_cum[0]
+        #Simulate the environment on both the training and testing kinematics
+        #First update the keys of self.kin_test
+        for cond in range(len(self.kin_test)):
+            self.kin_test[len(self.kin_train) + cond] = self.kin_test.pop(cond)
+        
+        #Update the kinematics to simulate
+        self.kin_to_sim.update(self.kin_test)
+
+        #Update the number of experimental conditions
+        self.n_exp_conds = len(self.kin_to_sim)
 
 
     def _set_action_space(self):
@@ -233,14 +219,13 @@ class MujocoEnv(gym.Env):
 
         #Set the experimental condition for training
         
-        self.x_coord = self.x_coord_cond_cum[cond_to_select]
-        self.y_coord = self.y_coord_cond_cum[cond_to_select]
+        self.current_cond_to_sim = cond_to_select
         self.neural_activity = self.neural_activity_cum[cond_to_select]
 
         #Set the high-level task scalar signal
-        self.condition_scalar = (self.x_coord.shape[0] - 600) / (1319 - 600)
+        self.condition_scalar = (self.kin_to_sim[self.current_cond_to_sim].shape[-1] - 600) / (1319 - 600)
         #Set the max episode steps to reset after one cycle for multiple cycles
-        self._max_episode_steps = self.x_coord.shape[0] + self.n_fixedsteps
+        self._max_episode_steps = self.kin_to_sim[self.current_cond_to_sim].shape[-1] + self.n_fixedsteps
 
         self.istep= 0
         self.coord_idx = 0
@@ -336,8 +321,8 @@ class MujocoEnv(gym.Env):
 
 class Muscle_Env(MujocoEnv):
 
-    def __init__(self, model_path, frame_skip):
-        MujocoEnv.__init__(self, model_path, frame_skip)
+    def __init__(self, model_path, initial_pose_path, kinematics_path, nusim_data_path, mode_to_sim, frame_skip):
+        MujocoEnv.__init__(self, model_path, initial_pose_path, kinematics_path, nusim_data_path, mode_to_sim, frame_skip)
 
     def get_cost(self, action):
         scaler= 1/50
@@ -345,29 +330,9 @@ class Muscle_Env(MujocoEnv):
         cost= scaler * np.sum(np.abs(act))
         return cost
 
-    def get_reward(self):
-        hand_pos= self.sim.data.get_body_xpos("hand").copy()
-        target_pos= self.sim.data.get_body_xpos("target").copy()
-
-        d_x= np.abs(hand_pos[0] - target_pos[0])
-        d_y= np.abs(hand_pos[1] - target_pos[1])
-        d_z= np.abs(hand_pos[2] - target_pos[2])
-
-        #Check if the distance is greater than the distance threshold, which will terminate the environment.
-        if d_x > self.threshold or d_y > self.threshold or d_z > self.threshold:
-            return -5
-
-        r_x= 1/(1000**d_x)
-        r_y= 1/(1000**d_y)
-        r_z= 1/(1000**d_z)
-
-        reward= r_x + r_y + r_z
-
-        return reward
-
     def is_done(self):
         #Define the distance threshold termination criteria
-        target_position= self.sim.data.get_body_xpos("target").copy()
+        target_position= self.sim.data.get_body_xpos("target0").copy()
         hand_position= self.sim.data.get_body_xpos("hand").copy()
         
         criteria= hand_position - target_position
@@ -390,81 +355,201 @@ class Muscle_Env(MujocoEnv):
         elif self.istep >=150:
             self.threshold = 0.008
 
-        prev_hand_xpos= self.sim.data.get_body_xpos("hand").copy()
+        #Save the xpos of the musculo bodies for visual vels
+        if len(sensory_feedback_specs.visual_velocity) != 0:
+            prev_body_xpos = []
+            for musculo_body in sensory_feedback_specs.visual_velocity:
+                body_xpos = self.sim.data.get_body_xpos(musculo_body)
+                prev_body_xpos = [*prev_body_xpos, *body_xpos]
 
+        #Now carry out one step of the MuJoCo simulation
         self.do_simulation(action, self.frame_skip)
 
-        curr_hand_xpos= self.sim.data.get_body_xpos("hand").copy()
-        prev_target_xpos = self.sim.data.get_body_xpos("target").copy()
-
-        hand_vel= (curr_hand_xpos - prev_hand_xpos) / self.dt
-
-        reward= self.get_reward()
+        #Currently the reward function is the function of the delayed state, current simulator state, action and threshold
+        if sensory_feedback_specs.sensory_delay_timepoints != 0:
+            reward= reward_function_specs.reward_function(self.state_to_return[-1], self.sim, action, self.threshold)
+        else:
+            #Pass a dummy variable for the delayed state feedback
+            reward= reward_function_specs.reward_function(0, self.sim, action, self.threshold)
+            
         cost= self.get_cost(action)
         final_reward= (5*reward) #- (0.5*cost)
 
         done= self.is_done()
 
         self.upd_theta()
-        curr_target_xpos = self.sim.data.get_body_xpos("target").copy()
-        target_vel = (curr_target_xpos - prev_target_xpos) / self.dt
 
-        hand_vel = np.clip(hand_vel*10, -1.5, 1.5)
-        target_vel = np.clip(target_vel*10, -1.5, 1.5)
+        visual_vels = []
+        #Find the visual vels after the simulation
+        if len(sensory_feedback_specs.visual_velocity) != 0:
+            current_body_xpos = []
+            for musculo_body in sensory_feedback_specs.visual_velocity:
+                body_xpos = self.sim.data.get_body_xpos(musculo_body)
+                current_body_xpos = [*current_body_xpos, *body_xpos]
+
+            #Find the velocity
+            visual_vels = (np.abs(np.array(prev_body_xpos) - np.array(current_body_xpos)) / self.dt).tolist()
 
         ob= self._get_obs()
-        obser= [*ob, *hand_vel, *target_vel]
+        
+        #process visual velocity feedback
+        if self.mode_to_sim in ["sensory_pert"]:
+            visual_vels = sensory_feedback_specs.process_visual_velocity_pert(visual_vels)
 
-        return obser, final_reward, done, {}
+        visual_vels = sensory_feedback_specs.process_visual_velocity(visual_vels)
+
+        if self.mode_to_sim in ["SFE"] and "visual_velocity" in sensory_feedback_specs.sf_elim:
+            obser= [*ob, *[ele*0 for ele in visual_vels]]
+        else:
+            obser= [*ob, *visual_vels]
+
+        #Append the current observation to the start of the list
+        #Return the last observation later on
+        self.state_to_return.insert(0, obser)
+
+
+        return self.state_to_return.pop(), final_reward, done, {}
 
     def viewer_setup(self):
         self.viewer.cam.trackbodyid = 0
 
     def reset_model(self):
-        qpos= self.init_qpos
-        qvel= self.init_qvel
 
-        self.set_state(qpos, qvel)
+        #Set the state to the initial pose
+        self.set_state(self.init_qpos, self.init_qvel)
 
-        return [*self._get_obs(), *[0, 0, 0], *[0,0,0]]
+        #Now get the observation of the initial state and append zeros corresponding to the velocity of musculo bodies 
+        #as specified in sensory_feedback_specs (len*3 for x/y/z vel for each musculo body)
+        initial_state_obs = [*self._get_obs(), *np.zeros(len(sensory_feedback_specs.visual_velocity)*3)]
+
+        #Maintain a list of state observations for implementing the state delay
+        self.state_to_return = [[0]*len(initial_state_obs)] * sensory_feedback_specs.sensory_delay_timepoints
+        #Insert the inital state obs to the start of the list
+        self.state_to_return.insert(0, initial_state_obs)
+
+        #Return the last element of the state_to_return 
+        return self.state_to_return.pop()
 
     def _get_obs(self):
-        target_position= self.sim.data.get_body_xpos("target").copy()
-        qposition= self.sim.data.qpos.flat.copy()
-        qvelocity= self.sim.data.qvel.flat.copy()
-        actuator_forces = self.sim.data.qfrc_actuator.flat.copy()
-        hand_position= self.sim.data.get_body_xpos("hand").copy()
-        dist_hand_target= hand_position - target_position
+        
+        sensory_feedback = []
+        if sensory_feedback_specs.proprioceptive_feedback == True:
+            muscle_lens = self.sim.data.actuator_length.flat.copy()
+            muscle_vels = self.sim.data.actuator_velocity.flat.copy()
 
-        return np.concatenate((target_position,
-        qposition,
-        qvelocity,
-        actuator_forces,
-        hand_position,
-        dist_hand_target))
+            #process through the given function for muscle lens and muscle vels
+            if self.mode_to_sim in ["sensory_pert"]:
+                muscle_lens, muscle_vels = sensory_feedback_specs.process_proprioceptive_pert(muscle_lens, muscle_vels)
+
+            muscle_lens, muscle_vels = sensory_feedback_specs.process_proprioceptive(muscle_lens, muscle_vels)
+
+            if self.mode_to_sim in ["SFE"] and "proprioceptive" in sensory_feedback_specs.sf_elim:
+                sensory_feedback = [*sensory_feedback, *[ele*0 for ele in muscle_lens], *[ele*0 for ele in muscle_vels]]
+            else:
+                sensory_feedback = [*sensory_feedback, *muscle_lens, *muscle_vels]
+
+
+        if sensory_feedback_specs.muscle_forces == True:
+            actuator_forces = self.sim.data.qfrc_actuator.flat.copy()
+
+            #process
+            if self.mode_to_sim in ["sensory_pert"]:
+                actuator_forces = sensory_feedback_specs.process_muscle_forces_pert(actuator_forces)
+
+            actuator_forces = sensory_feedback_specs.process_muscle_forces(actuator_forces)
+            
+            if self.mode_to_sim in ["SFE"] and "muscle_forces" in sensory_feedback_specs.sf_elim:
+                sensory_feedback = [*sensory_feedback, *[ele*0 for ele in actuator_forces]]
+            else:
+                sensory_feedback = [*sensory_feedback, *actuator_forces]
+
+
+        if sensory_feedback_specs.joint_feedback == True:
+            sensory_qpos = self.sim.data.qpos.flat.copy()
+            sensory_qvel = self.sim.data.qvel.flat.copy()
+
+            #process
+            if self.mode_to_sim in ["sensory_pert"]:
+                sensory_qpos, sensory_qvel = sensory_feedback_specs.process_joint_feedback_pert(sensory_qpos, sensory_qvel)
+
+            sensory_qpos, sensory_qvel = sensory_feedback_specs.process_joint_feedback(sensory_qpos, sensory_qvel)
+            
+            if self.mode_to_sim in ["SFE"] and "joint_feedback" in sensory_feedback_specs.sf_elim:
+                sensory_feedback = [*sensory_feedback, *[ele*0 for ele in sensory_qpos], *[ele*0 for ele in sensory_qvel]]
+            else:
+                sensory_feedback = [*sensory_feedback, *sensory_qpos, *sensory_qvel]
+
+
+        if sensory_feedback_specs.visual_feedback == True:
+            
+            #Check if the user specified the musculo bodies to be included
+            assert len(sensory_feedback_specs.visual_feedback_bodies) != 0
+
+            visual_xyz_coords = []
+            for musculo_body in sensory_feedback_specs.visual_feedback_bodies:
+                visual_xyz_coords = [*visual_xyz_coords, *self.sim.data.get_body_xpos(musculo_body)]
+
+            if self.mode_to_sim in ["sensory_pert"]:
+                visual_xyz_coords = sensory_feedback_specs.process_visual_position_pert(visual_xyz_coords)
+
+            visual_xyz_coords = sensory_feedback_specs.process_visual_position(visual_xyz_coords)
+            
+            if self.mode_to_sim in ["SFE"] and "visual_position" in sensory_feedback_specs.sf_elim:
+                sensory_feedback = [*sensory_feedback, *[ele*0 for ele in visual_xyz_coords]]
+            else:
+                sensory_feedback = [*sensory_feedback, *visual_xyz_coords]
+
+        if len(sensory_feedback_specs.visual_distance_bodies) != 0:
+            visual_xyz_distance = []
+            for musculo_tuple in sensory_feedback_specs.visual_distance_bodies:
+                body0_xyz = self.sim.data.get_body_xpos(musculo_tuple[0])
+                body1_xyz = self.sim.data.get_body_xpos(musculo_tuple[1])
+                tuple_dist = (body0_xyz - body1_xyz).tolist()
+                visual_xyz_distance = [*visual_xyz_distance, *tuple_dist]
+
+            #process
+            if self.mode_to_sim in ["sensory_pert"]:
+                visual_xyz_distance = sensory_feedback_specs.process_visual_distance_pert(visual_xyz_distance)
+
+            visual_xyz_distance = sensory_feedback_specs.process_visual_distance(visual_xyz_distance)
+
+            if self.mode_to_sim in ["SFE"] and "visual_distance" in sensory_feedback_specs.sf_elim:
+                sensory_feedback = [*sensory_feedback, *[ele*0 for ele in visual_xyz_distance]]
+            else:
+                sensory_feedback = [*sensory_feedback, *visual_xyz_distance]
+
+        return np.array(sensory_feedback)
 
     def upd_theta(self):
         if self.istep <= self._max_episode_steps:
             if self.istep <= self.n_fixedsteps:
-                target_x = self.x_coord[0]
-                target_y = self.y_coord[0]
-                self.coord_idx=0
+                self.tpoint_to_sim = 0
             else:
-                target_x = self.x_coord[int(((self.x_coord.shape[0]-1)/(self._max_episode_steps-self.n_fixedsteps)) * (self.istep - self.n_fixedsteps))]
-                target_y = self.y_coord[int(((self.y_coord.shape[0]-1)/(self._max_episode_steps-self.n_fixedsteps)) * (self.istep - self.n_fixedsteps))]
-                self.coord_idx= int(((self.y_coord.shape[0]-1)/(self._max_episode_steps-self.n_fixedsteps)) * (self.istep - self.n_fixedsteps))
+                self.tpoint_to_sim = int(((self.kin_to_sim[self.current_cond_to_sim].shape[-1]-1)/(self._max_episode_steps-self.n_fixedsteps)) * (self.istep - self.n_fixedsteps))
+                
         else:
-            target_x = self.x_coord[int(((self.x_coord.shape[0]-1)/(self._max_episode_steps-self.n_fixedsteps)) * ((self.istep - self.n_fixedsteps) % (self._max_episode_steps - self.n_fixedsteps)))]
-            target_y = self.y_coord[int(((self.y_coord.shape[0]-1)/(self._max_episode_steps-self.n_fixedsteps)) * ((self.istep - self.n_fixedsteps) % (self._max_episode_steps - self.n_fixedsteps)))]
-            self.coord_idx= int(((self.y_coord.shape[0]-1)/(self._max_episode_steps-self.n_fixedsteps)) * ((self.istep - self.n_fixedsteps) % (self._max_episode_steps - self.n_fixedsteps)))
+            self.tpoint_to_sim = int(((self.kin_to_sim[self.current_cond_to_sim].shape[-1]-1)/(self._max_episode_steps-self.n_fixedsteps)) * ((self.istep - self.n_fixedsteps) % (self._max_episode_steps - self.n_fixedsteps)))
+
+        self.coord_idx = self.tpoint_to_sim
+
+        coords_to_sim = self.kin_to_sim[self.current_cond_to_sim]
+        
+        crnt_state = self.sim.get_state()
+
+        for i_target in range(self.kin_to_sim[self.current_cond_to_sim].shape[0]):
+            if kinematics_preprocessing_specs.xyz_target[i_target][0]:
+                x_joint_idx= self.model.get_joint_qpos_addr(f"box:x{i_target}")
+                crnt_state.qpos[x_joint_idx] = coords_to_sim[i_target, 0, self.tpoint_to_sim]
 
 
-        x_joint_i= self.model.get_joint_qpos_addr("box:x")
-        y_joint_i= self.model.get_joint_qpos_addr("box:y")
+            if kinematics_preprocessing_specs.xyz_target[i_target][1]:
+                y_joint_idx= self.model.get_joint_qpos_addr(f"box:y{i_target}")
+                crnt_state.qpos[y_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0], self.tpoint_to_sim]
 
-        crnt_state= self.sim.get_state()
+            if kinematics_preprocessing_specs.xyz_target[i_target][2]:
+                z_joint_idx= self.model.get_joint_qpos_addr(f"box:z{i_target}")
+                crnt_state.qpos[z_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0] + kinematics_preprocessing_specs.xyz_target[i_target][1], self.tpoint_to_sim]
 
-        crnt_state.qpos[x_joint_i]= target_x 
-        crnt_state.qpos[y_joint_i]= target_y
 
+        #Now set the state
         self.set_state(crnt_state.qpos, crnt_state.qvel)

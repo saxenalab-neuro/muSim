@@ -1,4 +1,4 @@
-from SAC.RL_Framework_Mujoco import Muscle_Env
+from SAC.RL_Framework_Mujoco import Muscle_Env    #Muscle_Env is the musculoskeletal environment
 from simulate import Simulate
 import config
 
@@ -37,18 +37,22 @@ def main():
         args.root_dir,
         args.checkpoint_file,
         args.checkpoint_folder,
+        args.statistics_folder,
         args.total_episodes,
+        args.load_saved_nets_for_training,
         args.save_iter,
-        args.muscle_path,
-        args.muscle_params_path,
+        args.mode,
+        args.musculoskeletal_model_path,
+        args.initial_pose_path,
         args.kinematics_path,
+        args.nusim_data_path,
         args.condition_selection_strategy
     )
 
     ### TRAIN OR TEST ###
     if args.mode == "train":
         trainer.train()
-    elif args.mode == "test":
+    elif args.mode in ["test", "SFE", "sensory_pert", "neural_pert", "musculo_properties"]:
         trainer.test(args.test_data_filename)
     else:
         raise NotImplementedError
