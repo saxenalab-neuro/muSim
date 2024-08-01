@@ -268,7 +268,7 @@ This can be used to get Proprioception for training neural networks.
 
 1. To train the uSim controller using the provided DRL algorithm, run:
 
-`python [main.py](http://main.py) --config configs/configs.txt`
+`python main.py --config configs/configs.txt`
     
 2. To continue the training from the previous session, run:
 
