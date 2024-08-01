@@ -333,6 +333,7 @@ Note: jPCA analysis is based on MM Churchland’s original implementation. Pleas
 **Perturbation Analyses:**
 
 **Selective Feedback Elimination (SFE):**
+
 Specify the part of the sensory feedback to be eliminated in ./SAC/perturbation_specs.py using *sf_elim* variable. Run:
 
 `python main --config configs/configs.txt --mode SFE --visualize True`
