@@ -41,6 +41,15 @@ First you will need to install Mujoco (older version). Please make sure that Ana
 
 8. Reboot your system to ensure changes are made
 
+9. Create a new environment using conda:
+    'conda env create --name mujoco_env --file=requirements.yml'
+
+10. Activate the conda environment:
+
+    `conda activate mujoco_env`
+
+
+**If facing errors, installing the following libraries may help**
 
 1. If you are on linux (and may apply to Mac as well), there will likely be additional packages necessary. Here is a list of possible packages:
 
