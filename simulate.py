@@ -3,7 +3,7 @@ import torch
 from SAC.sac import SAC_Agent
 from SAC.replay_memory import PolicyReplayMemory
 from SAC.RL_Framework_Mujoco import Muscle_Env
-from SAC import sensory_feedback_specs, kinematics_preprocessing_specs, neural_specs
+from SAC import sensory_feedback_specs, kinematics_preprocessing_specs, perturbation_specs
 import pickle
 import os
 from numpy.core.records import fromarrays
@@ -14,35 +14,8 @@ from scipy.io import savemat
 os.chdir(os.getcwd())
 
 class Simulate():
-    def __init__(self, 
-                 env: Muscle_Env,
-                 model: str,
-                 gamma: float,
-                 tau: float,
-                 lr: float,
-                 alpha: float,
-                 automatic_entropy_tuning: bool,
-                 seed: int,
-                 policy_batch_size: int,
-                 hidden_size: int,
-                 policy_replay_size: int,
-                 multi_policy_loss: bool,
-                 batch_iters: int,
-                 cuda: bool,
-                 visualize: bool,
-                 root_dir: str,
-                 checkpoint_file: str,
-                 checkpoint_folder: str,
-                 statistics_folder: str,
-                 episodes: int,
-                 load_saved_nets_for_training: bool,
-                 save_iter: int,
-                 mode: str,
-                 musculoskeletal_model_path: str,
-                 initial_pose_path:str,
-                 kinematics_path: str,
-                 nusim_data_path:str,
-                 condition_selection_strategy: str):
+
+    def __init__(self, env:Muscle_Env, args):
 
         """Train a soft actor critic agent to control a musculoskeletal model to follow a kinematic trajectory.
 
@@ -95,19 +68,20 @@ class Simulate():
         """
 
         ### TRAINING VARIABLES ###
-        self.episodes = episodes
-        self.hidden_size = hidden_size
-        self.policy_batch_size = policy_batch_size
-        self.visualize = visualize
-        self.root_dir = root_dir
-        self.checkpoint_file = checkpoint_file
-        self.checkpoint_folder = checkpoint_folder
-        self.statistics_folder = statistics_folder
-        self.batch_iters = batch_iters
-        self.save_iter = save_iter
-        self.mode_to_sim = mode
-        self.condition_selection_strategy = condition_selection_strategy
-        self.load_saved_nets_for_training = load_saved_nets_for_training
+        self.episodes = args.total_episodes
+        self.hidden_size = args.hidden_size
+        self.policy_batch_size = args.policy_batch_size
+        self.visualize = args.visualize
+        self.root_dir = args.root_dir
+        self.checkpoint_file = args.checkpoint_file
+        self.checkpoint_folder = args.checkpoint_folder
+        self.statistics_folder = args.statistics_folder
+        self.batch_iters = args.batch_iters
+        self.save_iter = args.save_iter
+        self.mode_to_sim = args.mode
+        self.condition_selection_strategy = args.condition_selection_strategy
+        self.load_saved_nets_for_training = args.load_saved_nets_for_training
+        self.verbose_training = args.verbose_training
 
         ### ENSURE SAVING FILES ARE ACCURATE ###
         assert isinstance(self.root_dir, str)
@@ -115,33 +89,38 @@ class Simulate():
         assert isinstance(self.checkpoint_file, str)
 
         ### SEED ###
-        torch.manual_seed(seed)
-        np.random.seed(seed)
+        torch.manual_seed(args.seed)
+        np.random.seed(args.seed)
 
 
         ### LOAD CUSTOM GYM ENVIRONMENT ###
         if self.mode_to_sim in ["musculo_properties"]:
-            self.env = env(musculoskeletal_model_path[:-len('musculoskeletal_model.xml')] + 'musculo_targets_pert.xml', initial_pose_path, kinematics_path, nusim_data_path, self.mode_to_sim, 1)
+            self.env = env(args.musculoskeletal_model_path[:-len('musculoskeletal_model.xml')] + 'musculo_targets_pert.xml', 1, args)
 
         else:
-            self.env = env(musculoskeletal_model_path[:-len('musculoskeletal_model.xml')] + 'musculo_targets.xml', initial_pose_path, kinematics_path, nusim_data_path, self.mode_to_sim, 1)
-        self.observation_shape = self.env.observation_space.shape[0]+len(sensory_feedback_specs.visual_velocity)*3+1
+            self.env = env(args.musculoskeletal_model_path[:-len('musculoskeletal_model.xml')] + 'musculo_targets.xml', 1, args)
+
+        self.observation_shape = self.env.observation_space.shape[0]+len(self.env.sfs_visual_velocity)*3+1
 
         ### SAC AGENT ###
         self.agent = SAC_Agent(self.observation_shape, 
                                self.env.action_space, 
-                               hidden_size, 
-                               lr, 
-                               gamma, 
-                               tau, 
-                               alpha, 
-                               automatic_entropy_tuning, 
-                               model,
-                               multi_policy_loss,
-                               cuda)
+                               args.hidden_size, 
+                               args.lr, 
+                               args.gamma, 
+                               args.tau, 
+                               args.alpha, 
+                               args.automatic_entropy_tuning, 
+                               args.model,
+                               args.multi_policy_loss,
+                               args.alpha_usim,
+                               args.beta_usim,
+                               args.gamma_usim,
+                               args.zeta_nusim,
+                               args.cuda)
 
         ### REPLAY MEMORY ###
-        self.policy_memory = PolicyReplayMemory(policy_replay_size, seed)
+        self.policy_memory = PolicyReplayMemory(args.policy_replay_size, args.seed)
 
 
     def test(self, save_name):
@@ -165,7 +144,7 @@ class Simulate():
         self.load_saved_nets_from_checkpoint(load_best = True)
 
         #Set the recurrent connections to zero if the mode is SFE
-        if self.mode_to_sim in ["SFE"] and "recurrent_connections" in sensory_feedback_specs.sf_elim:
+        if self.mode_to_sim in ["SFE"] and "recurrent_connections" in perturbation_specs.sf_elim:
             self.agent.actor.rnn.weight_hh_l0 = torch.nn.Parameter(self.agent.actor.rnn.weight_hh_l0 * 0)
 
         ### TESTING DATA ###
@@ -211,7 +190,7 @@ class Simulate():
             cond_to_select = i_cond_sim % self.env.n_exp_conds
             state = self.env.reset(cond_to_select)
 
-            if self.mode_to_sim in ["SFE"] and "task_scalar" in sensory_feedback_specs.sf_elim:
+            if self.mode_to_sim in ["SFE"] and "task_scalar" in perturbation_specs.sf_elim:
                 state = [*state, 0]
             else:
                 state = [*state, self.env.condition_scalar]
@@ -228,11 +207,11 @@ class Simulate():
                     if self.mode_to_sim in ["neural_pert"]:
                         state = torch.FloatTensor(state).to(self.agent.device).unsqueeze(0).unsqueeze(0)
                         h_prev = h_prev.to(self.agent.device)
-                        neural_pert = neural_specs.neural_pert[timestep % neural_specs.neural_pert.shape[0], :]
+                        neural_pert = perturbation_specs.neural_pert[timestep % perturbation_specs.neural_pert.shape[0], :]
                         neural_pert = torch.FloatTensor(neural_pert).to(self.agent.device).unsqueeze(0).unsqueeze(0) 
                         action, h_current, rnn_act, rnn_in = self.agent.actor.forward_for_neural_pert(state, h_prev, neural_pert)
 
-                    elif self.mode_to_sim in ["SFE"] and "recurrent_connections" in sensory_feedback_specs.sf_elim:
+                    elif self.mode_to_sim in ["SFE"] and "recurrent_connections" in perturbation_specs.sf_elim:
                         h_prev = h_prev*0
                         action, h_current, rnn_act, rnn_in = self.agent.select_action(state, h_prev, evaluate=True)
                     else:
@@ -248,7 +227,7 @@ class Simulate():
                 ### TRACKING REWARD + EXPERIENCE TUPLE###
                 next_state, reward, done, _ = self.env.step(action)
                 
-                if self.mode_to_sim in ["SFE"] and "task_scalar" in sensory_feedback_specs.sf_elim:
+                if self.mode_to_sim in ["SFE"] and "task_scalar" in perturbation_specs.sf_elim:
                     next_state = [*next_state, 0]
                 else:
                     next_state = [*next_state, self.env.condition_scalar]
@@ -400,6 +379,9 @@ class Simulate():
                 mask = 1 if episode_steps == self.env._max_episode_steps else float(not done) # ensure mask is not 0 if episode ends
 
                 ### STORE CURRENT TIMESTEP TUPLE ###
+                if not self.env.nusim_data_exists:
+                    self.env.neural_activity[na_idx] = 0
+
                 ep_trajectory.append((state, 
                                         action, 
                                         reward, 
@@ -476,9 +458,10 @@ class Simulate():
                 highest_reward = episode_reward
 
             ### PRINT TRAINING OUTPUT ###
-            print('-----------------------------------')
-            print('highest reward: {} | reward: {} | timesteps completed: {}'.format(highest_reward, episode_reward, episode_steps))
-            print('-----------------------------------\n')
+            if self.verbose_training:
+                print('-----------------------------------')
+                print('highest reward: {} | reward: {} | timesteps completed: {}'.format(highest_reward, episode_reward, episode_steps))
+                print('-----------------------------------\n')
 
     def load_saved_nets_from_checkpoint(self, load_best: bool):
 

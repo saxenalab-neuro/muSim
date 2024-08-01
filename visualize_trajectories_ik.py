@@ -11,7 +11,7 @@ parser = config.config_parser()
 args = parser.parse_args()
 
 #Setup the mujoco_env with the given args
-env = Muscle_Env(args.musculoskeletal_model_path[:-len('musculoskeletal_model.xml')] + 'musculo_targets.xml', args.initial_pose_path, args.kinematics_path, 0, 0)
+env = Muscle_Env(args.musculoskeletal_model_path[:-len('musculoskeletal_model.xml')] + 'musculo_targets.xml', 0, 0, args)
 
 #Set the environment in the inital pose found by IK
 initial_state = np.load(args.initial_pose_path + '/initial_qpos_opt.npy')

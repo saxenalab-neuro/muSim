@@ -10,33 +10,6 @@ import config
 parser = config.config_parser()
 args, unknown = parser.parse_known_args()
 
-#Kinematics preprocessing for simulation
-#Adjustment instructions:
-
-#The timestep for the simulation: Keep 0 for default simulation timestep
-sim_dt = 0   # in seconds
-
-#The frames/timepoints for which the same action should be repeated during training of the agent
-frame_repeat = 5
-
-#Number of fixedsteps in the beginning of the simulation. The target will remain at kinematic[timestep0] for n_fixedsteps
-#If a good initial position is found using CMA-ES / TR Optimization, n_fixedsteps = 25 is a good estimate. Otherwise increase
-#if the starting reward does not increase with the training iterations. 
-n_fixedsteps = 25
-
-#Timestep limit is max number of timesteps after which the episode will terminate.
-#Multiple cycles of the same condition will be simulated if the timestep_limit > number of timsteps for that condition.
-timestep_limit = (1319 * 5) + n_fixedsteps
-
-#Adjusts/scales the length of the trajectory
-#Should be the same as num_targets
-trajectory_scaling = [1/0.038]
-radius = trajectory_scaling
-
-#Adjusts the starting point of the kinematics trajectory
-#Should be the same as num_targets, num_coords=3
-center = [[0.06, 0.083, 0]]
-
 ###Please do not change this code###
 ### -----------------------------------------------###
 

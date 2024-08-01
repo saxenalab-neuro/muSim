@@ -1,0 +1,168 @@
+#Parameters for uSim/nuSim
+#Visualze the MuJoCo environment during training
+visualize = False
+
+#Print output statistics during training
+verbose_training = True
+
+###PATHS TO THE INPUT DATA/FILES###
+###-------------------------------------------------------------------
+## DO NOT change these paths if using the default paths for input data/files
+
+#The path to the folder that contains the musculoskeletal model file
+musculoskeletal_model_path = musculoskeletal_model/musculoskeletal_model.xml
+
+#Path to the folder that contains intial pose (init_qpos.npy and init_qvel.npy) files
+initial_pose_path = initial_pose
+
+#Path to the folder that contains the experimental kinematics data
+kinematics_path = kinematics_data
+
+#Path to the folder that contains the experimental neural data
+nusim_data_path = nusim_neural_data
+
+#Path to the folder that contains the experimental stimulus data
+stimulus_data_path = stimulus_data
+
+### PATHS FOR SAVING THE OUTPUT / TEST DATA###
+### DO NOT change these paths if using the default paths for the saved output/test data
+###--------------------------------------------------
+#Save the agent networks after save_iter 
+save_iter = 100
+
+#Path to the root directory
+root_dir = "."
+
+#Path to save the agent's neural networks
+checkpoint_folder = "./checkpoint"
+
+#Path for saving the statististics for training
+statistics_folder = "training_statistics"
+
+#Save name for the agent's networks
+checkpoint_file = "agent_networks"
+
+#Save name for saving the test data
+test_data_filename = "test_data"
+
+#Load the saved networks from the previous session for further training
+load_saved_nets_for_training = False
+
+### Kinematics Preprocessing Parameters
+###----------------------------------------------------------------------
+#Kinematics preprocessing for simulation
+#Adjustment instructions:
+
+#The timestep for the simulation: Keep 0 for default simulation timestep
+sim_dt = 0   # in seconds
+
+#The frames/timepoints for which the same action should be repeated during training of the agent
+#For finer movements user smaller frame_repeat, but it will also increase the training time
+frame_repeat = 5
+
+#Number of fixedsteps in the beginning of the simulation. The target will remain at kinematic[timestep=0] for n_fixedsteps
+#If a good initial position is found using CMA-ES / IK Optimization, n_fixedsteps = 25 is a good estimate. Otherwise increase
+#if the starting reward does not increase with the training iterations.
+n_fixedsteps = 25
+
+#Timestep limit is max number of timesteps after which the episode will terminate.
+#Multiple cycles of the same condition will be simulated if the timestep_limit > number of timsteps for that condition.
+timestep_limit = 8000
+
+#Adjusts/scales the length of the trajectory
+#Should be the same as num_markers/targets
+trajectory_scaling = [26.3157894737]
+
+#Adjusts the starting point of the kinematics trajectory
+#Should be the same as num_markers/targets, num_coords=3
+center = [[0.06, 0.083, 0]]
+
+###-----------------------------------------------------------------------------------
+
+###Sensory Feedback Processing Parameters --------------------------------------------
+#Specifies the sensory feedback to the agent/network
+#True, if this feedback should be included in state feedback to the agent's network/controller
+#False, if this feedback should not be included in the state feedback to the agent's network/controller
+
+#Stimulus feedback consists of provided experimental stimulus data
+stimulus_feedback = True
+
+#Proprioceptive feedback consists of muscle lengths and velocities
+proprioceptive_feedback = True
+
+#Muscle forces consist of appled muscle forces 
+muscle_forces = False
+
+#Joint feedback consists of joint positions and velocities
+joint_feedback = False 
+
+#Visual feedback consists of x/y/z coordinates of the specified bodies in the model
+#If visual_feedback is True, specify the names of the bodies from musculoskeletal_model.xml for which the feedback should be included
+visual_feedback = False 
+
+#Append the musculo bodies from which visual feedback should be included
+#This list can also consist of targets/markers
+#Append targetn-1 for visual feedback from targets/markers in the kinematics.pkl file
+#'target0' corresponds to the visual feedback from the first target/marker, target1 to the second target/marker and so on
+visual_feedback_bodies = [hand, target0] 
+
+#Specify the names of the bodies as tuples(separated by ; with no spaces) for which the visual distance should be included in the feedback
+#Leave blank if the visual distance is not to be included in the feedback
+#Visual distance between the bodies will be included
+#e.g visual_distance_bodies = [[hand;target0], [elbow;target0]] will include the distance between the hand/elbow and first marker in sensory feedback
+visual_distance_bodies = [[hand;target0]] 
+
+#Specify the names of the bodies for which the visual velocity should be included in the feedback
+#Leave blank if the visual velocity is not to be included in the feedback
+#Appends the absolute musculo body velocity, e.g. visual_velocity = [hand, target0] 
+#will include the xyz velocities of hand and target0
+visual_velocity = []
+
+#Specify the delay in the sensory feedback in terms of the timepoints
+sensory_delay_timepoints = 0
+
+### -----------------------------------------------------------------------------------
+###Specifications for Regularizations with the policy network
+#Specify the weighting with various neural regularizations used in uSim/nuSim
+
+#weighting with loss for enforcing simple neural dynamics for uSim/nuSim
+alpha_usim = 0.1
+
+#weighting with loss for minimizing the neural activations for uSim/nuSim
+beta_usim = 0.01 
+
+#weighting with loss for minimizing the synaptic weights for uSim/nuSim
+gamma_usim = 0.001
+
+#weighting with loss for nuSim constraining a sub-population of RNN units to experimentally recorded neurons for nuSim
+zeta_nusim = 0
+
+### --------------------------------------------------------------------------------------
+
+### SAC TRAINING ###
+
+#The neural network model to use in the agent, can be ['rnn', 'gru']
+model = rnn
+
+#The number of hidden units in the layers of the agent's neural network
+hidden_size = 256
+
+#The mode of simulation can be [train, test, SFE, sensory_pert, neural_pert, musculo_properties]
+mode = "train"
+
+#DRL specific parameters.
+gamma = 0.99
+tau = 0.005
+lr = 0.0003
+alpha = 0.20
+automatic_entropy_tuning = True
+seed = 123456
+policy_batch_size = 8
+policy_replay_size = 4000
+multi_policy_loss = True
+batch_iters = 1
+total_episodes = 1000000
+condition_selection_strategy = "reward"
+cuda = True
+
+

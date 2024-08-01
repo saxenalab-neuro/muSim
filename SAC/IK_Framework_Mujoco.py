@@ -26,11 +26,11 @@ DEFAULT_SIZE = 500
 class MujocoEnv(gym.Env):
     """Superclass for all MuJoCo environments.
     """
-    def __init__(self, model_path, initial_pose_path, kinematics_path, condition_to_sim, cond_tpoint):
+    def __init__(self, model_path, condition_to_sim, cond_tpoint, args):
 
         self.model_path = model_path
-        self.initial_pose_path = initial_pose_path
-        self.kinematics_path = kinematics_path
+        self.initial_pose_path = args.initial_pose_path
+        self.kinematics_path = args.kinematics_path
         self.cond_to_sim = condition_to_sim
         self.cond_tpoint = cond_tpoint
 
@@ -40,6 +40,16 @@ class MujocoEnv(gym.Env):
         #setup the simulator and data object
         self.sim = mujoco_py.MjSim(self.model)
         self.data = self.sim.data
+
+        #Save all the sensory feedback specs for use in the later functions
+        self.sfs_proprioceptive_feedback = args.proprioceptive_feedback
+        self.sfs_muscle_forces = args.muscle_forces
+        self.sfs_joint_feedback = args.joint_feedback
+        self.sfs_visual_feedback = args.visual_feedback
+        self.sfs_visual_feedback_bodies = args.visual_feedback_bodies
+        self.sfs_visual_distance_bodies = args.visual_distance_bodies
+        self.sfs_visual_velocity = args.visual_velocity
+        self.sfs_sensory_delay_timepoints = args.sensory_delay_timepoints
 
         #Load the kin_train
         # Load the experimental kinematics x and y coordinates from the data
@@ -62,13 +72,13 @@ class MujocoEnv(gym.Env):
         self.qpos_idx_musculo = np.delete(self.qpos_idx_musculo, self.qpos_idx_targets).tolist()
 
         #Set the simulation timestep
-        if kinematics_preprocessing_specs.sim_dt != 0:
-            self.model.opt.timestep = kinematics_preprocessing_specs.sim_dt
+        if args.sim_dt != 0:
+            self.model.opt.timestep = args.sim_dt
 
 
-        self.n_fixedsteps = kinematics_preprocessing_specs.n_fixedsteps
-        self.radius = kinematics_preprocessing_specs.radius
-        self.center = kinematics_preprocessing_specs.center
+        self.n_fixedsteps = args.n_fixedsteps
+        self.radius = args.trajectory_scaling
+        self.center = args.center
 
         #Kinematics preprocessing for training and testing kinematics
         #Preprocess training kinematics
@@ -98,9 +108,9 @@ class MujocoEnv(gym.Env):
         #init_qpos and init_qvel do not contain target qpos
         #and contain only the musculo qpos
         #If the initial qpos and qvel are provided by the user
-        if path.isfile(initial_pose_path + '/qpos.npy'):
-            init_qpos = np.load(initial_pose_path + '/qpos.npy')
-            init_qvel = np.load(initial_pose_path + '/qvel.npy')
+        if path.isfile(self.initial_pose_path + '/qpos.npy'):
+            init_qpos = np.load(self.initial_pose_path + '/qpos.npy')
+            init_qvel = np.load(self.initial_pose_path + '/qvel.npy')
         
         #else use the default initial pose of xml model
         else:
@@ -120,12 +130,12 @@ class MujocoEnv(gym.Env):
         #Set the state to the initial pose
         self.set_state(self.init_qpos)
 
-        if sensory_feedback_specs.visual_feedback == True:
+        if self.sfs_visual_feedback == True:
 
             #Save the xpos of the musculo bodies for visual vels
-            if len(sensory_feedback_specs.visual_velocity) != 0:
+            if len(self.sfs_visual_velocity) != 0:
                 self.prev_body_xpos = []
-                for musculo_body in sensory_feedback_specs.visual_velocity:
+                for musculo_body in self.sfs_visual_velocity:
                     body_xpos = self.sim.data.get_body_xpos(musculo_body)
                     self.prev_body_xpos = [*self.prev_body_xpos, *body_xpos]
 
@@ -256,10 +266,9 @@ class MujocoEnv(gym.Env):
 
 class Muscle_Env(MujocoEnv):
 
-    def __init__(self, model_path, initial_pose_path, kinematics_path, condition_to_sim, cond_tpoint):
-        MujocoEnv.__init__(self, model_path, initial_pose_path, kinematics_path, condition_to_sim, cond_tpoint)
+    def __init__(self, model_path, condition_to_sim, cond_tpoint, args):
+        MujocoEnv.__init__(self, model_path, condition_to_sim, cond_tpoint, args)
 
-    
     def viewer_setup(self):
         self.viewer.cam.trackbodyid = 0
 
@@ -293,7 +302,7 @@ class Muscle_Env(MujocoEnv):
     def _get_obs(self):
         
         sensory_feedback = []
-        if sensory_feedback_specs.proprioceptive_feedback == True:
+        if self.sfs_proprioceptive_feedback == True:
             muscle_lens = self.sim.data.actuator_length.flat.copy()
             muscle_vels = self.sim.data.actuator_velocity.flat.copy()
 
@@ -302,7 +311,7 @@ class Muscle_Env(MujocoEnv):
             sensory_feedback = [*sensory_feedback, *muscle_lens, *muscle_vels]
 
 
-        if sensory_feedback_specs.muscle_forces == True:
+        if self.sfs_muscle_forces == True:
             actuator_forces = self.sim.data.qfrc_actuator.flat.copy()
 
             #process
@@ -310,7 +319,7 @@ class Muscle_Env(MujocoEnv):
             sensory_feedback = [*sensory_feedback, *actuator_forces]
 
 
-        if sensory_feedback_specs.joint_feedback == True:
+        if self.sfs_joint_feedback == True:
             sensory_qpos = self.sim.data.qpos.flat.copy()
             sensory_qvel = self.sim.data.qvel.flat.copy()
 
@@ -318,21 +327,21 @@ class Muscle_Env(MujocoEnv):
             sensory_feedback = [*sensory_feedback, *sensory_qpos, *sensory_qvel]
 
 
-        if sensory_feedback_specs.visual_feedback == True:
+        if self.sfs_visual_feedback == True:
             
             #Check if the user specified the musculo bodies to be included
-            assert len(sensory_feedback_specs.visual_feedback_bodies) != 0
+            assert len(self.sfs_visual_feedback_bodies) != 0
 
             visual_xyz_coords = []
-            for musculo_body in sensory_feedback_specs.visual_feedback_bodies:
+            for musculo_body in self.sfs_visual_feedback_bodies:
                 visual_xyz_coords = [*visual_xyz_coords, *self.sim.data.get_body_xpos(musculo_body)]
 
             visual_xyz_coords = sensory_feedback_specs.process_visual_position(visual_xyz_coords)
             sensory_feedback = [*sensory_feedback, *visual_xyz_coords]
 
-        if len(sensory_feedback_specs.visual_distance_bodies) != 0:
+        if len(self.sfs_visual_distance_bodies) != 0:
             visual_xyz_distance = []
-            for musculo_tuple in sensory_feedback_specs.visual_distance_bodies:
+            for musculo_tuple in self.sfs_visual_distance_bodies:
                 body0_xyz = self.sim.data.get_body_xpos(musculo_tuple[0])
                 body1_xyz = self.sim.data.get_body_xpos(musculo_tuple[1])
                 tuple_dist = np.abs(body0_xyz - body1_xyz).tolist()
@@ -343,11 +352,11 @@ class Muscle_Env(MujocoEnv):
             sensory_feedback = [*sensory_feedback, *visual_xyz_distance]
 
         #Save the xpos of the musculo bodies for visual vels
-        if len(sensory_feedback_specs.visual_velocity) != 0:
+        if len(self.sfs_visual_velocity) != 0:
 
             #Find the visual vels after the simulation
             current_body_xpos = []
-            for musculo_body in sensory_feedback_specs.visual_velocity:
+            for musculo_body in self.sfs_visual_velocity:
                 body_xpos = self.sim.data.get_body_xpos(musculo_body)
                 current_body_xpos = [*current_body_xpos, *body_xpos]
 

@@ -7,7 +7,7 @@ from .model import Actor, Critic
 from torch.nn.utils.rnn import pad_sequence
 import numpy as np
 from .replay_memory import PolicyReplayMemory
-from . import neural_specs
+import ipdb
 
 class SAC_Agent():
     def __init__(self, 
@@ -21,12 +21,22 @@ class SAC_Agent():
                  automatic_entropy_tuning: bool, 
                  model: str, 
                  multi_policy_loss: bool,
+                 alpha_usim:float,
+                 beta_usim:float,
+                 gamma_usim:float,
+                 zeta_nusim:float,
                  cuda: bool):
 
         if cuda:
             self.device = torch.device("cuda")
         else:
             self.device = torch.device("cpu")
+
+        #Save the regularization parameters
+        self.alpha_usim = alpha_usim
+        self.beta_usim = beta_usim
+        self.gamma_usim = gamma_usim
+        self.zeta_nusim = zeta_nusim
 
         ### SET CRITIC NETWORKS ###
         self.critic = Critic(num_inputs, action_space.shape[0], hidden_size).to(self.device)
@@ -109,12 +119,12 @@ class SAC_Agent():
         #Find the loss for neural activity constrainting
         lstm_out = self.actor.forward_lstm(policy_state_batch, h0, sampling= False, len_seq= len_seq)
         lstm_out = lstm_out.reshape(-1, lstm_out.size()[-1])[mask_seq]
-        lstm_activity = lstm_out[:, 0:49]
+        lstm_activity = lstm_out[:, 0:neural_activity_batch.shape[-1]]
 
         #Now filter the neural activity batch and lstm activity batch using the na_idx batch
         with torch.no_grad():
             na_idx_batch = na_idx_batch.squeeze(-1) > 0
-   
+        
         lstm_activity = lstm_activity[na_idx_batch]
         neural_activity_batch = neural_activity_batch[na_idx_batch]
 
@@ -202,11 +212,11 @@ class SAC_Agent():
             loss_exp_constrain = self._policy_loss_exp_neural_constrain(policy_state_batch, h0, len_seq, neural_activity_batch, na_idx_batch, mask_seq)
 
             ### CALCULATE FINAL POLICY LOSS ###
-            #To implement GDM use a weighting of 1e+04 with loss_exp_constrain
-            policy_loss += (neural_specs.alpha*(loss_simple_dynamics))  \
-                            + (neural_specs.beta*(loss_activations_min))  \
-                            + (neural_specs.gamma*(loss_weights_min))  \
-                            + (neural_specs.zeta*(loss_exp_constrain))
+            #To implement nuSim training use a weighting of 1e+04 with loss_exp_constrain
+            policy_loss += (self.alpha_usim*(loss_simple_dynamics))  \
+                            + (self.beta_usim*(loss_activations_min))  \
+                            + (self.gamma_usim*(loss_weights_min))  \
+                            + (self.zeta_nusim*(loss_exp_constrain))
 
         ### TAKE GRADIENT STEP ###
         self.actor_optim.zero_grad()

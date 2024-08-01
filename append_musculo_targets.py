@@ -13,9 +13,10 @@ tree = ET.parse(args.musculoskeletal_model_path)
 root = tree.getroot()
 
 #Load the kinematics to determine the number of targets
-with open(args.kinematics_path + '/kinematics_train.pkl', 'rb') as f:
-            kinematics_train = pickle.load(f)	#[num_conditions][n_targets, num_coords, timepoints]
+with open(args.kinematics_path + '/kinematics.pkl', 'rb') as f:
+            kin = pickle.load(f)	#[num_conditions][n_targets, num_coords, timepoints]
 
+kinematics_train = kin['train']
 num_conds = len(kinematics_train)
 
 #Randomly sample a condition

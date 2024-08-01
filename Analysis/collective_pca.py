@@ -15,6 +15,11 @@ import sys
 sys.path.insert(0, '../SAC/')
 import kinematics_preprocessing_specs
 
+import config
+
+parser = config.config_parser()
+args, unknown = parser.parse_known_args()
+
 #Load the test data of nusim
 
 with open('../test_data/test_data.pkl', 'rb') as file:
@@ -45,7 +50,7 @@ cycles = [2, 2, 2, 2, 2, 2]
 
 #Number of fixedsteps in the start of each condition
 #Fix this {todo}: Get the values automatically from ..SAC/kinematics_preprocessing_specs.py
-n_fixedsteps= kinematics_preprocessing_specs.n_fixedsteps
+n_fixedsteps= args.n_fixedsteps
 
 #Load the network activities
 A_agent = []
