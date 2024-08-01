@@ -311,6 +311,7 @@ see LRA.ipynb
 see procrustes.ipynb
 
 6. **Fixed Point (FP) Analysis:**
+
 Run
 
 `python find_fp.py`
