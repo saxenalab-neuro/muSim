@@ -157,7 +157,8 @@ class MujocoEnv(gym.Env):
         self.current_cond_to_sim = 0
 
         #Set the stim data
-        self.stim_data_sim = self.stim_data_train
+        if self.stim_fb_exists:
+            self.stim_data_sim = self.stim_data_train
 
         self.viewer = None 
         self._viewers = {}

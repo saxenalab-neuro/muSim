@@ -85,7 +85,7 @@ center = [[0.06, 0.083, 0]]
 #False, if this feedback should not be included in the state feedback to the agent's network/controller
 
 #Stimulus feedback consists of provided experimental stimulus data
-stimulus_feedback = True
+stimulus_feedback = False
 
 #Proprioceptive feedback consists of muscle lengths and velocities
 proprioceptive_feedback = True
