@@ -45,11 +45,11 @@ First you will need to install Mujoco (older version). Please make sure that Ana
 
 9. Create a new environment using conda:
 
-    `conda env create --name mujoco_env --file=requirements.yml`
+    `conda env create --name nusim --file=requirements.yml`
 
 10. Activate the conda environment:
 
-    `conda activate mujoco_env`
+    `conda activate nusim`
 
 
 **If facing errors, installing the following libraries may help**
