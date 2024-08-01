@@ -213,7 +213,7 @@ Provide the parameters for various modules using the ‘./configs/configs.txt’
 
 Run:
 
-python append_musculo_targets.py
+`python append_musculo_targets.py`
 
 This will append targets to the musculoskeletal xml file that will follow the preprocessed markers kinematics during simulation.
 
