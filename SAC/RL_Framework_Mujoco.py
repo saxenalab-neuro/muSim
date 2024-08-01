@@ -202,11 +202,12 @@ class MujocoEnv(gym.Env):
 
         #Repeat for the stimulus feedback
         #First update the keys of self.stim_data_test
-        for cond in range(len(self.stim_data_test)):
-            self.stim_data_test[len(self.stim_data_train) + cond] = self.stim_data_test.pop(cond)
-        
-        #Update the kinematics to simulate
-        self.stim_data_sim.update(self.stim_data_test)
+        if self.stim_fb_exists:
+            for cond in range(len(self.stim_data_test)):
+                self.stim_data_test[len(self.stim_data_train) + cond] = self.stim_data_test.pop(cond)
+            
+            #Update the kinematics to simulate
+            self.stim_data_sim.update(self.stim_data_test)
 
     def _set_action_space(self):
         bounds = self.model.actuator_ctrlrange.copy().astype(np.float32)
