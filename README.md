@@ -92,6 +92,8 @@ First you will need to install Mujoco (older version). Please make sure that Ana
 
 1. To train the controller, run the following in terminal:
 
+    `python append_musculo_targets.py`
+    `python find_init_pose.py --config configs/configs.txt`
     `python main.py --config configs/configs.txt`
 
     This will save the controller in the ./checkpoint file with training iterations. The highest reward should reach >= 55000 for kinematic accuracy.
