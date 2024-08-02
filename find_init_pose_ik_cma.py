@@ -38,8 +38,7 @@ def obj_func(state):
 es = cma.CMAEvolutionStrategy(len(initial_state) * [0], sigma)
 
 
-# while not es.stop():
-for idx in range(1):
+while not es.stop():
 
 	initial_states = es.ask()
 	es.tell(initial_states, [TR_Algorithm(obj_func, initial_state, env)[3] for initial_state in initial_states])
