@@ -328,6 +328,8 @@ see procrustes.ipynb
 
 6. **Fixed Point (FP) Analysis:**
 
+Clone the fixed-point-finder in ./Analysis, https://github.com/mattgolub/fixed-point-finder
+
 Run
 
 `python find_fp.py`
