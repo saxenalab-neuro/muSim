@@ -2,7 +2,7 @@
 
 # -- Project information
 
-project = 'musim'
+project = 'MuSim'
 copyright = '2024, Saxena Lab'
 author = 'Saxena Lab'
 
