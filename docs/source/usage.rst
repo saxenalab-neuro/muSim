@@ -18,8 +18,6 @@ Basic Usage
 
    The episode reward with iterations should look like this:
    (There may be slight variations due to random seed but trend should look similar)
-   
-   <p align="center"> <img src="https://github.com/saxenalab-neuro/muSim/assets/77393494/d3a7578c-035d-4a8c-b87b-853e3d03187c" width="50%" height="50%"> </p>
 
 .. _general_usage:
 
@@ -38,33 +36,39 @@ Musculoskeletal Model
 Experimental Kinematics
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-1. Save the experimental kinematics in ``./kinematics_data/kinematics.pkl`` as a Python dict object with the following format::
+1. Save the experimental kinematics in ``./kinematics_data/kinematics.pkl`` as a Python dict object with the following format
+
+.. code-block::
+
     
    dict{
     
-    <'marker_names'> : <['marker_name_1', ..., 'marker_name_n']>,
+      <'marker_names'> : <['marker_name_1', ..., 'marker_name_n']>,
 
-    <'train'> : <dict_train>,
+      <'train'> : <dict_train>,
 
-    <'test'> : <dict_test>
+      <'test'> : <dict_test>
 
    }
 
 2. ``<marker_names>`` contain a list of names of the experimental markers that were recorded. The marker_name must correspond to a body name in the musculoskeletal model xml file. 
 
-3. ``<dict_train>`` and ``<dict_test>`` are Python dictionary objects that contain kinematics in the following format::
+3. ``<dict_train>`` and ``<dict_test>`` are Python dictionary objects that contain kinematics in the following format
+
+.. code-block::
+
 
    { 
 
-   <key> :   <value>,
+      <key> :   <value>,
 
-   <key>:   <value>,
+      <key>:   <value>,
 
-   .
-   .
-   .
+      .
+      .
+      .
 
-   <key>: <value>
+      <key>: <value>
 
    }
 
@@ -83,7 +87,10 @@ An example for saving the experimental kinematics for the cycling task is given 
 Neural Data (optional)
 ~~~~~~~~~~~~~~~~~~~~~~
 
-1. Save the recorded neural data for the training and testing conditions in ‘./nusim_neural_data/neural_activity.pkl’ as a Python dict object::
+1. Save the recorded neural data for the training and testing conditions in ‘./nusim_neural_data/neural_activity.pkl’ as a Python dict object
+
+.. code-block::
+
 
    dict{
 
