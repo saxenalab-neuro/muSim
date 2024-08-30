@@ -6,17 +6,15 @@ Usage
 Basic Usage
 -----------
 
-<p align="center"> <img src="https://github.com/saxenalab-neuro/muSim/assets/77393494/2073cc37-c44a-4558-82ae-a0c54e5573c4" width="50%" height="50%"> </p>
+1. To train the controller, run the following in terminal:
 
-   1. To train the controller, run the following in terminal:
+   ``python append_musculo_targets.py``
 
-    ``python append_musculo_targets.py``
+   ``python find_init_pose.py --config configs/configs.txt``
 
-    ``python find_init_pose.py --config configs/configs.txt``
+   ``python main.py --config configs/configs.txt``
 
-    ``python main.py --config configs/configs.txt``
-
-    This will save the controller in the ./checkpoint file with training iterations. The highest reward should reach >= 55000 for kinematic accuracy.
+   This will save the controller in the ./checkpoint file with training iterations. The highest reward should reach >= 55000 for kinematic accuracy.
 
    The episode reward with iterations should look like this:
    (There may be slight variations due to random seed but trend should look similar)
@@ -31,18 +29,18 @@ General Usage
 Musculoskeletal Model
 ~~~~~~~~~~~~~~~~~~~~~
 
-   1. Musculoskeletal Model: Save the MuJoCo musculoskeletal model in “./musculoskeletal_model/” as musculoskeletal_model.xml alongwith the Geometry files
+1. Musculoskeletal Model: Save the MuJoCo musculoskeletal model in “./musculoskeletal_model/” as musculoskeletal_model.xml alongwith the Geometry files
 
-   (The path to the musculoskeletal_model.xml can also be specified in the configs.txt file with *musculoskeletal_model_path* param, if not using the above default path)
+(The path to the musculoskeletal_model.xml can also be specified in the configs.txt file with *musculoskeletal_model_path* param, if not using the above default path)
 
-   2. For conversion of musculoskeletal model from OpenSim to MuJoCo, please refer to MyoConverter: https://github.com/MyoHub/myoconverter
+2. For conversion of musculoskeletal model from OpenSim to MuJoCo, please refer to MyoConverter: https://github.com/MyoHub/myoconverter
 
 Experimental Kinematics
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-   1. Save the experimental kinematics in ``./kinematics_data/kinematics.pkl`` as a Python dict object with the following format::
+1. Save the experimental kinematics in ``./kinematics_data/kinematics.pkl`` as a Python dict object with the following format::
     
-    dict{
+   dict{
     
     <'marker_names'> : <['marker_name_1', ..., 'marker_name_n']>,
 
@@ -52,11 +50,9 @@ Experimental Kinematics
 
    }
 
-::
+2. ``<marker_names>`` contain a list of names of the experimental markers that were recorded. The marker_name must correspond to a body name in the musculoskeletal model xml file. 
 
-   1. ``<marker_names>`` contain a list of names of the experimental markers that were recorded. The marker_name must correspond to a body name in the musculoskeletal model xml file. 
-
-   2. ``<dict_train>`` and ``<dict_test>`` are Python dictionary objects that contain kinematics in the following format::
+3. ``<dict_train>`` and ``<dict_test>`` are Python dictionary objects that contain kinematics in the following format::
 
    { 
 
@@ -71,8 +67,6 @@ Experimental Kinematics
    <key>: <value>
 
    }
-
-::
 
 ``<key: int>`` is the integer index of the corresponding condition. (starts from 0 for the first condition for both the training and testing conditions) 
 
@@ -89,7 +83,7 @@ An example for saving the experimental kinematics for the cycling task is given 
 Neural Data (optional)
 ~~~~~~~~~~~~~~~~~~~~~~
 
-   1. Save the recorded neural data for the training and testing conditions in ‘./nusim_neural_data/neural_activity.pkl’ as a Python dict object::
+1. Save the recorded neural data for the training and testing conditions in ‘./nusim_neural_data/neural_activity.pkl’ as a Python dict object::
 
    dict{
 
@@ -99,16 +93,15 @@ Neural Data (optional)
 
    }
 
-::
-
-   2. <dict_train> and <dict_test> are Python dictionary objects that contain the neural data in the following format:
+2. ``<dict_train>`` and ``<dict_test>`` are Python dictionary objects that contain the neural data in the following format:
 
    ``<key: int>`` is the integer index of the corresponding condition as in the kinematics file.
 
    ``<value: numpy.ndarray>`` is the numpy array that contains recorded firing rates with the following shape: ``[timepoints, num_neurons]``. num_neurons are the total number of recorded neurons.
 
-Note: If this step is omitted, various post-processing analyses which require recorded neural data such as CCA, will not run. nuSim training will also not proceed.
-(nusim_data_path can also be specified in the configs.txt file)
+.. note::
+
+   If this step is omitted, various post-processing analyses which require recorded neural data such as CCA, will not run. nuSim training will also not proceed (nusim_data_path can also be specified in the configs.txt file).
 
 Stimulus Data (optional)
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -123,9 +116,7 @@ Provide any experimental stimulus data in ``./stimulus_data/stimulus_data.pkl`` 
 
    }
 
-::
-
-   1. ``<dict_train>`` and ``<dict_test>`` are Python dictionary objects that contain the experimental stimulus data in the following format:
+1. ``<dict_train>`` and ``<dict_test>`` are Python dictionary objects that contain the experimental stimulus data in the following format:
 
    ``<key: int>`` is the integer index of the corresponding condition as in the kinematics file.
 
@@ -148,54 +139,54 @@ Provide the parameters for various modules using the ‘./configs/configs.txt’
 Inverse Kinematics
 ~~~~~~~~~~~~~~~~~~
 
-   1. **Append the xml model with targets:**
+1. **Append the xml model with targets:**
 
    Run:
 
    ``python append_musculo_targets.py``
 
-This will append targets to the musculoskeletal xml file that will follow the preprocessed markers kinematics during simulation.
+   This will append targets to the musculoskeletal xml file that will follow the preprocessed markers kinematics during simulation.
 
-   2. **Find the initial pose for xml model using CMA-ES and Inverse Kinematics:**
+2. **Find the initial pose for xml model using CMA-ES and Inverse Kinematics:**
 
-      a. Run the following command in the terminal:
+   a. Run the following command in the terminal:
 
       ``python find_init_pose.py --config configs/configs.txt --visualize True``
 
-This will use inverse kinematics (IK) to find the initial pose for the xml model to match the initial timepoint of the target kinematics.
+      This will use inverse kinematics (IK) to find the initial pose for the xml model to match the initial timepoint of the target kinematics.
 
-If you see the output, ‘Initial Pose found and saved’, skip 1b.
+      If you see the output, ‘Initial Pose found and saved’, skip 1b.
 
    b. Run:
 
-   ``python find_init_pose_ik_cma.py --config configs/configs.txt --visualize True``
+      ``python find_init_pose_ik_cma.py --config configs/configs.txt --visualize True``
 
-This will use CMA-ES optimization with IK to find a good initial pose for the xml model. 
+      This will use CMA-ES optimization with IK to find a good initial pose for the xml model. 
 
-If you see, ‘Initial Pose found and saved using CMA-ES and Inverse Kinematics’, proceed to the next step. 
+      If you see, ‘Initial Pose found and saved using CMA-ES and Inverse Kinematics’, proceed to the next step. 
     
-Otherwise, provide a good inital pose for the xml model that preferably starts nearer to the inital marker/target position.
+      Otherwise, provide a good inital pose for the xml model that preferably starts nearer to the inital marker/target position.
     
-   3. **Visualize the targets/markers trajectories using randomly initialized uSim network:**
+3. **Visualize the targets/markers trajectories using randomly initialized uSim network:**
 
    Run
 
    ``python main --config configs/configs.txt --visualize True --mode test``
 
-This will visualize the target trajectories using a randomly initialized uSim controller network. Make sure target trajectories look as desired. Otherwise, change the kinematics preprocessing parameters (e.g. trajectory_scaling, center) in the ./configs/configs.txt file.
+   This will visualize the target trajectories using a randomly initialized uSim controller network. Make sure target trajectories look as desired. Otherwise, change the kinematics preprocessing parameters (e.g. trajectory_scaling, center) in the ./configs/configs.txt file.
 
-   4. **Visualize the musculoskeletal model trajectory and save the corresponding sensory feedback:**
+4. **Visualize the musculoskeletal model trajectory and save the corresponding sensory feedback:**
 
    Run:
 
    ``python visualize_trajectories_ik.py --config configs/configs.txt --visualize True``
     
     
-This will visualize the xml model following/tracking the training target trajectories. Before proceeding, make sure that the target trajectories are feasible and lie within the bounds of the xml model. Otherwise, adjust the target trajectories using the kinematics preprocessing parameters in configs.txt file. 
-This will also save the generated sensory feedback in ``./test_data/sensory_feedback_ik.pkl`` as Python dict object: 
+   This will visualize the xml model following/tracking the training target trajectories. Before proceeding, make sure that the target trajectories are feasible and lie within the bounds of the xml model. Otherwise, adjust the target trajectories using the kinematics preprocessing parameters in configs.txt file. 
+   This will also save the generated sensory feedback in ``./test_data/sensory_feedback_ik.pkl`` as Python dict object: 
 
-``<key: int>`` corresponds to the integer index of the corresponding training condition
-``<value: numpy.ndarray>`` with shape: ``[timepoints, num_of_state_feedback_variables]``
+   ``<key: int>`` corresponds to the integer index of the corresponding training condition
+   ``<value: numpy.ndarray>`` with shape: ``[timepoints, num_of_state_feedback_variables]``
 
 This can be used to get Proprioception for training neural networks.
 
@@ -204,13 +195,13 @@ Training the uSim Controller using DRL
 
 **(Make sure DRL/SAC related parameters are specified correctly in the configs.txt file)**
 
-   1. To train the uSim controller using the provided DRL algorithm, run:
+1. To train the uSim controller using the provided DRL algorithm, run:
 
-      ``python main.py --config configs/configs.txt``
+   ``python main.py --config configs/configs.txt``
     
-   2. To continue the training from the previous session, run:
+2. To continue the training from the previous session, run:
 
-      ``python main.py --config configs/configs.txt --load_saved_nets_for_training True``
+   ``python main.py --config configs/configs.txt --load_saved_nets_for_training True``
 
 Testing the uSim Controller
 ---------------------------
@@ -228,49 +219,51 @@ Post Training Analyses
 
 After training, the following modules are used for various analyses. All these modules are in ‘./Analysis’
 
-   1. **Kinematics Visualization:**
+1. **Kinematics Visualization:**
 
-To visualize the kinematics for the training and testing conditions, see visualize_kinematics.ipynb
+   To visualize the kinematics for the training and testing conditions, see visualize_kinematics.ipynb
 
-   2. **PCA:**
+2. **PCA:**
 
-To visualize the uSim controller’s population trajectories in PCA subspace, run:
+   To visualize the uSim controller’s population trajectories in PCA subspace, run:
 
    ``python collective_pca.py``
 
-   3. **Canonical Correlation Analysis (CCA):**
+3. **Canonical Correlation Analysis (CCA):**
 
-see CCA.ipynb
+   see CCA.ipynb
 
-   4. **Linear Regression Analysis (LRA):**
+4. **Linear Regression Analysis (LRA):**
 
-see LRA.ipynb
+   see LRA.ipynb
 
-   5. **Procrustes:**
+5. **Procrustes:**
 
-see procrustes.ipynb
+   see procrustes.ipynb
 
-   6. **Fixed Point (FP) Analysis:**
+6. **Fixed Point (FP) Analysis:**
 
-Clone the fixed-point-finder in ./Analysis, https://github.com/mattgolub/fixed-point-finder
+   Clone the fixed-point-finder in ./Analysis, https://github.com/mattgolub/fixed-point-finder
 
-Run
+   Run
 
    ``python find_fp.py``
 
-The fixed point analysis is based on the original implementation: https://github.com/mattgolub/fixed-point-finder. Refer to the github repo for further information.
+   The fixed point analysis is based on the original implementation: https://github.com/mattgolub/fixed-point-finder. Refer to the github repo for further information.
 
-   7. **Rotational Dynamics: (requires MATLAB)**
+7. **Rotational Dynamics: (requires MATLAB)**
 
-See and run jpca_nusim.m
+   See and run jpca_nusim.m
 
-Note: jPCA analysis is based on MM Churchland’s original implementation. Please see it for further details (https://www.dropbox.com/scl/fo/duf5zbwcibsux467c6oc9/AIN-ZiFsy2Huyh8h7VMdL7g?rlkey=3o5axmq5hirel4cij7g64jc0r&e=1&dl=0)
+.. note:: 
+
+   jPCA analysis is based on MM Churchland’s original implementation. Please see it for further details (https://www.dropbox.com/scl/fo/duf5zbwcibsux467c6oc9/AIN-ZiFsy2Huyh8h7VMdL7g?rlkey=3o5axmq5hirel4cij7g64jc0r&e=1&dl=0)
 
 **Important for jPCA analysis:**
 
-   1. Make sure that ./Analyses/jPCA_ForDistribution is included in the MATLAB path alongwith all sub-directories
+1. Make sure that ./Analyses/jPCA_ForDistribution is included in the MATLAB path alongwith all sub-directories
 
-   2. Make sure that usim test_data folder is included in the MATLAB path. test_data folder is where the jpca data is saved during usim test
+2. Make sure that usim test_data folder is included in the MATLAB path. test_data folder is where the jpca data is saved during usim test
 
 Perturbation Analyses
 ---------------------
@@ -296,18 +289,18 @@ The neural perturbation will add the given perturbation to the nodes of the uSim
 
 Specify the neural perturbation vector in perturbation_specs.py using *neural_pert* variable. Run:
 
-   ``python main.py --config configs/configs.txt --mode neural_pert --visualize True``
+   ``python main.py --config configs/configs.txt --mode neural_pert --visualize True``             
 
 Change Musculoskeletal Properties
 ---------------------------------
 
 To test the trained uSim controller under changed musculoskeletal properties:
 
-   1. Go to the folder ‘./musculoskeletal_model/’. Copy and paste the xml model ‘musculo_targets.xml’. Rename the copied model as ‘musculo_targets_pert.xml’.
+1. Go to the folder ‘./musculoskeletal_model/’. Copy and paste the xml model ‘musculo_targets.xml’. Rename the copied model as ‘musculo_targets_pert.xml’.
 
-   2. Change the desired musculoskeletal properties in xml model ‘musculo_targets_pert.xml’.
+2. Change the desired musculoskeletal properties in xml model ‘musculo_targets_pert.xml’.
 
-   3. Run:
+3. Run:
 
    ``python main.py --config configs/configs.txt --mode musculo_properties --visualize True``
 
