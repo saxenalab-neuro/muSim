@@ -281,7 +281,7 @@ class MujocoEnv(gym.Env):
         mujoco.mj_forward(self.model, self.data)"""
 
         self.data.qpos = qpos
-        self.data.qvel = qpos * 0
+        self.data.qvel = qvel
         mujoco.mj_forward(self.model, self.data)
 
     @property
@@ -400,7 +400,7 @@ class Muscle_Env(MujocoEnv):
         if len(self.sfs_visual_velocity) != 0:
             prev_body_xpos = []
             for musculo_body in self.sfs_visual_velocity:
-                body_xpos = self.sim.data.get_body_xpos(musculo_body)
+                body_xpos = self.data[self.model.body(musculo_body).id]#self.sim.data.get_body_xpos(musculo_body)
                 prev_body_xpos = [*prev_body_xpos, *body_xpos]
 
         #Now carry out one step of the MuJoCo simulation
@@ -506,7 +506,7 @@ class Muscle_Env(MujocoEnv):
 
 
         if self.sfs_muscle_forces == True:
-            actuator_forces = self.sim.data.qfrc_actuator.flat.copy()
+            actuator_forces = self.data.qfrc_actuator.flat.copy()
 
             #process
             if self.mode_to_sim in ["sensory_pert"]:
@@ -542,7 +542,7 @@ class Muscle_Env(MujocoEnv):
 
             visual_xyz_coords = []
             for musculo_body in self.sfs_visual_feedback_bodies:
-                visual_xyz_coords = [*visual_xyz_coords, *self.sim.data.get_body_xpos(musculo_body)]
+                visual_xyz_coords = [*visual_xyz_coords, *self.data[self.model.body(musculo_body).id]]
 
             if self.mode_to_sim in ["sensory_pert"]:
                 visual_xyz_coords = sensory_feedback_specs.process_visual_position_pert(visual_xyz_coords, self.istep)
