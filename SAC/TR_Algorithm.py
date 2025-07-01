@@ -92,7 +92,7 @@ def TR_Algorithm(obj_func, initial_state, env):
 
         #Return the final qpos and qvel
 
-        state_opt = env.sim.data.qpos.flat.copy()
+        state_opt = env.data.qpos.flat.copy()
         state_opt_musculo = env.get_musculo_state()
         final_loss = np.linalg.norm(fs(x0))
         success = True
@@ -109,7 +109,7 @@ def TR_Algorithm(obj_func, initial_state, env):
         print('2. Change other parameters including r0, delta step')
         print('3. Use MuJoCo to provide a better initial pose')
         
-        state_opt = env.sim.data.qpos.flat.copy()
+        state_opt = env.data.qpos.flat.copy()
         state_opt_musculo = env.get_musculo_state()
         final_loss = np.linalg.norm(fs(x0))
         success = False

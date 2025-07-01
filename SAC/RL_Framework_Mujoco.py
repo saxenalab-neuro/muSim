@@ -7,16 +7,20 @@ import numpy as np
 from os import path
 import gym
 import pickle
+from mujoco import viewer
 
 import numpy as np
 from gym import utils
 from . import sensory_feedback_specs, reward_function_specs, perturbation_specs
 from . import kinematics_preprocessing_specs
 
-try:
+
+"""try:
     import mujoco_py
 except ImportError as e:
     raise error.DependencyNotInstalled("{}. (HINT: you need to install mujoco_py, and also perform the setup instructions here: https://github.com/openai/mujoco-py/.)".format(e))
+"""
+import mujoco
 
 import ipdb
 
@@ -54,10 +58,10 @@ class MujocoEnv(gym.Env):
         self.mode_to_sim = args.mode
         self.frame_skip = frame_skip
         self.frame_repeat = args.frame_repeat
-        self.model = mujoco_py.load_model_from_path(model_path)
+        self.model = mujoco.MjModel.from_xml_path(model_path)#model_path)#mujoco_py.load_model_from_path(model_path)
 
-        self.sim = mujoco_py.MjSim(self.model)
-        self.data = self.sim.data
+        #self.sim = mujoco.MjSim(self.model)#mujoco_py.MjSim(self.model)
+        self.data = mujoco.MjData(self.model)#self.sim.data
 
         #Set the simulation timestep
         if args.sim_dt != 0:
@@ -107,7 +111,7 @@ class MujocoEnv(gym.Env):
 
         #Load the stimulus feedback
         if path.isfile(self.stim_data_path + '/stimulus_data.pkl'):
-            self.stim_fb_exists = True 
+            self.stim_fb_exists = True
 
             with open(self.stim_data_path + '/stimulus_data.pkl', 'rb') as f:
                 stim_data = pickle.load(f)
@@ -260,30 +264,38 @@ class MujocoEnv(gym.Env):
         self.coord_idx = 0
         self.theta= np.pi
         self.threshold= self.threshold_user
-        self.sim.reset()
+        #self.sim.reset()
+        mujoco.mj_resetData(self.model, self.data)
         ob = self.reset_model()
         return ob
 
     def set_state(self, qpos, qvel):
         assert qpos.shape == (self.model.nq, ) and qvel.shape == (self.model.nv, )
-        old_state= self.sim.get_state()
+        """old_state= self.sim.get_state()
 
         new_state= mujoco_py.MjSimState(old_state.time, qpos, qvel,
                                         old_state.act, old_state.udd_state)
 
         self.sim.set_state(new_state)
-        self.sim.forward()
+        #self.sim.forward()
+        mujoco.mj_forward(self.model, self.data)"""
+
+        self.data.qpos = qpos
+        self.data.qvel = qpos * 0
+        mujoco.mj_forward(self.model, self.data)
 
     @property
     def dt(self):
         return self.model.opt.timestep * self.frame_skip 
 
     def do_simulation(self, ctrl, n_frames):
-        self.sim.data.ctrl[:]= ctrl 
+        self.data.ctrl[:] = ctrl
         for _ in range(n_frames):
-            self.sim.data.ctrl[:]= ctrl
-            self.sim.step()
-            self.sim.forward()
+            self.data.ctrl[:] = ctrl
+            mujoco.mj_step(self.model, self.data)
+            mujoco.mj_forward(self.model, self.data)
+            #self.sim.step()
+            #self.sim.forward()
 
     def render(self,
                mode='human',
@@ -318,7 +330,7 @@ class MujocoEnv(gym.Env):
             # original image is upside-down, so flip it
             return data[::-1, :]
         elif mode == 'human':
-            self._get_viewer(mode).render()
+            self._get_viewer(mode)#.render()
 
     def close(self):
         if self.viewer is not None:
@@ -330,7 +342,7 @@ class MujocoEnv(gym.Env):
         self.viewer = self._viewers.get(mode)
         if self.viewer is None:
             if mode == 'human':
-                self.viewer = mujoco_py.MjViewer(self.sim)
+                self.viewer = viewer.launch_passive(self.model, self.data)#mujoco_py.MjViewer(self.sim)
             elif mode == 'rgb_array' or mode == 'depth_array':
                 self.viewer = mujoco_py.MjRenderContextOffscreen(self.sim, -1)
 
@@ -343,8 +355,8 @@ class MujocoEnv(gym.Env):
 
     def state_vector(self):
         return np.concatenate([
-            self.sim.data.qpos.flat,
-            self.sim.data.qvel.flat
+            self.data.qpos.flat,
+            self.data.qvel.flat
         ])
 
 
@@ -361,8 +373,8 @@ class Muscle_Env(MujocoEnv):
 
     def is_done(self):
         #Define the distance threshold termination criteria
-        target_position= self.sim.data.get_body_xpos("target0").copy()
-        hand_position= self.sim.data.get_body_xpos("hand").copy()
+        target_position= self.data.xpos[self.model.body("target0").id].copy()# self.sim.data.get_body_xpos("target0").copy()
+        hand_position= self.data.xpos[self.model.body("hand").id].copy()#self.sim.data.get_body_xpos("hand").copy()
         
         criteria= hand_position - target_position
 
@@ -396,12 +408,12 @@ class Muscle_Env(MujocoEnv):
 
         #Currently the reward function is the function of the delayed state, current simulator state, action and threshold
         if self.sfs_sensory_delay_timepoints != 0:
-            reward= reward_function_specs.reward_function(self.state_to_return[-1], self.sim, action, self.threshold)
+            reward= reward_function_specs.reward_function(self.state_to_return[-1], self.data, self.model, action, self.threshold)
         else:
             #Pass a dummy variable for the delayed state feedback
-            reward= reward_function_specs.reward_function(0, self.sim, action, self.threshold)
+            reward= reward_function_specs.reward_function(0, self.data, self.model, action, self.threshold)
             
-        cost= self.get_cost(action)
+        cost = self.get_cost(action)
         final_reward= (5*reward) #- (0.5*cost)
 
         done= self.is_done()
@@ -413,7 +425,7 @@ class Muscle_Env(MujocoEnv):
         if len(self.sfs_visual_velocity) != 0:
             current_body_xpos = []
             for musculo_body in self.sfs_visual_velocity:
-                body_xpos = self.sim.data.get_body_xpos(musculo_body)
+                body_xpos = self.data.xpos[self.model.body(musculo_body).id]#self.sim.data.get_body_xpos(musculo_body)
                 current_body_xpos = [*current_body_xpos, *body_xpos]
 
             #Find the velocity
@@ -456,7 +468,7 @@ class Muscle_Env(MujocoEnv):
         #Insert the inital state obs to the start of the list
         self.state_to_return.insert(0, initial_state_obs)
 
-        #Return the last element of the state_to_return 
+        #Return the last element of the state_to_return
         return self.state_to_return.pop()
 
     def _get_obs(self):
@@ -478,8 +490,8 @@ class Muscle_Env(MujocoEnv):
 
 
         if self.sfs_proprioceptive_feedback == True:
-            muscle_lens = self.sim.data.actuator_length.flat.copy()
-            muscle_vels = self.sim.data.actuator_velocity.flat.copy()
+            muscle_lens = self.data.actuator_length.flat.copy()
+            muscle_vels = self.data.actuator_velocity.flat.copy()
 
             #process through the given function for muscle lens and muscle vels
             if self.mode_to_sim in ["sensory_pert"]:
@@ -499,7 +511,6 @@ class Muscle_Env(MujocoEnv):
             #process
             if self.mode_to_sim in ["sensory_pert"]:
                 actuator_forces = sensory_feedback_specs.process_muscle_forces_pert(actuator_forces, self.istep)
-
             actuator_forces = sensory_feedback_specs.process_muscle_forces(actuator_forces)
             
             if self.mode_to_sim in ["SFE"] and "muscle_forces" in perturbation_specs.sf_elim:
@@ -509,8 +520,8 @@ class Muscle_Env(MujocoEnv):
 
 
         if self.sfs_joint_feedback == True:
-            sensory_qpos = self.sim.data.qpos.flat.copy()
-            sensory_qvel = self.sim.data.qvel.flat.copy()
+            sensory_qpos = self.data.qpos.flat.copy()
+            sensory_qvel = self.data.qvel.flat.copy()
 
             #process
             if self.mode_to_sim in ["sensory_pert"]:
@@ -546,8 +557,8 @@ class Muscle_Env(MujocoEnv):
         if len(self.sfs_visual_distance_bodies) != 0:
             visual_xyz_distance = []
             for musculo_tuple in self.sfs_visual_distance_bodies:
-                body0_xyz = self.sim.data.get_body_xpos(musculo_tuple[0])
-                body1_xyz = self.sim.data.get_body_xpos(musculo_tuple[1])
+                body0_xyz = self.data.xpos[self.model.body(musculo_tuple[0]).id]#self.sim.data.get_body_xpos(musculo_tuple[0])
+                body1_xyz = self.data.xpos[self.model.body(musculo_tuple[1]).id]#self.sim.data.get_body_xpos(musculo_tuple[1])
                 tuple_dist = (body0_xyz - body1_xyz).tolist()
                 visual_xyz_distance = [*visual_xyz_distance, *tuple_dist]
 
@@ -577,23 +588,32 @@ class Muscle_Env(MujocoEnv):
         self.coord_idx = self.tpoint_to_sim
 
         coords_to_sim = self.kin_to_sim[self.current_cond_to_sim]
-        
-        crnt_state = self.sim.get_state()
+
+        crnt_state = {
+            'qpos': self.data.qpos.copy(),
+            'qvel': self.data.qvel.copy(),
+            'act': self.data.act.copy() if self.data.act.size > 0 else None,
+            'mocap_pos': self.data.mocap_pos.copy() if self.data.mocap_pos.size > 0 else None,
+            'mocap_quat': self.data.mocap_quat.copy() if self.data.mocap_quat.size > 0 else None
+        }
 
         for i_target in range(self.kin_to_sim[self.current_cond_to_sim].shape[0]):
             if kinematics_preprocessing_specs.xyz_target[i_target][0]:
-                x_joint_idx= self.model.get_joint_qpos_addr(f"box:x{i_target}")
-                crnt_state.qpos[x_joint_idx] = coords_to_sim[i_target, 0, self.tpoint_to_sim]
+                #x_joint_idx= self.model.get_joint_qpos_addr(f"box:x{i_target}")
+                #crnt_state.qpos[x_joint_idx] = coords_to_sim[i_target, 0, self.tpoint_to_sim]
+                x_joint_idx = self.model.joint(f"box:x{i_target}").qposadr[0]
+                crnt_state['qpos'][x_joint_idx] = coords_to_sim[i_target, 0, self.tpoint_to_sim]
 
 
             if kinematics_preprocessing_specs.xyz_target[i_target][1]:
-                y_joint_idx= self.model.get_joint_qpos_addr(f"box:y{i_target}")
-                crnt_state.qpos[y_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0], self.tpoint_to_sim]
+                #y_joint_idx= self.model.get_joint_qpos_addr(f"box:y{i_target}")
+                #crnt_state.qpos[y_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0], self.tpoint_to_sim]
+                y_joint_idx = self.model.joint(f"box:y{i_target}").qposadr[0]
+                crnt_state['qpos'][y_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0], self.tpoint_to_sim]
 
             if kinematics_preprocessing_specs.xyz_target[i_target][2]:
-                z_joint_idx= self.model.get_joint_qpos_addr(f"box:z{i_target}")
-                crnt_state.qpos[z_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0] + kinematics_preprocessing_specs.xyz_target[i_target][1], self.tpoint_to_sim]
-
+                z_joint_idx = self.model.joint(f"box:z{i_target}").qposadr[0]
+                crnt_state['qpos'][z_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0] + kinematics_preprocessing_specs.xyz_target[i_target][1], self.tpoint_to_sim]
 
         #Now set the state
-        self.set_state(crnt_state.qpos, crnt_state.qvel)
+        self.set_state(crnt_state['qpos'], crnt_state['qvel'])

@@ -362,7 +362,6 @@ class Simulate():
                 for _ in range(self.env.frame_repeat):
                     next_state, inter_reward, done, _ = self.env.step(action)
                     next_state = [*next_state, self.env.condition_scalar]
-
                     reward += inter_reward
                     episode_steps += 1
 
