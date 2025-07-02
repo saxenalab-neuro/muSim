@@ -148,16 +148,16 @@ class MujocoEnv(gym.Env):
     def set_state(self, qpos):
         assert qpos.shape == (self.model.nq, )
 
-        self.data.qpos = qpos
-        self.data.qvel = qpos * 0
+        self.data.qpos[:] = qpos
+        self.data.qvel[:] = qpos * 0
         mujoco.mj_forward(self.model, self.data)
 
     def set_state_musculo(self, qpos):
         qpos_all = self.data.qpos.flat.copy()
         qpos_all[self.qpos_idx_musculo] = qpos
 
-        self.data.qpos = qpos_all
-        self.data.qvel = qpos_all * 0
+        self.data.qpos[:] = qpos_all
+        self.data.qvel[:] = qpos_all * 0
         mujoco.mj_forward(self.model, self.data)
 
 
