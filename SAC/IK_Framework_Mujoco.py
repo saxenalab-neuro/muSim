@@ -76,6 +76,7 @@ class MujocoEnv(gym.Env):
 
         self.n_fixedsteps = args.n_fixedsteps
         self.radius = args.trajectory_scaling
+
         self.center = args.center
 
         #Kinematics preprocessing for training and testing kinematics
@@ -147,6 +148,7 @@ class MujocoEnv(gym.Env):
 
     def set_state(self, qpos):
         assert qpos.shape == (self.model.nq, )
+        print(qpos, self.data.qpos)
 
         self.data.qpos[:] = qpos
         self.data.qvel[:] = qpos * 0
