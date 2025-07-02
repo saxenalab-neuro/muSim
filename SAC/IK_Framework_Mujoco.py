@@ -250,8 +250,8 @@ class MujocoEnv(gym.Env):
             data = self._get_viewer(mode).read_pixels(width, height, depth=True)[1]
             # original image is upside-down, so flip it
             return data[::-1, :]
-        #elif mode == 'human':
-         #   self._get_viewer(mode)#.render()
+        elif mode == 'human':
+            self._get_viewer(mode)#.render()
 
     def close(self):
         if self.viewer is not None:

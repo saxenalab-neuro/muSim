@@ -233,13 +233,14 @@ class Simulate():
                     next_state = [*next_state, self.env.condition_scalar]
 
                 episode_reward += reward
+                print(reward)
 
                 #now append the kinematics of the musculo body and the corresponding target
                 kin_mb_t = []
                 kin_mt_t = []
                 for musculo_body in kinematics_preprocessing_specs.musculo_tracking:
-                    kin_mb_t.append(self.env.sim.data.get_body_xpos(musculo_body[0]).copy())   #[3, ]    
-                    kin_mt_t.append(self.env.sim.data.get_body_xpos(musculo_body[1]).copy()) #[3, ]
+                    kin_mb_t.append(self.env.data.xpos[self.env.model.body(musculo_body[0]).id].copy())   #[3, ]
+                    kin_mt_t.append(self.env.data.xpos[self.env.model.body(musculo_body[1]).id].copy()) #[3, ]
 
                 kin_mb_cond.append(kin_mb_t)   # kin_mb_t : [n_targets, 3]
                 kin_mt_cond.append(kin_mt_t)   # kin_mt_t : [n_targets, 3]

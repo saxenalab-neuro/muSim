@@ -330,7 +330,7 @@ class MujocoEnv(gym.Env):
             # original image is upside-down, so flip it
             return data[::-1, :]
         elif mode == 'human':
-            self._get_viewer(mode)#.render()
+            self._get_viewer(mode).sync()
 
     def close(self):
         if self.viewer is not None:
@@ -601,18 +601,18 @@ class Muscle_Env(MujocoEnv):
             if kinematics_preprocessing_specs.xyz_target[i_target][0]:
                 #x_joint_idx= self.model.get_joint_qpos_addr(f"box:x{i_target}")
                 #crnt_state.qpos[x_joint_idx] = coords_to_sim[i_target, 0, self.tpoint_to_sim]
-                x_joint_idx = self.model.joint(f"box:x{i_target}").qposadr[0]
+                x_joint_idx = self.model.joint(f"box:x{i_target}").qposadr#[0]
                 crnt_state['qpos'][x_joint_idx] = coords_to_sim[i_target, 0, self.tpoint_to_sim]
 
 
             if kinematics_preprocessing_specs.xyz_target[i_target][1]:
                 #y_joint_idx= self.model.get_joint_qpos_addr(f"box:y{i_target}")
                 #crnt_state.qpos[y_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0], self.tpoint_to_sim]
-                y_joint_idx = self.model.joint(f"box:y{i_target}").qposadr[0]
+                y_joint_idx = self.model.joint(f"box:y{i_target}").qposadr#[0]
                 crnt_state['qpos'][y_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0], self.tpoint_to_sim]
 
             if kinematics_preprocessing_specs.xyz_target[i_target][2]:
-                z_joint_idx = self.model.joint(f"box:z{i_target}").qposadr[0]
+                z_joint_idx = self.model.joint(f"box:z{i_target}").qposadr#[0]
                 crnt_state['qpos'][z_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0] + kinematics_preprocessing_specs.xyz_target[i_target][1], self.tpoint_to_sim]
 
         #Now set the state
