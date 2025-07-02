@@ -15,11 +15,6 @@ from . import sensory_feedback_specs, reward_function_specs, perturbation_specs
 from . import kinematics_preprocessing_specs
 
 
-"""try:
-    import mujoco_py
-except ImportError as e:
-    raise error.DependencyNotInstalled("{}. (HINT: you need to install mujoco_py, and also perform the setup instructions here: https://github.com/openai/mujoco-py/.)".format(e))
-"""
 import mujoco
 
 import ipdb
@@ -271,14 +266,6 @@ class MujocoEnv(gym.Env):
 
     def set_state(self, qpos, qvel):
         assert qpos.shape == (self.model.nq, ) and qvel.shape == (self.model.nv, )
-        """old_state= self.sim.get_state()
-
-        new_state= mujoco_py.MjSimState(old_state.time, qpos, qvel,
-                                        old_state.act, old_state.udd_state)
-
-        self.sim.set_state(new_state)
-        #self.sim.forward()
-        mujoco.mj_forward(self.model, self.data)"""
 
         self.data.qpos = qpos
         self.data.qvel = qvel
@@ -294,8 +281,6 @@ class MujocoEnv(gym.Env):
             self.data.ctrl[:] = ctrl
             mujoco.mj_step(self.model, self.data)
             mujoco.mj_forward(self.model, self.data)
-            #self.sim.step()
-            #self.sim.forward()
 
     def render(self,
                mode='human',
@@ -373,8 +358,8 @@ class Muscle_Env(MujocoEnv):
 
     def is_done(self):
         #Define the distance threshold termination criteria
-        target_position= self.data.xpos[self.model.body("target0").id].copy()# self.sim.data.get_body_xpos("target0").copy()
-        hand_position= self.data.xpos[self.model.body("hand").id].copy()#self.sim.data.get_body_xpos("hand").copy()
+        target_position= self.data.xpos[self.model.body("target0").id].copy()
+        hand_position= self.data.xpos[self.model.body("hand").id].copy()
         
         criteria= hand_position - target_position
 
@@ -599,15 +584,11 @@ class Muscle_Env(MujocoEnv):
 
         for i_target in range(self.kin_to_sim[self.current_cond_to_sim].shape[0]):
             if kinematics_preprocessing_specs.xyz_target[i_target][0]:
-                #x_joint_idx= self.model.get_joint_qpos_addr(f"box:x{i_target}")
-                #crnt_state.qpos[x_joint_idx] = coords_to_sim[i_target, 0, self.tpoint_to_sim]
                 x_joint_idx = self.model.joint(f"box:x{i_target}").qposadr#[0]
                 crnt_state['qpos'][x_joint_idx] = coords_to_sim[i_target, 0, self.tpoint_to_sim]
 
 
             if kinematics_preprocessing_specs.xyz_target[i_target][1]:
-                #y_joint_idx= self.model.get_joint_qpos_addr(f"box:y{i_target}")
-                #crnt_state.qpos[y_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0], self.tpoint_to_sim]
                 y_joint_idx = self.model.joint(f"box:y{i_target}").qposadr#[0]
                 crnt_state['qpos'][y_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0], self.tpoint_to_sim]
 

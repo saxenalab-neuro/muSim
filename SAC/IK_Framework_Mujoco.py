@@ -141,7 +141,7 @@ class MujocoEnv(gym.Env):
             if len(self.sfs_visual_velocity) != 0:
                 self.prev_body_xpos = []
                 for musculo_body in self.sfs_visual_velocity:
-                    body_xpos = self.data.xpos[self.model.body(musculo_body).id]#self.sim.data.get_body_xpos(musculo_body)
+                    body_xpos = self.data.xpos[self.model.body(musculo_body).id]
                     self.prev_body_xpos = [*self.prev_body_xpos, *body_xpos]
 
     #Return the qpos of only the musculoskeletal bodies and not the targets
@@ -153,33 +153,16 @@ class MujocoEnv(gym.Env):
    
 
     def set_state(self, qpos):
-        
         assert qpos.shape == (self.model.nq, )
-        
-        """old_state= self.sim.get_state()
 
-        new_state= mujoco_py.MjSimState(old_state.time, qpos, qpos*0,
-                                        old_state.act, old_state.udd_state)
-
-        self.sim.set_state(new_state)
-        self.sim.forward()"""
         self.data.qpos = qpos
         self.data.qvel = qpos * 0
         mujoco.mj_forward(self.model, self.data)
 
     def set_state_musculo(self, qpos):
-        
-        #old_state= self.sim.get_state()
         qpos_all = self.data.qpos.flat.copy()
         qpos_all[self.qpos_idx_musculo] = qpos
 
-        """assert qpos_all.shape == (self.model.nq, )
-
-        new_state= mujoco_py.MjSimState(old_state.time, qpos_all, qpos_all*0,
-                                        old_state.act, old_state.udd_state)
-
-        self.sim.set_state(new_state)
-        self.sim.forward()"""
         self.data.qpos = qpos_all
         self.data.qvel = qpos_all * 0
         mujoco.mj_forward(self.model, self.data)
@@ -252,7 +235,7 @@ class MujocoEnv(gym.Env):
             # original image is upside-down, so flip it
             return data[::-1, :]
         elif mode == 'human':
-            self._get_viewer(mode).sync()#.render()
+            self._get_viewer(mode).sync()
 
     def close(self):
         if self.viewer is not None:
@@ -286,7 +269,7 @@ class Muscle_Env(MujocoEnv):
 
     def upd_theta(self, cond_timepoint):
 
-        coords_to_sim = self.kin_to_sim[self.current_cond_to_sim] #[num_targets, num_coords, timepoints]
+        coords_to_sim = self.kin_to_sim[self.current_cond_to_sim]
 
         assert cond_timepoint < coords_to_sim.shape[-1]
 
@@ -360,8 +343,8 @@ class Muscle_Env(MujocoEnv):
         if len(self.sfs_visual_distance_bodies) != 0:
             visual_xyz_distance = []
             for musculo_tuple in self.sfs_visual_distance_bodies:
-                body0_xyz = self.data.xpos[self.model.body(musculo_body[0]).id]#self.sim.data.get_body_xpos(musculo_tuple[0])
-                body1_xyz = self.data.xpos[self.model.body(musculo_body[1]).id]#self.sim.data.get_body_xpos(musculo_tuple[1])
+                body0_xyz = self.data.xpos[self.model.body(musculo_tuple[0]).id]
+                body1_xyz = self.data.xpos[self.model.body(musculo_tuple[1]).id]
                 tuple_dist = np.abs(body0_xyz - body1_xyz).tolist()
                 visual_xyz_distance = [*visual_xyz_distance, *tuple_dist]
 
@@ -375,7 +358,7 @@ class Muscle_Env(MujocoEnv):
             #Find the visual vels after the simulation
             current_body_xpos = []
             for musculo_body in self.sfs_visual_velocity:
-                body_xpos = self.data.xpos[self.model.body(musculo_body).id]#self.sim.data.get_body_xpos(musculo_body)
+                body_xpos = self.data.xpos[self.model.body(musculo_body).id]
                 current_body_xpos = [*current_body_xpos, *body_xpos]
 
             #Find the velocity
