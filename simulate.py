@@ -233,7 +233,6 @@ class Simulate():
                     next_state = [*next_state, self.env.condition_scalar]
 
                 episode_reward += reward
-                print(reward)
 
                 #now append the kinematics of the musculo body and the corresponding target
                 kin_mb_t = []

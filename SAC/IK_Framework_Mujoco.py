@@ -67,10 +67,11 @@ class MujocoEnv(gym.Env):
         self.qpos_idx_musculo = np.array(list(range(0, self.model.nq)))
         self.qpos_idx_targets = []
         for musculo_targets in kinematics_preprocessing_specs.musculo_target_joints:
-            joint_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, musculo_targets)
-            joint_idx = self.model.jnt_qposadr[joint_id]
+            joint_id = self.model.joint(musculo_targets).qposadr
+            #joint_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, musculo_targets)
+            #joint_idx = self.model.jnt_qposadr[joint_id]
             #joint_idx = self.model.get_joint_qpos_addr(musculo_targets)
-            self.qpos_idx_targets.append(joint_idx)
+            self.qpos_idx_targets.append(joint_id)
         	
         #Delete the corresponding index from the qpos_idx_musculo
         self.qpos_idx_musculo = np.delete(self.qpos_idx_musculo, self.qpos_idx_targets).tolist()
@@ -188,7 +189,7 @@ class MujocoEnv(gym.Env):
     	#Returns the current xyz coords of the musculo bodies to be tracked
     	musculo_body_state = []
     	for musculo_body in kinematics_preprocessing_specs.musculo_tracking:
-    		current_xyz_coord = self.data.xpos[self.model.body(musculo_body[0]).id].copy()
+    		current_xyz_coord = self.data.xpos[self.model.body(musculo_body[0]).id].flat.copy()
     		musculo_body_state.append(current_xyz_coord)
 
     	return np.array(musculo_body_state)  #[n_musculo_bodies, 3]
@@ -198,7 +199,7 @@ class MujocoEnv(gym.Env):
     	#Returns the current xyz coords of the targets to be tracked
     	musculo_target_state = []
     	for musculo_body in kinematics_preprocessing_specs.musculo_tracking:
-    		current_xyz_coord = self.data.xpos[self.model.body(musculo_body[1]).id].copy()
+    		current_xyz_coord = self.data.xpos[self.model.body(musculo_body[1]).id].flat.copy()
     		musculo_target_state.append(current_xyz_coord)
 
     	return np.array(musculo_target_state)  #[n_musculo_targets, 3]
@@ -251,7 +252,7 @@ class MujocoEnv(gym.Env):
             # original image is upside-down, so flip it
             return data[::-1, :]
         elif mode == 'human':
-            self._get_viewer(mode)#.render()
+            self._get_viewer(mode).sync()#.render()
 
     def close(self):
         if self.viewer is not None:
@@ -299,16 +300,16 @@ class Muscle_Env(MujocoEnv):
 
         for i_target in range(self.kin_to_sim[self.current_cond_to_sim].shape[0]):
             if kinematics_preprocessing_specs.xyz_target[i_target][0]:
-                x_joint_idx= self.model.joint(f"box:x{i_target}").qposadr[0]
+                x_joint_idx= self.model.joint(f"box:x{i_target}").qposadr
                 crnt_state['qpos'][x_joint_idx] = coords_to_sim[i_target, 0, cond_timepoint]
 
 
             if kinematics_preprocessing_specs.xyz_target[i_target][1]:
-                y_joint_idx= self.model.joint(f"box:y{i_target}").qposadr[0]
+                y_joint_idx= self.model.joint(f"box:y{i_target}").qposadr
                 crnt_state['qpos'][y_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0], cond_timepoint]
 
             if kinematics_preprocessing_specs.xyz_target[i_target][2]:
-                z_joint_idx= self.model.joint(f"box:z{i_target}").qposadr[0]
+                z_joint_idx= self.model.joint(f"box:z{i_target}").qposadr
                 crnt_state['qpos'][z_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0] + kinematics_preprocessing_specs.xyz_target[i_target][1], cond_timepoint]
 
 
@@ -359,8 +360,8 @@ class Muscle_Env(MujocoEnv):
         if len(self.sfs_visual_distance_bodies) != 0:
             visual_xyz_distance = []
             for musculo_tuple in self.sfs_visual_distance_bodies:
-                body0_xyz = self.data.xpos[self.model.body(musculo_body[0]).id].copy()#self.sim.data.get_body_xpos(musculo_tuple[0])
-                body1_xyz = self.data.xpos[self.model.body(musculo_body[1]).id].copy()#self.sim.data.get_body_xpos(musculo_tuple[1])
+                body0_xyz = self.data.xpos[self.model.body(musculo_body[0]).id]#self.sim.data.get_body_xpos(musculo_tuple[0])
+                body1_xyz = self.data.xpos[self.model.body(musculo_body[1]).id]#self.sim.data.get_body_xpos(musculo_tuple[1])
                 tuple_dist = np.abs(body0_xyz - body1_xyz).tolist()
                 visual_xyz_distance = [*visual_xyz_distance, *tuple_dist]
 
