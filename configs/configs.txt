@@ -94,27 +94,27 @@ proprioceptive_feedback = True
 muscle_forces = False
 
 #Joint feedback consists of joint positions and velocities
-joint_feedback = False 
+joint_feedback = False
 
 #Visual feedback consists of x/y/z coordinates of the specified bodies in the model
 #If visual_feedback is True, specify the names of the bodies from musculoskeletal_model.xml for which the feedback should be included
-visual_feedback = False 
+visual_feedback = False
 
 #Append the musculo bodies from which visual feedback should be included
 #This list can also consist of targets/markers
 #Append targetn-1 for visual feedback from targets/markers in the kinematics.pkl file
 #'target0' corresponds to the visual feedback from the first target/marker, target1 to the second target/marker and so on
-visual_feedback_bodies = [hand, target0] 
+visual_feedback_bodies = [hand, target0]
 
 #Specify the names of the bodies as tuples(separated by ; with no spaces) for which the visual distance should be included in the feedback
 #Leave blank if the visual distance is not to be included in the feedback
 #Visual distance between the bodies will be included
 #e.g visual_distance_bodies = [[hand;target0], [elbow;target0]] will include the distance between the hand/elbow and first marker in sensory feedback
-visual_distance_bodies = [[hand;target0]] 
+visual_distance_bodies = [[hand;target0]]
 
 #Specify the names of the bodies for which the visual velocity should be included in the feedback
 #Leave blank if the visual velocity is not to be included in the feedback
-#Appends the absolute musculo body velocity, e.g. visual_velocity = [hand, target0] 
+#Appends the absolute musculo body velocity, e.g. visual_velocity = [hand, target0]
 #will include the xyz velocities of hand and target0
 visual_velocity = []
 
@@ -129,7 +129,7 @@ sensory_delay_timepoints = 0
 alpha_usim = 0.1
 
 #weighting with loss for minimizing the neural activations for uSim/nuSim
-beta_usim = 0.01 
+beta_usim = 0.01
 
 #weighting with loss for minimizing the synaptic weights for uSim/nuSim
 gamma_usim = 0.001
@@ -163,5 +163,4 @@ multi_policy_loss = True
 batch_iters = 1
 total_episodes = 1000000
 condition_selection_strategy = "reward"
-cuda = True
-
+cuda = False
