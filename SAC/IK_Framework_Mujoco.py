@@ -17,10 +17,6 @@ from mujoco import viewer
 
 import ipdb
 
-"""try:
-    import mujoco_py
-except ImportError as e:
-    raise error.DependencyNotInstalled("{}. (HINT: you need to install mujoco_py, and also perform the setup instructions here: https://github.com/openai/mujoco-py/.)".format(e))"""
 import mujoco
 
 DEFAULT_SIZE = 500
@@ -68,9 +64,6 @@ class MujocoEnv(gym.Env):
         self.qpos_idx_targets = []
         for musculo_targets in kinematics_preprocessing_specs.musculo_target_joints:
             joint_id = self.model.joint(musculo_targets).qposadr
-            #joint_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_JOINT, musculo_targets)
-            #joint_idx = self.model.jnt_qposadr[joint_id]
-            #joint_idx = self.model.get_joint_qpos_addr(musculo_targets)
             self.qpos_idx_targets.append(joint_id)
         	
         #Delete the corresponding index from the qpos_idx_musculo
