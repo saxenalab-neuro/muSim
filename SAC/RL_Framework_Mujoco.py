@@ -53,10 +53,9 @@ class MujocoEnv(gym.Env):
         self.mode_to_sim = args.mode
         self.frame_skip = frame_skip
         self.frame_repeat = args.frame_repeat
-        self.model = mujoco.MjModel.from_xml_path(model_path)#model_path)#mujoco_py.load_model_from_path(model_path)
+        self.model = mujoco.MjModel.from_xml_path(model_path)
 
-        #self.sim = mujoco.MjSim(self.model)#mujoco_py.MjSim(self.model)
-        self.data = mujoco.MjData(self.model)#self.sim.data
+        self.data = mujoco.MjData(self.model)
 
         #Set the simulation timestep
         if args.sim_dt != 0:
@@ -259,7 +258,7 @@ class MujocoEnv(gym.Env):
         self.coord_idx = 0
         self.theta= np.pi
         self.threshold= self.threshold_user
-        #self.sim.reset()
+
         mujoco.mj_resetData(self.model, self.data)
         ob = self.reset_model()
         return ob
@@ -327,7 +326,7 @@ class MujocoEnv(gym.Env):
         self.viewer = self._viewers.get(mode)
         if self.viewer is None:
             if mode == 'human':
-                self.viewer = viewer.launch_passive(self.model, self.data)#mujoco_py.MjViewer(self.sim)
+                self.viewer = viewer.launch_passive(self.model, self.data)
             elif mode == 'rgb_array' or mode == 'depth_array':
                 self.viewer = mujoco_py.MjRenderContextOffscreen(self.sim, -1)
 
@@ -410,7 +409,7 @@ class Muscle_Env(MujocoEnv):
         if len(self.sfs_visual_velocity) != 0:
             current_body_xpos = []
             for musculo_body in self.sfs_visual_velocity:
-                body_xpos = self.data.xpos[self.model.body(musculo_body).id]#self.sim.data.get_body_xpos(musculo_body)
+                body_xpos = self.data.xpos[self.model.body(musculo_body).id]
                 current_body_xpos = [*current_body_xpos, *body_xpos]
 
             #Find the velocity
@@ -542,8 +541,8 @@ class Muscle_Env(MujocoEnv):
         if len(self.sfs_visual_distance_bodies) != 0:
             visual_xyz_distance = []
             for musculo_tuple in self.sfs_visual_distance_bodies:
-                body0_xyz = self.data.xpos[self.model.body(musculo_tuple[0]).id]#self.sim.data.get_body_xpos(musculo_tuple[0])
-                body1_xyz = self.data.xpos[self.model.body(musculo_tuple[1]).id]#self.sim.data.get_body_xpos(musculo_tuple[1])
+                body0_xyz = self.data.xpos[self.model.body(musculo_tuple[0]).id]
+                body1_xyz = self.data.xpos[self.model.body(musculo_tuple[1]).id]
                 tuple_dist = (body0_xyz - body1_xyz).tolist()
                 visual_xyz_distance = [*visual_xyz_distance, *tuple_dist]
 
@@ -579,16 +578,16 @@ class Muscle_Env(MujocoEnv):
 
         for i_target in range(self.kin_to_sim[self.current_cond_to_sim].shape[0]):
             if kinematics_preprocessing_specs.xyz_target[i_target][0]:
-                x_joint_idx = self.model.joint(f"box:x{i_target}").qposadr#[0]
+                x_joint_idx = self.model.joint(f"box:x{i_target}").qposadr
                 crnt_qpos[x_joint_idx] = coords_to_sim[i_target, 0, self.tpoint_to_sim]
 
 
             if kinematics_preprocessing_specs.xyz_target[i_target][1]:
-                y_joint_idx = self.model.joint(f"box:y{i_target}").qposadr#[0]
+                y_joint_idx = self.model.joint(f"box:y{i_target}").qposadr
                 crnt_qpos[y_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0], self.tpoint_to_sim]
 
             if kinematics_preprocessing_specs.xyz_target[i_target][2]:
-                z_joint_idx = self.model.joint(f"box:z{i_target}").qposadr#[0]
+                z_joint_idx = self.model.joint(f"box:z{i_target}").qposadr
                 crnt_qpos[z_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0] + kinematics_preprocessing_specs.xyz_target[i_target][1], self.tpoint_to_sim]
 
         #Now set the state

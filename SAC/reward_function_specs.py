@@ -25,6 +25,7 @@ def reward_function(state_td, data, model, action_t, threshold):
         for musculo_body_tracking in musculo_tracking:
             musculo_body = data.xpos[model.body(musculo_body_tracking[0]).id].flat.copy()
             musculo_target = data.xpos[model.body(musculo_body_tracking[1]).id].flat.copy()
+
             current_dists = np.abs(musculo_body - musculo_target)
             xyz_coord_dists = [*xyz_coord_dists, *current_dists]
 

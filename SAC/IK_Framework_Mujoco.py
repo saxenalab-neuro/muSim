@@ -36,7 +36,6 @@ class MujocoEnv(gym.Env):
         self.model = mujoco.MjModel.from_xml_path(model_path)
 
         #setup the simulator and data object
-        #self.sim = mujoco_py.MjSim(self.model)
         self.data = mujoco.MjData(self.model)
 
         #Save all the sensory feedback specs for use in the later functions
@@ -263,7 +262,7 @@ class Muscle_Env(MujocoEnv):
 
     def upd_theta(self, cond_timepoint):
 
-        coords_to_sim = self.kin_to_sim[self.current_cond_to_sim]
+        coords_to_sim = self.kin_to_sim[self.current_cond_to_sim] #[num_targets, num_coords, timepoints]
 
         assert cond_timepoint < coords_to_sim.shape[-1]
 
