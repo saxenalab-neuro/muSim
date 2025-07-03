@@ -148,7 +148,6 @@ class MujocoEnv(gym.Env):
 
     def set_state(self, qpos):
         assert qpos.shape == (self.model.nq, )
-        print(qpos, self.data.qpos)
 
         self.data.qpos[:] = qpos
         self.data.qvel[:] = qpos * 0

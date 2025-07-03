@@ -16,6 +16,7 @@
     </default>
   </default>
   <option timestep="0.002"></option>
+  <default> <geom contype="0" conaffinity="0"/> </default>
   <size njmax="1000" nconmax="400" nuser_jnt="1"></size>
   <worldbody>
     <body name="sternum" pos="       0 -2.23711e-17        1" quat="0.7071067811865475 0.7071067811865475 0.0 0.0">

@@ -411,8 +411,13 @@ class Simulate():
             ### TRACKING ###
             Statistics["rewards"].append(episode_reward)
             Statistics["steps"].append(episode_steps)
-            Statistics["policy_loss"].append(np.mean(np.array(policy_loss_tracker)))
-            Statistics["critic_loss"].append(np.mean(np.array(critic1_loss_tracker)))
+            if policy_loss_tracker == [] and critic1_loss_tracker == []:
+                Statistics["policy_loss"].append(np.nan)
+                Statistics["critic_loss"].append(np.nan)
+            else:
+                Statistics["policy_loss"].append(np.mean(np.array(policy_loss_tracker)))
+                Statistics["critic_loss"].append(np.mean(np.array(critic1_loss_tracker)))
+
 
             ### SAVE DATA TO FILE (in root project folder) ###
             if len(self.statistics_folder) != 0:
