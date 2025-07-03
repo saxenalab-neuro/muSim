@@ -6,7 +6,7 @@ data = np.load('../training_statistics/stats_rewards.npy')  # Replace with your 
 
 # Plot the data
 plt.plot(data)
-plt.title('1D Data Plot')
+plt.title('Reward Graph')
 plt.xlabel('Iteration')
 plt.ylabel('Reward')
 plt.grid(False)

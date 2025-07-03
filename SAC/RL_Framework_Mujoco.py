@@ -574,27 +574,22 @@ class Muscle_Env(MujocoEnv):
 
         coords_to_sim = self.kin_to_sim[self.current_cond_to_sim]
 
-        crnt_state = {
-            'qpos': self.data.qpos.copy(),
-            'qvel': self.data.qvel.copy(),
-            'act': self.data.act.copy() if self.data.act.size > 0 else None,
-            'mocap_pos': self.data.mocap_pos.copy() if self.data.mocap_pos.size > 0 else None,
-            'mocap_quat': self.data.mocap_quat.copy() if self.data.mocap_quat.size > 0 else None
-        }
+        crnt_qpos = self.data.qpos.copy()
+        crnt_qvel = self.data.qvel.copy()
 
         for i_target in range(self.kin_to_sim[self.current_cond_to_sim].shape[0]):
             if kinematics_preprocessing_specs.xyz_target[i_target][0]:
                 x_joint_idx = self.model.joint(f"box:x{i_target}").qposadr#[0]
-                crnt_state['qpos'][x_joint_idx] = coords_to_sim[i_target, 0, self.tpoint_to_sim]
+                crnt_qpos[x_joint_idx] = coords_to_sim[i_target, 0, self.tpoint_to_sim]
 
 
             if kinematics_preprocessing_specs.xyz_target[i_target][1]:
                 y_joint_idx = self.model.joint(f"box:y{i_target}").qposadr#[0]
-                crnt_state['qpos'][y_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0], self.tpoint_to_sim]
+                crnt_qpos[y_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0], self.tpoint_to_sim]
 
             if kinematics_preprocessing_specs.xyz_target[i_target][2]:
                 z_joint_idx = self.model.joint(f"box:z{i_target}").qposadr#[0]
-                crnt_state['qpos'][z_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0] + kinematics_preprocessing_specs.xyz_target[i_target][1], self.tpoint_to_sim]
+                crnt_qpos[z_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0] + kinematics_preprocessing_specs.xyz_target[i_target][1], self.tpoint_to_sim]
 
         #Now set the state
-        self.set_state(crnt_state['qpos'], crnt_state['qvel'])
+        self.set_state(crnt_qpos, crnt_qvel)
