@@ -83,8 +83,11 @@ class MujocoEnv(gym.Env):
         for i_target in range(kin_train[0].shape[0]):
             for i_cond in range(len(kin_train)):
                 for i_coord in range(kin_train[i_cond].shape[1]):
-                    kin_train[i_cond][i_target, i_coord, :] = kin_train[i_cond][i_target, i_coord, :] / self.radius[i_target]
-                    kin_train[i_cond][i_target, i_coord, :] = kin_train[i_cond][i_target, i_coord, :] + self.center[i_target][i_coord]
+                    if (kin_train[i_cond][i_target, i_coord, :] == np.nan).all():
+                        kin_train[i_cond][i_target, i_coord, :] = self.center[i_target][i_coord]
+                    else:
+                        kin_train[i_cond][i_target, i_coord, :] = kin_train[i_cond][i_target, i_coord, :] / self.radius[i_target]
+                        kin_train[i_cond][i_target, i_coord, :] = kin_train[i_cond][i_target, i_coord, :] + self.center[i_target][i_coord]
 
 
         self.kin_train = kin_train
@@ -263,7 +266,7 @@ class Muscle_Env(MujocoEnv):
     def upd_theta(self, cond_timepoint):
 
         coords_to_sim = self.kin_to_sim[self.current_cond_to_sim] #[num_targets, num_coords, timepoints]
-
+        coords_to_sim = np.array(self.center).reshape((1, 3, 1))
         assert cond_timepoint < coords_to_sim.shape[-1]
 
         crnt_qpos = self.data.qpos.copy()

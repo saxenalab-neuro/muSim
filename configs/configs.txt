@@ -63,19 +63,19 @@ frame_repeat = 5
 #Number of fixedsteps in the beginning of the simulation. The target will remain at kinematic[timestep=0] for n_fixedsteps
 #If a good initial position is found using CMA-ES / IK Optimization, n_fixedsteps = 25 is a good estimate. Otherwise increase
 #if the starting reward does not increase with the training iterations.
-n_fixedsteps = 25
+n_fixedsteps = 0
 
 #Timestep limit is max number of timesteps after which the episode will terminate.
 #Multiple cycles of the same condition will be simulated if the timestep_limit > number of timsteps for that condition.
-timestep_limit = 8000
+timestep_limit = 150
 
 #Adjusts/scales the length of the trajectory
 #Should be the same as num_markers/targets
-trajectory_scaling = [26.3157894737]
+trajectory_scaling = [13.1578947368] #[26.3157894737]
 
 #Adjusts the starting point of the kinematics trajectory
 #Should be the same as num_markers/targets, num_coords=3
-center = [[0.06, 0.083, 0]]
+center = [[0.06, 0, 0]]
 
 ###-----------------------------------------------------------------------------------
 
@@ -98,7 +98,7 @@ joint_feedback = False
 
 #Visual feedback consists of x/y/z coordinates of the specified bodies in the model
 #If visual_feedback is True, specify the names of the bodies from musculoskeletal_model.xml for which the feedback should be included
-visual_feedback = False
+visual_feedback = True
 
 #Append the musculo bodies from which visual feedback should be included
 #This list can also consist of targets/markers

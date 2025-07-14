@@ -14,7 +14,7 @@ class SAC_Agent():
                  num_inputs: int, 
                  action_space: int, 
                  hidden_size: int, 
-                 lr: float, 
+                 lr: float,
                  gamma: float, 
                  tau: float, 
                  alpha: float, 
@@ -127,7 +127,6 @@ class SAC_Agent():
         
         lstm_activity = lstm_activity[na_idx_batch]
         neural_activity_batch = neural_activity_batch[na_idx_batch]
-
         policy_loss_exp_c = F.mse_loss(lstm_activity, neural_activity_batch)
 
         return policy_loss_exp_c

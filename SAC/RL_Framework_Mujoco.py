@@ -18,6 +18,8 @@ from . import kinematics_preprocessing_specs
 import mujoco
 
 import ipdb
+import torch as th
+import random
 
 DEFAULT_SIZE = 500
 
@@ -40,7 +42,6 @@ class MujocoEnv(gym.Env):
     """Superclass for all MuJoCo environments.
     """
     def __init__(self, model_path, frame_skip, args):
-
         #Set the istep to zero
         self.istep = 0
 
@@ -53,8 +54,10 @@ class MujocoEnv(gym.Env):
         self.mode_to_sim = args.mode
         self.frame_skip = frame_skip
         self.frame_repeat = args.frame_repeat
-        self.model = mujoco.MjModel.from_xml_path(model_path)
+        self.testing = (args.mode == 'test')
+        self.batch_size = args.policy_batch_size
 
+        self.model = mujoco.MjModel.from_xml_path(model_path)
         self.data = mujoco.MjData(self.model)
 
         #Set the simulation timestep
@@ -72,13 +75,19 @@ class MujocoEnv(gym.Env):
         self.sfs_visual_velocity = args.visual_velocity
         self.sfs_sensory_delay_timepoints = args.sensory_delay_timepoints
 
-        # Load the experimental kinematics x and y coordinates from the data
+        """# Load the experimental kinematics x and y coordinates from the data
         with open(self.kinematics_path + '/kinematics.pkl', 'rb') as f:
             kin_train_test = pickle.load(f)
 
         kin_train = kin_train_test['train']     #[num_conds][num_targets, num_coords, timepoints]
-        kin_test = kin_train_test['test']       #[num_conds][num_targets, num_coords, timepoints]
+        kin_test = kin_train_test['test']       #[num_conds][num_targets, num_coords, timepoints]"""
 
+        """#Preprocess testing kinematics
+        for i_target in range(self.kin_test[0].shape[0]):
+            for i_cond in range(len(self.kin_test)):
+                for i_coord in range(self.kin_test[i_cond].shape[1]):
+                    self.kin_test[i_cond][i_target, i_coord, :] = self.kin_test[i_cond][i_target, i_coord, :] / self.radius[i_target]
+                    self.kin_test[i_cond][i_target, i_coord, :] = self.kin_test[i_cond][i_target, i_coord, :] + self.center[i_target][i_coord]"""
 
         #Load the neural activities for nusim if they exist
         if path.isfile(self.nusim_data_path + '/neural_activity.pkl'):
@@ -87,21 +96,21 @@ class MujocoEnv(gym.Env):
                 nusim_neural_activity = pickle.load(f)
 
             na_train = nusim_neural_activity['train']
-            na_test = nusim_neural_activity['test']
+            #na_test = nusim_neural_activity['test']
 
         else:
             self.nusim_data_exists = False
             assert args.zeta_nusim == 0, "Neural Activity not provided for nuSim training"
             #Create a dummy neural activity as it is not being used anywhere
-            na_train = kin_train_test['train']
-            na_test = kin_train_test['test']
+            #na_train = kin_train_test['train']
+            #na_test = kin_train_test['test']
 
         #Normalize the neural activity
         for na_idx, na_item in na_train.items():
             na_train[na_idx] = na_item/np.max(na_item)
 
-        for na_idx, na_item in na_test.items():
-            na_test[na_idx] = na_item/np.max(na_item)
+        #for na_idx, na_item in na_test.items():
+         #   na_test[na_idx] = na_item/np.max(na_item)
 
         #Load the stimulus feedback
         if path.isfile(self.stim_data_path + '/stimulus_data.pkl'):
@@ -111,7 +120,7 @@ class MujocoEnv(gym.Env):
                 stim_data = pickle.load(f)
 
             self.stim_data_train = stim_data['train']   #[num_conds][timepoints, num_features]
-            self.stim_data_test = stim_data['test']     #[num_conds][timepoints, num_features]
+            #self.stim_data_test = stim_data['test']     #[num_conds][timepoints, num_features]
 
         else:
             assert args.stimulus_feedback == False, "Expecting stimulus feedback, stimulus data file not provided"
@@ -126,33 +135,11 @@ class MujocoEnv(gym.Env):
         self.threshold_user = 0.064   #Previously it was 0.1
         
         #Setup coord_idx for setting the neural activity loss during nusim training
-        self.coord_idx=0
+        self.coord_idx = 0
         self.na_train = na_train
-        self.na_test = na_test
+        #self.na_test = na_test
         self.na_to_sim = na_train
 
-
-        #Kinematics preprocessing for training and testing kinematics
-        #Preprocess training kinematics
-        for i_target in range(kin_train[0].shape[0]):
-            for i_cond in range(len(kin_train)):
-                for i_coord in range(kin_train[i_cond].shape[1]):
-                    kin_train[i_cond][i_target, i_coord, :] = kin_train[i_cond][i_target, i_coord, :] / self.radius[i_target]
-                    kin_train[i_cond][i_target, i_coord, :] = kin_train[i_cond][i_target, i_coord, :] + self.center[i_target][i_coord]
-
-        #Preprocess testing kinematics
-        for i_target in range(kin_test[0].shape[0]):
-            for i_cond in range(len(kin_test)):
-                for i_coord in range(kin_test[i_cond].shape[1]):
-                    kin_test[i_cond][i_target, i_coord, :] = kin_test[i_cond][i_target, i_coord, :] / self.radius[i_target]
-                    kin_test[i_cond][i_target, i_coord, :] = kin_test[i_cond][i_target, i_coord, :] + self.center[i_target][i_coord]
-
-        self.kin_train = kin_train 
-        self.kin_test = kin_test 
-
-        self.kin_to_sim = self.kin_train
-        self.n_exp_conds = len(self.kin_to_sim)
-        self.current_cond_to_sim = 0
 
         #Set the stim data
         if self.stim_fb_exists:
@@ -170,42 +157,15 @@ class MujocoEnv(gym.Env):
         #Start the musculo model with zero initial qvels
         self.init_qvel = np.load(args.initial_pose_path + '/initial_qpos_opt.npy')*0
 
+        self.rule_input = [0] * 10
+        self.go_cue = [0]
+        self.speed_scalar = 0
+
         self._set_action_space()
         
         self._set_observation_space(self._get_obs())
 
         self.seed()
-
-
-    def update_kinematics_for_test(self):
-
-        #Simulate the environment on both the training and testing kinematics
-        #First update the keys of self.kin_test
-        for cond in range(len(self.kin_test)):
-            self.kin_test[len(self.kin_train) + cond] = self.kin_test.pop(cond)
-        
-        #Update the kinematics to simulate
-        self.kin_to_sim.update(self.kin_test)
-
-        #Update the number of experimental conditions
-        self.n_exp_conds = len(self.kin_to_sim)
-
-        #Repeat for the neural activity
-        #First update the keys of self.na_test
-        for cond in range(len(self.na_test)):
-            self.na_test[len(self.na_train) + cond] = self.na_test.pop(cond)
-        
-        #Update the kinematics to simulate
-        self.na_to_sim.update(self.na_test)
-
-        #Repeat for the stimulus feedback
-        #First update the keys of self.stim_data_test
-        if self.stim_fb_exists:
-            for cond in range(len(self.stim_data_test)):
-                self.stim_data_test[len(self.stim_data_train) + cond] = self.stim_data_test.pop(cond)
-            
-            #Update the kinematics to simulate
-            self.stim_data_sim.update(self.stim_data_test)
 
     def _set_action_space(self):
         bounds = self.model.actuator_ctrlrange.copy().astype(np.float32)
@@ -244,10 +204,14 @@ class MujocoEnv(gym.Env):
     def reset(self, cond_to_select):
 
         #Set the experimental condition for training
-        
         self.current_cond_to_sim = cond_to_select
+
+
+        if cond_to_select == 0:
+            self.generate_kinematics()
+
         
-        self.neural_activity = self.na_to_sim[cond_to_select]
+        self.neural_activity = self.na_to_sim[0] # change this at some point
 
         #Set the high-level task scalar signal
         self.condition_scalar = (self.kin_to_sim[self.current_cond_to_sim].shape[-1] - 600) / (1319 - 600)
@@ -327,12 +291,17 @@ class MujocoEnv(gym.Env):
         if self.viewer is None:
             if mode == 'human':
                 self.viewer = viewer.launch_passive(self.model, self.data)
+                mujoco.mjv_defaultFreeCamera(self.model, self.viewer.cam)
             elif mode == 'rgb_array' or mode == 'depth_array':
                 self.viewer = mujoco_py.MjRenderContextOffscreen(self.sim, -1)
 
             self.viewer_setup()
             self._viewers[mode] = self.viewer
         return self.viewer
+
+    def close_viewer(self):
+        self.viewer.close()
+        self.viewer = None
 
     def get_body_com(self, body_name):
         return self.data.get_body_xpos(body_name).copy()
@@ -342,6 +311,51 @@ class MujocoEnv(gym.Env):
             self.data.qpos.flat,
             self.data.qvel.flat
         ])
+
+    def choose_kinematics_settings(self):
+        movement_times = [50, 100, 150]
+        self.movement_time = random.choice(movement_times)
+        self.half_movement_time = int(self.movement_time / 2)
+
+        # choosing delay and hold times such that total time equals self.movement_time + 50
+        self.delay_time = np.random.randint(15, 35) + 1
+        self.hold_time = 52 - self.delay_time
+
+        self.timestep_limit = self.delay_time + self.movement_time + self.hold_time
+
+        # Now we need rule input
+        self.rule_input = [0] * 10  # the number of envs
+
+        # creating a go cue based on delay and hold
+        self.go_cue = [0] * self.delay_time + [1] * (self.movement_time + self.hold_time)
+
+        # part of the observation conveying the target's speed
+        self.speed_scalar = 1 - (self.movement_time / 150)  #
+
+    def scale_kinematics(self):
+        # implementing the delay and hold be repeating those coordinates
+        self.traj = th.concatenate((self.traj[:, 0, :].unsqueeze(1).repeat((1, self.delay_time, 1)),
+                                    self.traj[:, 1:-1, :],
+                                    self.traj[:, -1, :].unsqueeze(1).repeat((1, self.hold_time, 1))), dim=1)
+
+        self.kin_train = self.traj.permute(0, 2, 1).unsqueeze(1)
+
+        # Kinematics preprocessing for training and testing kinematics
+        # Preprocess training kinematics
+        for i_target in range(self.kin_train.shape[1]):
+            for i_cond in range(self.kin_train.shape[0]):
+                for i_coord in range(self.kin_train.shape[2]):
+                    self.kin_train[i_cond, i_target, i_coord, :] = self.kin_train[i_cond, i_target, i_coord, :] / \
+                                                                   self.radius[i_target]
+                    self.kin_train[i_cond, i_target, i_coord, :] = self.kin_train[i_cond, i_target, i_coord, :] + \
+                                                                   self.center[i_target][i_coord]
+        self.kin_to_sim = self.kin_train
+        self.n_exp_conds = len(self.kin_to_sim)
+        self.current_cond_to_sim = 0
+
+    def generate_kinematics(self):
+
+        raise NotImplementedError
 
 
 class Muscle_Env(MujocoEnv):
@@ -375,9 +389,9 @@ class Muscle_Env(MujocoEnv):
 
         if self.istep > self.n_fixedsteps and self.istep < 100:
             self.threshold = 0.032
-        elif self.istep >= 100 and self.istep<150:
+        elif self.istep >= 100 and self.istep < 150:
             self.threshold = 0.016
-        elif self.istep >=150:
+        elif self.istep >= 150:
             self.threshold = 0.008
 
         #Save the xpos of the musculo bodies for visual vels
@@ -456,7 +470,6 @@ class Muscle_Env(MujocoEnv):
         return self.state_to_return.pop()
 
     def _get_obs(self):
-        
         sensory_feedback = []
         if self.sfs_stimulus_feedback == True:
             stim_feedback = self.stim_data_sim[self.current_cond_to_sim][max(0, self.istep - 1), :].tolist()  #other feedbacks are in in lists
@@ -538,6 +551,7 @@ class Muscle_Env(MujocoEnv):
             else:
                 sensory_feedback = [*sensory_feedback, *visual_xyz_coords]
 
+
         if len(self.sfs_visual_distance_bodies) != 0:
             visual_xyz_distance = []
             for musculo_tuple in self.sfs_visual_distance_bodies:
@@ -557,6 +571,8 @@ class Muscle_Env(MujocoEnv):
             else:
                 sensory_feedback = [*sensory_feedback, *visual_xyz_distance]
 
+        # adding in environment inputs
+        sensory_feedback = [*sensory_feedback, *self.rule_input, self.go_cue[self.istep], self.speed_scalar]
         return np.array(sensory_feedback)
 
     def upd_theta(self):
@@ -575,12 +591,10 @@ class Muscle_Env(MujocoEnv):
 
         crnt_qpos = self.data.qpos.copy()
         crnt_qvel = self.data.qvel.copy()
-
         for i_target in range(self.kin_to_sim[self.current_cond_to_sim].shape[0]):
             if kinematics_preprocessing_specs.xyz_target[i_target][0]:
                 x_joint_idx = self.model.joint(f"box:x{i_target}").qposadr
                 crnt_qpos[x_joint_idx] = coords_to_sim[i_target, 0, self.tpoint_to_sim]
-
 
             if kinematics_preprocessing_specs.xyz_target[i_target][1]:
                 y_joint_idx = self.model.joint(f"box:y{i_target}").qposadr
@@ -589,6 +603,477 @@ class Muscle_Env(MujocoEnv):
             if kinematics_preprocessing_specs.xyz_target[i_target][2]:
                 z_joint_idx = self.model.joint(f"box:z{i_target}").qposadr
                 crnt_qpos[z_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0] + kinematics_preprocessing_specs.xyz_target[i_target][1], self.tpoint_to_sim]
-
         #Now set the state
         self.set_state(crnt_qpos, crnt_qvel)
+
+
+class DlyReach(Muscle_Env):
+    def __init__(self,  model_path, frame_skip, args):
+        super().__init__(model_path, frame_skip, args)
+        self.generate_kinematics()
+
+    def generate_kinematics(self):
+        self.choose_kinematics_settings()
+        self.rule_input[0] = 1
+
+        # Generate 8 equally spaced angles
+        angles = th.linspace(0, 2 * np.pi, 9)[:-1]
+
+        # Compute (x, y) coordinates for each angle
+        points = th.stack([th.tensor([np.cos(angle), np.sin(angle), 0]) for angle in angles], dim=0)
+
+        point_idx = th.arange(self.batch_size) if self.testing else th.randint(0, points.size(0), (self.batch_size,))
+        goal = points[point_idx]
+
+        # Draw a line from fingertip to goal
+        x_points = th.linspace(0, 1, steps=self.movement_time).repeat(self.batch_size, 1) * (
+                    goal[:, None, 0])
+        y_points = th.linspace(0, 1, steps=self.movement_time).repeat(self.batch_size, 1) * (
+                    goal[:, None, 1])
+        z_points = th.linspace(0, 1, steps=self.movement_time).repeat(self.batch_size, 1) * (
+                    goal[:, None, 2])
+
+        self.traj = th.stack([x_points, y_points, z_points], dim=-1)
+        self.scale_kinematics()
+
+class DlyCurvedReachClk(Muscle_Env):
+    def __init__(self,  model_path, frame_skip, args):
+        super().__init__(model_path, frame_skip, args)
+        self.generate_kinematics()
+
+    def generate_kinematics(self):
+        self.choose_kinematics_settings()
+        self.rule_input[1] = 1
+
+        # Get fingertip position for the target
+        traj_points = th.linspace(np.pi, 0, self.movement_time)
+
+        # Compute (x, y) coordinates for each angle
+        points = th.stack([th.tensor([np.cos(angle), np.sin(angle), 0]) for angle in traj_points], dim=0)
+        points = (points + th.tensor([[1, 0, 0]])) * 0.5
+
+        # Generate 8 equally spaced angles
+        rot_angle = th.linspace(0, 2 * np.pi, 9)[:-1]
+        rotated_points = th.zeros(size=(self.batch_size, self.movement_time, 3))
+
+        """# Might be slow because I have to loop through everything
+        if reach_conds is None:
+            point_idx = th.randint(0, rot_angle.size(0), (self.batch_size,))
+        else:
+            if isinstance(reach_conds, (int, float)):
+                point_idx = torch.tensor([reach_conds])
+            elif isinstance(reach_conds, (th.Tensor, np.ndarray)):
+                point_idx = reach_conds"""
+
+        point_idx = th.arange(self.batch_size) if self.testing else th.randint(0, rot_angle.size(0), (self.batch_size,))
+
+        # Rotate the points based on the chosen angles
+        batch_angles = rot_angle[point_idx]
+        for i, theta in enumerate(batch_angles):
+            cos_theta = np.cos(theta)
+            sin_theta = np.sin(theta)
+            # Create the 2D rotation matrix
+            R = th.tensor([[cos_theta,  -sin_theta, 0],
+                           [sin_theta,  cos_theta,  0],
+                           [0,          0,          1]])
+            rotated_traj = (R @ points.T).T
+            rotated_points[i] = rotated_traj
+
+        # Create full trajectory (center at fingertip)
+        self.traj = rotated_points
+
+        self.scale_kinematics()
+
+
+class DlyCurvedReachCClk(Muscle_Env):
+    def __init__(self,  model_path, frame_skip, args):
+        super().__init__(model_path, frame_skip, args)
+        self.generate_kinematics()
+
+    def generate_kinematics(self):
+        self.choose_kinematics_settings()
+        self.rule_input[2] = 1
+
+        # Get fingertip position for the target
+        traj_points = th.linspace(np.pi, 2 * np.pi, self.movement_time)
+
+        # Compute (x, y) coordinates for each angle
+        points = th.stack([th.tensor([np.cos(angle), np.sin(angle), 0]) for angle in traj_points], dim=0)
+        points = (points + th.tensor([[1, 0, 0]])) * 0.5
+
+        # Generate 8 equally spaced angles
+        rot_angle = th.linspace(0, 2 * np.pi, 9)[:-1]
+        rotated_points = th.zeros(size=(self.batch_size, self.movement_time, 3))
+
+        """# Might be slow because I have to loop through everything
+        if reach_conds is None:
+            point_idx = th.randint(0, rot_angle.size(0), (batch_size,))
+        else:
+            if isinstance(reach_conds, (int, float)):
+                point_idx = torch.tensor([reach_conds])
+            elif isinstance(reach_conds, (th.Tensor, np.ndarray)):
+                point_idx = reach_conds"""
+
+        point_idx = th.arange(self.batch_size) if self.testing else th.randint(0, rot_angle.size(0), (self.batch_size,))
+
+        batch_angles = rot_angle[point_idx]
+        for i, theta in enumerate(batch_angles):
+            cos_theta = np.cos(theta)
+            sin_theta = np.sin(theta)
+            # Create the 2D rotation matrix
+            R = th.tensor([[cos_theta, -sin_theta, 0],
+                           [sin_theta, cos_theta,  0],
+                           [0,         0,          1]])
+            rotated_traj = (R @ points.T).T
+            rotated_points[i] = rotated_traj
+
+        self.traj = rotated_points
+
+        self.scale_kinematics()
+
+
+class DlySinusoid(Muscle_Env):
+    def __init__(self,  model_path, frame_skip, args):
+        super().__init__(model_path, frame_skip, args)
+        self.generate_kinematics()
+
+    def generate_kinematics(self):
+        self.choose_kinematics_settings()
+        self.rule_input[3] = 1
+
+        # x and y coordinates for movement, x is in 0-1 range, y is similar
+        x_points = th.linspace(0, 1, self.movement_time)
+        y_points = th.sin(th.linspace(0, 2 * np.pi, self.movement_time))
+        z_points = th.linspace(0, 0, self.movement_time)
+
+        # Compute (x, y) coordinates for each angle
+        # Circle y is scaled by 0.25 and 0.5 (this is so that the x coordinate has a length of 0.25, but this looks good)
+        # Due to this, additionally scale only the y component of the sinusoid by 0.5 to get it in a better range
+        points = th.stack([x_points, y_points, z_points], dim=1) * th.tensor([1, 0.5, 1])
+
+        # Generate 8 equally spaced angles
+        rot_angle = th.linspace(0, 2 * np.pi, 9)[:-1]
+        rotated_points = th.zeros(size=(self.batch_size, self.movement_time, 3))
+
+        """# Might be slow because I have to loop through everything
+        if reach_conds is None:
+            point_idx = th.randint(0, rot_angle.size(0), (batch_size,))
+        else:
+            if isinstance(reach_conds, (int, float)):
+                point_idx = torch.tensor([reach_conds])
+            elif isinstance(reach_conds, (th.Tensor, np.ndarray)):
+                point_idx = reach_conds"""
+
+        point_idx = th.arange(self.batch_size) if self.testing else th.randint(0, rot_angle.size(0), (self.batch_size,))
+
+        batch_angles = rot_angle[point_idx]
+        for i, theta in enumerate(batch_angles):
+            cos_theta = np.cos(theta)
+            sin_theta = np.sin(theta)
+            # Create the 2D rotation matrix
+            R = th.tensor([[cos_theta, -sin_theta, 0],
+                           [sin_theta, cos_theta,  0],
+                           [0,         0,          1]])
+            rotated_traj = (R @ points.T).T
+            rotated_points[i] = rotated_traj
+
+        self.traj = rotated_points
+
+        self.scale_kinematics()
+
+class DlySinusoidInv(Muscle_Env):
+    def __init__(self,  model_path, frame_skip, args):
+        super().__init__(model_path, frame_skip, args)
+        self.generate_kinematics()
+
+    def generate_kinematics(self):
+        self.choose_kinematics_settings()
+        self.rule_input[4] = 1
+
+        x_points = th.linspace(0, 1, self.movement_time)
+        y_points = th.sin(th.linspace(np.pi, 3 * np.pi, self.movement_time))
+        z_points = th.linspace(0, 0, self.movement_time)
+
+        # Compute (x, y) coordinates for each angle
+        points = th.stack([x_points, y_points, z_points], dim=1) * th.tensor([1, 0.5, 1])
+
+        # Generate 8 equally spaced angles
+        rot_angle = th.linspace(0, 2 * np.pi, 9)[:-1]
+        rotated_points = th.zeros(size=(self.batch_size, self.movement_time, 3))
+
+        """# Might be slow because I have to loop through everything
+        if reach_conds is None:
+            point_idx = th.randint(0, rot_angle.size(0), (batch_size,))
+        else:
+            if isinstance(reach_conds, (int, float)):
+                point_idx = torch.tensor([reach_conds])
+            elif isinstance(reach_conds, (th.Tensor, np.ndarray)):
+                point_idx = reach_conds"""
+
+        point_idx = th.arange(self.batch_size) if self.testing else th.randint(0, rot_angle.size(0), (self.batch_size,))
+
+        batch_angles = rot_angle[point_idx]
+        for i, theta in enumerate(batch_angles):
+            cos_theta = np.cos(theta)
+            sin_theta = np.sin(theta)
+            # Create the 2D rotation matrix
+            R = th.tensor([[cos_theta, -sin_theta, 0],
+                           [sin_theta, cos_theta,  0],
+                           [0,         0,          1]])
+            rotated_traj = (R @ points.T).T
+            rotated_points[i] = rotated_traj
+
+        self.traj = rotated_points
+
+        self.scale_kinematics()
+
+
+class DlyFullReach(Muscle_Env):
+    def __init__(self,  model_path, frame_skip, args):
+        super().__init__(model_path, frame_skip, args)
+        self.generate_kinematics()
+
+    def generate_kinematics(self):
+        self.choose_kinematics_settings()
+        self.rule_input[5] = 1
+
+        # Generate 8 equally spaced angles
+        angles = th.linspace(0, 2 * np.pi, 9)[:-1]
+
+        # Compute (x, y) coordinates for each angle
+        points = th.stack([th.tensor([np.cos(angle), np.sin(angle), 0]) for angle in angles], dim=0)
+
+        """# this wont work yet cause everything else has shape batch_size (or I can assert reach_conds and batch_size are same shape)
+        if reach_conds is None:
+            point_idx = th.randint(0, points.size(0), (batch_size,))
+        else:
+            if isinstance(reach_conds, (int, float)):
+                point_idx = torch.tensor([reach_conds])
+            elif isinstance(reach_conds, (th.Tensor, np.ndarray)):
+                point_idx = reach_conds"""
+
+        point_idx = th.arange(self.batch_size) if self.testing else th.randint(0, points.size(0), (self.batch_size,))
+
+        goal = points[point_idx]
+
+        # Draw a line from fingertip to goal
+        x_points_ext = th.linspace(0, 1, steps=self.half_movement_time).repeat(self.batch_size,
+                                                                               1) * (goal[:, None, 0])
+        y_points_ext = th.linspace(0, 1, steps=self.half_movement_time).repeat(self.batch_size,
+                                                                               1) * (goal[:, None, 1])
+        z_points_ext = th.linspace(0, 1, steps=self.half_movement_time).repeat(self.batch_size,
+                                                                               1) * (goal[:, None, 2])
+
+        # Draw a line from goal to fingertip
+        x_points_ret = goal[:, None, 0] + th.linspace(0, 1, steps=self.half_movement_time).repeat(self.batch_size,
+                                                                                                  1) * (0 - goal[:, None, 0])
+        y_points_ret = goal[:, None, 1] + th.linspace(0, 1, steps=self.half_movement_time).repeat(self.batch_size,
+                                                                                                  1) * (0 - goal[:, None, 1])
+        z_points_ret = goal[:, None, 2] + th.linspace(0, 1, steps=self.half_movement_time).repeat(self.batch_size,
+                                                                                                  1) * (0 - goal[:, None, 2])
+
+        # Concatenate reaching forward then backward along time axis
+        forward_traj = th.stack([x_points_ext, y_points_ext, z_points_ext], dim=-1)
+        backward_traj = th.stack([x_points_ret, y_points_ret, z_points_ret], dim=-1)
+        self.traj = th.cat([forward_traj, backward_traj], dim=1)
+
+        self.scale_kinematics()
+
+
+class DlyCircleClk(Muscle_Env):
+    def __init__(self, model_path, frame_skip, args):
+        super().__init__(model_path, frame_skip, args)
+        self.generate_kinematics()
+
+    def generate_kinematics(self):
+        self.choose_kinematics_settings()
+        self.rule_input[6] = 1
+
+        traj_points = th.linspace(np.pi, -np.pi, self.movement_time)
+
+        # Compute (x, y) coordinates for each angle
+        points = th.stack([th.tensor([np.cos(angle), np.sin(angle), 0]) for angle in traj_points], dim=0)
+        points = (points + th.tensor([[1, 0, 0]])) * 0.5
+
+        # Generate 8 equally spaced angles
+        rot_angle = th.linspace(0, 2 * np.pi, 9)[:-1]
+        rotated_points = th.zeros(size=(self.batch_size, self.movement_time, 3))
+
+        """# Might be slow because I have to loop through everything
+        if reach_conds is None:
+            point_idx = th.randint(0, rot_angle.size(0), (batch_size,))
+        else:
+            if isinstance(reach_conds, (int, float)):
+                point_idx = torch.tensor([reach_conds])
+            elif isinstance(reach_conds, (th.Tensor, np.ndarray)):
+                point_idx = reach_conds"""
+
+        point_idx = th.arange(self.batch_size) if self.testing else th.randint(0, rot_angle.size(0), (self.batch_size,))
+
+        batch_angles = rot_angle[point_idx]
+        for i, theta in enumerate(batch_angles):
+            cos_theta = np.cos(theta)
+            sin_theta = np.sin(theta)
+            # Create the 2D rotation matrix
+            R = th.tensor([[cos_theta, -sin_theta, 0],
+                           [sin_theta, cos_theta,  0],
+                           [0,         0,          1]])
+            rotated_traj = (R @ points.T).T
+            rotated_points[i] = rotated_traj
+
+        self.traj = rotated_points
+
+        self.scale_kinematics()
+
+
+class DlyCircleCClk(Muscle_Env):
+    def __init__(self,  model_path, frame_skip, args):
+        super().__init__(model_path, frame_skip, args)
+        self.generate_kinematics()
+
+    def generate_kinematics(self):
+        self.choose_kinematics_settings()
+        self.rule_input[7] = 1
+
+        traj_points = th.linspace(np.pi, 3 * np.pi, self.movement_time)
+
+        # Compute (x, y) coordinates for each angle
+        points = th.stack([th.tensor([np.cos(angle), np.sin(angle), 0]) for angle in traj_points], dim=0)
+        points = (points + th.tensor([[1, 0, 0]])) * 0.5
+
+        # Generate 8 equally spaced angles
+        rot_angle = th.linspace(0, 2 * np.pi, 9)[:-1]
+        rotated_points = th.zeros(size=(self.batch_size, self.movement_time, 3))
+
+        """# Might be slow because I have to loop through everything
+        if reach_conds is None:
+            point_idx = th.randint(0, rot_angle.size(0), (batch_size,))
+        else:
+            if isinstance(reach_conds, (int, float)):
+                point_idx = torch.tensor([reach_conds])
+            elif isinstance(reach_conds, (th.Tensor, np.ndarray)):
+                point_idx = reach_conds"""
+
+        point_idx = th.arange(self.batch_size) if self.testing else th.randint(0, rot_angle.size(0), (self.batch_size,))
+
+        batch_angles = rot_angle[point_idx]
+        for i, theta in enumerate(batch_angles):
+            cos_theta = np.cos(theta)
+            sin_theta = np.sin(theta)
+            # Create the 2D rotation matrix
+            R = th.tensor([[cos_theta, -sin_theta, 0],
+                           [sin_theta, cos_theta,  0],
+                           [0,         0,          1]])
+            rotated_traj = (R @ points.T).T
+            rotated_points[i] = rotated_traj
+
+        self.traj = rotated_points
+
+        self.scale_kinematics()
+
+
+class DlyFigure8(Muscle_Env):
+    def __init__(self,  model_path, frame_skip, args):
+        super().__init__(model_path, frame_skip, args)
+        self.generate_kinematics()
+
+    def generate_kinematics(self):
+        self.choose_kinematics_settings()
+        self.rule_input[8] = 1
+
+        x_points_forward = th.linspace(0, 1, self.half_movement_time)
+        y_points_forward = th.sin(th.linspace(0, 2 * np.pi, self.half_movement_time))
+        z_points_forward = th.linspace(0, 0, self.half_movement_time)
+
+        x_points_back = th.linspace(1, 0, self.half_movement_time)
+        y_points_back = -th.sin(th.linspace(2 * np.pi, 0, self.half_movement_time))
+        z_points_back = th.linspace(0, 0, self.half_movement_time)
+
+        # Compute (x, y) coordinates for each angle
+        points_forward = th.stack([x_points_forward, y_points_forward, z_points_forward], dim=1) * th.tensor([1, 0.5, 1])
+        points_back = th.stack([x_points_back, y_points_back, z_points_back], dim=1) * th.tensor([1, 0.5, 1])
+
+        points = th.cat([points_forward, points_back], dim=0)
+
+        # Generate 8 equally spaced angles
+        rot_angle = th.linspace(0, 2 * np.pi, 9)[:-1]
+        rotated_points = th.zeros(size=(self.batch_size, self.movement_time, 3))
+
+        """# Might be slow because I have to loop through everything
+        if reach_conds is None:
+            point_idx = th.randint(0, rot_angle.size(0), (batch_size,))
+        else:
+            if isinstance(reach_conds, (int, float)):
+                point_idx = torch.tensor([reach_conds])
+            elif isinstance(reach_conds, (th.Tensor, np.ndarray)):
+                point_idx = reach_conds"""
+
+        point_idx = th.arange(self.batch_size) if self.testing else th.randint(0, rot_angle.size(0), (self.batch_size,))
+
+        batch_angles = rot_angle[point_idx]
+        for i, theta in enumerate(batch_angles):
+            cos_theta = np.cos(theta)
+            sin_theta = np.sin(theta)
+            # Create the 2D rotation matrix
+            R = th.tensor([[cos_theta, -sin_theta, 0],
+                           [sin_theta, cos_theta,  0],
+                           [0,         0,          1]])
+            rotated_traj = (R @ points.T).T
+            rotated_points[i] = rotated_traj
+
+        self.traj = rotated_points
+
+        self.scale_kinematics()
+
+class DlyFigure8Inv(Muscle_Env):
+    def __init__(self,  model_path, frame_skip, args):
+        super().__init__(model_path, frame_skip, args)
+        self.generate_kinematics()
+
+    def generate_kinematics(self):
+        self.choose_kinematics_settings()
+        self.rule_input[9] = 1
+
+        x_points_forward = th.linspace(0, 1, self.half_movement_time)
+        y_points_forward = -th.sin(th.linspace(0, 2 * np.pi, self.half_movement_time))
+        z_points_forward = th.linspace(0, 0, self.half_movement_time)
+
+        x_points_back = th.linspace(1, 0, self.half_movement_time)
+        y_points_back = th.sin(th.linspace(2 * np.pi, 0, self.half_movement_time))
+        z_points_back = th.linspace(0, 0, self.half_movement_time)
+
+        # Compute (x, y) coordinates for each angle
+        points_forward = th.stack([x_points_forward, y_points_forward, z_points_forward], dim=1) * th.tensor([1, 0.5, 1])
+        points_back = th.stack([x_points_back, y_points_back, z_points_back], dim=1) * th.tensor([1, 0.5, 1])
+
+        points = th.cat([points_forward, points_back], dim=0)
+
+        # Generate 8 equally spaced angles
+        rot_angle = th.linspace(0, 2 * np.pi, 9)[:-1]
+        rotated_points = th.zeros(size=(self.batch_size, self.movement_time, 3))
+
+        """# Might be slow because I have to loop through everything
+        if reach_conds is None:
+            point_idx = th.randint(0, rot_angle.size(0), (batch_size,))
+        else:
+            if isinstance(reach_conds, (int, float)):
+                point_idx = torch.tensor([reach_conds])
+            elif isinstance(reach_conds, (th.Tensor, np.ndarray)):
+                point_idx = reach_conds"""
+
+        point_idx = th.arange(self.batch_size) if self.testing else th.randint(0, rot_angle.size(0), (self.batch_size,))
+
+        batch_angles = rot_angle[point_idx]
+        for i, theta in enumerate(batch_angles):
+            cos_theta = np.cos(theta)
+            sin_theta = np.sin(theta)
+            # Create the 2D rotation matrix
+            R = th.tensor([[cos_theta, -sin_theta, 0],
+                           [sin_theta, cos_theta,  0],
+                           [0,         0,          1]])
+            rotated_traj = (R @ points.T).T
+            rotated_points[i] = rotated_traj
+
+        self.traj = rotated_points
+
+        self.scale_kinematics()

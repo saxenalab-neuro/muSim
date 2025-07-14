@@ -34,10 +34,10 @@ for child in root:
 				body_to_add += f'<joint axis="1 0 0" name="box:x{current_target}" type="slide" limited="false" range="-6.28319  6.28319"></joint> \n'
 			
 			if kinematics_preprocessing_specs.xyz_target[current_target][1]:
-				body_to_add += f'<joint axis="0 0 1" name="box:y{current_target}" type="slide" limited="false" range="-6.28319  6.28319"></joint> \n'
+				body_to_add += f'<joint axis="0 1 0" name="box:y{current_target}" type="slide" limited="false" range="-6.28319  6.28319"></joint> \n'
 
 			if kinematics_preprocessing_specs.xyz_target[current_target][2]:
-				body_to_add += f'<joint axis="0 1 0" name="box:z{current_target}" type="slide" limited="false" range="-6.28319  6.28319"></joint> \n'
+				body_to_add += f'<joint axis="0 0 1" name="box:z{current_target}" type="slide" limited="false" range="-6.28319  6.28319"></joint> \n'
 
 			body_to_add += '</body>'
 

@@ -23,10 +23,10 @@ def boolean_string(s):
 
 def config_parser():
     parser = configargparse.ArgumentParser()
-    
+
     parser.add_argument("--config", is_config_file=True, help="config file path")
-    
-    parser.add_argument('--model', 
+
+    parser.add_argument('--model',
                         type=str, 
                         default="rnn",
                         help='rnn, gru')

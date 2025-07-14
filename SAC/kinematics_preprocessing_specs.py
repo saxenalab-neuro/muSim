@@ -33,13 +33,15 @@ kin_test = kin_train_test['test']
 cond2load = np.random.randint(0, len(kin_train))
 kin2load = kin_train[cond2load] #[num_targets, num_coords, timepoints]
 
-xyz_target = []
+"""xyz_target = []
 for target in range(kin2load.shape[0]):
 	xyz_coord = []
 	for coord in range(kin2load.shape[1]):
 		xyz_coord.append(int(np.logical_not(np.isnan(kin2load[target, coord, :]).any())))
 
-	xyz_target.append(xyz_coord)
+	xyz_target.append(xyz_coord)"""
+
+xyz_target = [[1, 1, 1]] # this should be changed at some point
 
 
 #Targets are as specified in kin_train.pkl, kin_test.pkl

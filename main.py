@@ -1,4 +1,5 @@
-from SAC.RL_Framework_Mujoco import Muscle_Env    #Muscle_Env is the musculoskeletal environment
+from SAC.RL_Framework_Mujoco import DlyReach, DlyCurvedReachClk, DlyCurvedReachCClk, DlySinusoid, DlySinusoidInv, \
+    DlyFullReach, DlyCircleClk, DlyCircleCClk, DlyFigure8, DlyFigure8Inv
 from simulate import Simulate
 import config
 import pdb
@@ -19,7 +20,9 @@ def main():
     args = parser.parse_args()
 
     ### TRAINING OBJECT ###
-    trainer = Simulate(Muscle_Env, args)
+    #trainer = Simulate([DlyReach, DlyCurvedReachClk, DlyCurvedReachCClk, DlySinusoid, DlySinusoidInv, \
+     #           DlyFullReach, DlyCircleClk, DlyCircleCClk, DlyFigure8, DlyFigure8Inv], args)
+    trainer = Simulate([DlyReach], args)
 
     # trainer = Simulate(
     #     Muscle_Env,

@@ -2,12 +2,13 @@ import numpy as np
 import torch
 from SAC.sac import SAC_Agent
 from SAC.replay_memory import PolicyReplayMemory
-from SAC.RL_Framework_Mujoco import Muscle_Env
 from SAC import sensory_feedback_specs, kinematics_preprocessing_specs, perturbation_specs
 import pickle
 import os
 from numpy.core.records import fromarrays
 from scipy.io import savemat
+import time
+import random
 
 
 #Set the current working directory
@@ -15,7 +16,7 @@ os.chdir(os.getcwd())
 
 class Simulate():
 
-    def __init__(self, env:Muscle_Env, args):
+    def __init__(self, envs, args):
 
         """Train a soft actor critic agent to control a musculoskeletal model to follow a kinematic trajectory.
 
@@ -95,16 +96,16 @@ class Simulate():
 
         ### LOAD CUSTOM GYM ENVIRONMENT ###
         if self.mode_to_sim in ["musculo_properties"]:
-            self.env = env(args.musculoskeletal_model_path[:-len('musculoskeletal_model.xml')] + 'musculo_targets_pert.xml', 1, args)
+            self.envs = [env(args.musculoskeletal_model_path[:-len('musculoskeletal_model.xml')] + 'musculo_targets_pert.xml', 1, args) for env in envs]
 
         else:
-            self.env = env(args.musculoskeletal_model_path[:-len('musculoskeletal_model.xml')] + 'musculo_targets.xml', 1, args)
+            self.envs = [env(args.musculoskeletal_model_path[:-len('musculoskeletal_model.xml')] + 'musculo_targets.xml', 1, args) for env in envs]
 
-        self.observation_shape = self.env.observation_space.shape[0]+len(self.env.sfs_visual_velocity)*3+1
+        self.observation_shape = self.envs[0].observation_space.shape[0]+len(self.envs[0].sfs_visual_velocity)*3+1
 
         ### SAC AGENT ###
         self.agent = SAC_Agent(self.observation_shape, 
-                               self.env.action_space, 
+                               self.envs[0].action_space,
                                args.hidden_size, 
                                args.lr, 
                                args.gamma, 
@@ -138,10 +139,10 @@ class Simulate():
         """
 
         #Update the environment kinematics to both the training and testing conditions
-        self.env.update_kinematics_for_test()
+        #self.env.update_kinematics_for_test()
 
         ### LOAD SAVED MODEL ###
-        self.load_saved_nets_from_checkpoint(load_best = True)
+        #self.load_saved_nets_from_checkpoint(load_best = True)
 
         #Set the recurrent connections to zero if the mode is SFE
         if self.mode_to_sim in ["SFE"] and "recurrent_connections" in perturbation_specs.sf_elim:
@@ -170,100 +171,102 @@ class Simulate():
         kin_mb = {}
         kin_mt = {}
         rnn_input_fp = {}
+        for env in self.envs:
+            for i_cond_sim in range(env.n_exp_conds):
 
-        for i_cond_sim in range(self.env.n_exp_conds):
+                ### TRACKING VARIABLES ###
+                episode_reward = 0
+                episode_steps = 0
 
-            ### TRACKING VARIABLES ###
-            episode_reward = 0
-            episode_steps = 0 
+                emg_cond = []
+                kin_mb_cond = []
+                kin_mt_cond = []
+                rnn_activity_cond = []
+                rnn_input_cond = []
+                rnn_input_fp_cond = []
 
-            emg_cond = []
-            kin_mb_cond = []
-            kin_mt_cond = []
-            rnn_activity_cond = []
-            rnn_input_cond = []
-            rnn_input_fp_cond = []
+                done = False
 
-            done = False
+                ### GET INITAL STATE + RESET MODEL BY POSE
+                cond_to_select = i_cond_sim % env.n_exp_conds
+                state = env.reset(cond_to_select)
 
-            ### GET INITAL STATE + RESET MODEL BY POSE
-            cond_to_select = i_cond_sim % self.env.n_exp_conds
-            state = self.env.reset(cond_to_select)
-
-            if self.mode_to_sim in ["SFE"] and "task_scalar" in perturbation_specs.sf_elim:
-                state = [*state, 0]
-            else:
-                state = [*state, self.env.condition_scalar]
-
-            # Num_layers specified in the policy model 
-            h_prev = torch.zeros(size=(1, 1, self.hidden_size))
-
-            ### STEPS PER EPISODE ###
-            for timestep in range(self.env.timestep_limit):
-
-                ### SELECT ACTION ###
-                with torch.no_grad():
-
-                    if self.mode_to_sim in ["neural_pert"]:
-                        state = torch.FloatTensor(state).to(self.agent.device).unsqueeze(0).unsqueeze(0)
-                        h_prev = h_prev.to(self.agent.device)
-                        neural_pert = perturbation_specs.neural_pert[timestep % perturbation_specs.neural_pert.shape[0], :]
-                        neural_pert = torch.FloatTensor(neural_pert).to(self.agent.device).unsqueeze(0).unsqueeze(0) 
-                        action, h_current, rnn_act, rnn_in = self.agent.actor.forward_for_neural_pert(state, h_prev, neural_pert)
-
-                    elif self.mode_to_sim in ["SFE"] and "recurrent_connections" in perturbation_specs.sf_elim:
-                        h_prev = h_prev*0
-                        action, h_current, rnn_act, rnn_in = self.agent.select_action(state, h_prev, evaluate=True)
-                    else:
-                        action, h_current, rnn_act, rnn_in = self.agent.select_action(state, h_prev, evaluate=True)
-
-                    
-                    emg_cond.append(action) #[n_muscles, ]
-                    rnn_activity_cond.append(rnn_act[0, :])  # [1, n_hidden_units] --> [n_hidden_units,]
-                    rnn_input_cond.append(state) #[n_inputs, ]
-                    rnn_input_fp_cond.append(rnn_in[0, 0, :])  #[1, 1, n_hidden_units] --> [n_hidden_units, ]
-
-
-                ### TRACKING REWARD + EXPERIENCE TUPLE###
-                next_state, reward, done, _ = self.env.step(action)
-                
                 if self.mode_to_sim in ["SFE"] and "task_scalar" in perturbation_specs.sf_elim:
-                    next_state = [*next_state, 0]
+                    state = [*state, 0]
                 else:
-                    next_state = [*next_state, self.env.condition_scalar]
+                    state = [*state, env.condition_scalar]
 
-                episode_reward += reward
 
-                #now append the kinematics of the musculo body and the corresponding target
-                kin_mb_t = []
-                kin_mt_t = []
-                for musculo_body in kinematics_preprocessing_specs.musculo_tracking:
-                    kin_mb_t.append(self.env.data.xpos[self.env.model.body(musculo_body[0]).id].copy())   #[3, ]
-                    kin_mt_t.append(self.env.data.xpos[self.env.model.body(musculo_body[1]).id].copy()) #[3, ]
+                # Num_layers specified in the policy model
+                h_prev = torch.zeros(size=(1, 1, self.hidden_size))
 
-                kin_mb_cond.append(kin_mb_t)   # kin_mb_t : [n_targets, 3]
-                kin_mt_cond.append(kin_mt_t)   # kin_mt_t : [n_targets, 3]
+                ### STEPS PER EPISODE ###
+                for timestep in range(1, env.timestep_limit):
+                    time.sleep(.005)
+                    ### SELECT ACTION ###
+                    with torch.no_grad():
 
-                ### VISUALIZE MODEL ###
-                if self.visualize == True:
-                    self.env.render()
+                        if self.mode_to_sim in ["neural_pert"]:
+                            state = torch.FloatTensor(state).to(self.agent.device).unsqueeze(0).unsqueeze(0)
+                            h_prev = h_prev.to(self.agent.device)
+                            neural_pert = perturbation_specs.neural_pert[timestep % perturbation_specs.neural_pert.shape[0], :]
+                            neural_pert = torch.FloatTensor(neural_pert).to(self.agent.device).unsqueeze(0).unsqueeze(0)
+                            action, h_current, rnn_act, rnn_in = self.agent.actor.forward_for_neural_pert(state, h_prev, neural_pert)
 
-                state = next_state
-                h_prev = h_current
-            
-            #Append the testing data
-            emg[i_cond_sim] = np.array(emg_cond)  # [timepoints, muscles]
-            rnn_activity[i_cond_sim] = np.array(rnn_activity_cond) # [timepoints, n_hidden_units]
-            rnn_input[i_cond_sim] = np.array(rnn_input_cond)  #[timepoints, n_inputs]
-            rnn_input_fp[i_cond_sim] = np.array(rnn_input_fp_cond)  #[timepoints, n_hidden_units]
-            kin_mb[i_cond_sim] = np.array(kin_mb_cond).transpose(1, 0, 2)   # kin_mb_cond: [timepoints, n_targets, 3] --> [n_targets, timepoints, 3]
-            kin_mt[i_cond_sim] = np.array(kin_mt_cond).transpose(1, 0, 2)   # kin_mt_cond: [timepoints, n_targets, 3] --> [n_targets, timepoints, 3]
+                        elif self.mode_to_sim in ["SFE"] and "recurrent_connections" in perturbation_specs.sf_elim:
+                            h_prev = h_prev*0
+                            action, h_current, rnn_act, rnn_in = self.agent.select_action(state, h_prev, evaluate=True)
+                        else:
+                            action, h_current, rnn_act, rnn_in = self.agent.select_action(state, h_prev, evaluate=True)
 
-            ##Append the jpca data
-            activity_jpca.append(dict(A = rnn_activity_cond))
-            times_jpca.append(dict(times = np.arange(timestep)))    #the timestep is assumed to be 1ms
-            condition_tpoints_jpca.append(self.env.kin_to_sim[self.env.current_cond_to_sim].shape[-1])
-            n_fixedsteps_jpca.append(self.env.n_fixedsteps)
+
+                        emg_cond.append(action) #[n_muscles, ]
+                        rnn_activity_cond.append(rnn_act[0, :])  # [1, n_hidden_units] --> [n_hidden_units,]
+                        rnn_input_cond.append(state) #[n_inputs, ]
+                        rnn_input_fp_cond.append(rnn_in[0, 0, :])  #[1, 1, n_hidden_units] --> [n_hidden_units, ]
+
+
+                    ### TRACKING REWARD + EXPERIENCE TUPLE###
+                    next_state, reward, done, _ = env.step(action)
+
+                    if self.mode_to_sim in ["SFE"] and "task_scalar" in perturbation_specs.sf_elim:
+                        next_state = [*next_state, 0]
+                    else:
+                        next_state = [*next_state, env.condition_scalar]
+
+                    episode_reward += reward
+
+                    #now append the kinematics of the musculo body and the corresponding target
+                    kin_mb_t = []
+                    kin_mt_t = []
+                    for musculo_body in kinematics_preprocessing_specs.musculo_tracking:
+                        kin_mb_t.append(env.data.xpos[env.model.body(musculo_body[0]).id].copy())   #[3, ]
+                        kin_mt_t.append(env.data.xpos[env.model.body(musculo_body[1]).id].copy()) #[3, ]
+
+                    kin_mb_cond.append(kin_mb_t)   # kin_mb_t : [n_targets, 3]
+                    kin_mt_cond.append(kin_mt_t)   # kin_mt_t : [n_targets, 3]
+
+                    ### VISUALIZE MODEL ###
+                    if self.visualize == True:
+                        env.render()
+
+                    state = next_state
+                    h_prev = h_current
+
+                #Append the testing data
+                emg[i_cond_sim] = np.array(emg_cond)  # [timepoints, muscles]
+                rnn_activity[i_cond_sim] = np.array(rnn_activity_cond) # [timepoints, n_hidden_units]
+                rnn_input[i_cond_sim] = np.array(rnn_input_cond)  #[timepoints, n_inputs]
+                rnn_input_fp[i_cond_sim] = np.array(rnn_input_fp_cond)  #[timepoints, n_hidden_units]
+                kin_mb[i_cond_sim] = np.array(kin_mb_cond).transpose(1, 0, 2)   # kin_mb_cond: [timepoints, n_targets, 3] --> [n_targets, timepoints, 3]
+                kin_mt[i_cond_sim] = np.array(kin_mt_cond).transpose(1, 0, 2)   # kin_mt_cond: [timepoints, n_targets, 3] --> [n_targets, timepoints, 3]
+
+                ##Append the jpca data
+                activity_jpca.append(dict(A = rnn_activity_cond))
+                times_jpca.append(dict(times = np.arange(timestep)))    #the timestep is assumed to be 1ms
+                condition_tpoints_jpca.append(env.kin_to_sim[env.current_cond_to_sim].shape[-1])
+                n_fixedsteps_jpca.append(env.n_fixedsteps)
+            env.close_viewer()
 
         ### SAVE TESTING STATS ###
         Test_Data["emg"] = emg
@@ -284,7 +287,7 @@ class Simulate():
         savemat(save_name + '/Data_jpca.mat', {'Data' : Data_jpca})
         savemat(save_name + '/n_fixedsteps_jpca.mat', {'n_fsteps' : n_fixedsteps_jpca})
         savemat(save_name + '/condition_tpoints_jpca.mat', {'cond_tpoints': condition_tpoints_jpca})
-        
+
 
     def train(self):
 
@@ -306,13 +309,14 @@ class Simulate():
         highest_reward = -float("inf") # used for storing highest reward throughout training
 
         #Average reward across conditions initialization
-        cond_train_count= np.ones((self.env.n_exp_conds,))
-        cond_avg_reward = np.zeros((self.env.n_exp_conds,))
-        cond_cum_reward = np.zeros((self.env.n_exp_conds,))
-        cond_cum_count = np.zeros((self.env.n_exp_conds,))
+        cond_train_count= np.ones((self.envs[0].n_exp_conds,)) # Assuming that n_exp_conds is constant across different envs
+        cond_avg_reward = np.zeros((self.envs[0].n_exp_conds,))
+        cond_cum_reward = np.zeros((self.envs[0].n_exp_conds,))
+        cond_cum_count = np.zeros((self.envs[0].n_exp_conds,))
 
         ### BEGIN TRAINING ###
         for episode in range(self.episodes):
+            env = random.choice(self.envs)
 
             ### Gather Episode Data Variables ###
             episode_reward = 0          # reward for single episode
@@ -323,17 +327,16 @@ class Simulate():
 
             ### GET INITAL STATE + RESET MODEL BY POSE
             if self.condition_selection_strategy != "reward":
-                cond_to_select = episode % self.env.n_exp_conds
-                state = self.env.reset(cond_to_select)
+                cond_to_select = episode % env.n_exp_conds
+                state = env.reset(cond_to_select)
 
             else:
-
                 cond_indx = np.nonzero(cond_train_count>0)[0][0]
                 cond_train_count[cond_indx] = cond_train_count[cond_indx] - 1
-                state = self.env.reset(cond_indx)
+                state = env.reset(cond_indx)
 
             #Append the high-level task scalar signal
-            state = [*state, self.env.condition_scalar]
+            state = [*state, env.condition_scalar]
 
             ep_trajectory = []  # used to store (s_t, a_t, r_t, s_t+1) tuple for replay storage
 
@@ -347,7 +350,7 @@ class Simulate():
                     action, h_current, _, _ = self.agent.select_action(state, h_prev, evaluate=False)
                     
                     #Now query the neural activity idx from the simulator
-                    na_idx= self.env.coord_idx
+                    na_idx= env.coord_idx
 
                 ### UPDATE MODEL PARAMETERS ###
                 if len(self.policy_memory.buffer) > self.policy_batch_size:
@@ -359,9 +362,9 @@ class Simulate():
 
                 ### SIMULATION ###
                 reward = 0
-                for _ in range(self.env.frame_repeat):
-                    next_state, inter_reward, done, _ = self.env.step(action)
-                    next_state = [*next_state, self.env.condition_scalar]
+                for _ in range(env.frame_repeat):
+                    next_state, inter_reward, done, _ = env.step(action)
+                    next_state = [*next_state, env.condition_scalar]
                     reward += inter_reward
                     episode_steps += 1
 
@@ -373,21 +376,20 @@ class Simulate():
 
                 ### VISUALIZE MODEL ###
                 if self.visualize == True:
-                    self.env.render()
+                    env.render()
 
-                mask = 1 if episode_steps == self.env._max_episode_steps else float(not done) # ensure mask is not 0 if episode ends
+                mask = 1 if episode_steps == env._max_episode_steps else float(not done) # ensure mask is not 0 if episode ends
 
                 ### STORE CURRENT TIMESTEP TUPLE ###
-                if not self.env.nusim_data_exists:
-                    self.env.neural_activity[na_idx] = 0
-
+                if not env.nusim_data_exists:
+                    env.neural_activity[na_idx] = 0
                 ep_trajectory.append((state, 
                                         action, 
                                         reward, 
                                         next_state, 
                                         mask,
                                         h_current.squeeze(0).cpu().numpy(),
-                                        self.env.neural_activity[na_idx],
+                                        env.neural_activity[na_idx],
                                         np.array([na_idx])))
 
                 ### MOVE TO NEXT STATE ###
@@ -406,7 +408,7 @@ class Simulate():
                 #Check if there are all zeros in the cond_train_count array
                 if np.all((cond_train_count == 0)):
                     cond_avg_reward = cond_cum_reward / cond_cum_count
-                    cond_train_count = np.ceil((np.max(cond_avg_reward)*np.ones((self.env.n_exp_conds,)))/cond_avg_reward)
+                    cond_train_count = np.ceil((np.max(cond_avg_reward)*np.ones((self.envs[0].n_exp_conds,)))/cond_avg_reward)
 
             ### TRACKING ###
             Statistics["rewards"].append(episode_reward)
@@ -461,11 +463,13 @@ class Simulate():
             if episode_reward > highest_reward:
                 highest_reward = episode_reward
 
-            ### PRINT TRAINING OUTPUT ###
+            ### TRAINING OUTPUT ###
             if self.verbose_training:
                 print('-----------------------------------')
                 print('highest reward: {} | reward: {} | timesteps completed: {}'.format(highest_reward, episode_reward, episode_steps))
                 print('-----------------------------------\n')
+
+            #env.close_viewer()
 
     def load_saved_nets_from_checkpoint(self, load_best: bool):
 
@@ -475,33 +479,33 @@ class Simulate():
         if not load_best:
 
             #Load the policy network
-            self.agent.actor.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['agent_state_dict'])
+            self.agent.actor.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth', map_location=torch.device('cpu'))['agent_state_dict'])
 
             #Load the critic network
-            self.agent.critic.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['critic_state_dict'])
+            self.agent.critic.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth', map_location=torch.device('cpu'))['critic_state_dict'])
 
             #Load the critic target network
-            self.agent.critic_target.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['critic_target_state_dict'])
+            self.agent.critic_target.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth', map_location=torch.device('cpu'))['critic_target_state_dict'])
 
             #Load the policy optimizer 
-            self.agent.actor_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['agent_optimizer_state_dict'])
+            self.agent.actor_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth', map_location=torch.device('cpu'))['agent_optimizer_state_dict'])
 
             #Load the critic optimizer
-            self.agent.critic_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['critic_optimizer_state_dict'])
+            self.agent.critic_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth', map_location=torch.device('cpu'))['critic_optimizer_state_dict'])
 
         else:
 
             #Load the policy network
-            self.agent.actor.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['agent_state_dict'])
+            self.agent.actor.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth', map_location=torch.device('cpu'))['agent_state_dict'])
 
             #Load the critic network
-            self.agent.critic.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['critic_state_dict'])
+            self.agent.critic.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth', map_location=torch.device('cpu'))['critic_state_dict'])
 
             #Load the critic target network
-            self.agent.critic_target.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['critic_target_state_dict'])
+            self.agent.critic_target.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth', map_location=torch.device('cpu'))['critic_target_state_dict'])
 
             #Load the policy optimizer 
-            self.agent.actor_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['agent_optimizer_state_dict'])
+            self.agent.actor_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth', map_location=torch.device('cpu'))['agent_optimizer_state_dict'])
 
             #Load the critic optimizer
-            self.agent.critic_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['critic_optimizer_state_dict'])
+            self.agent.critic_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth', map_location=torch.device('cpu'))['critic_optimizer_state_dict'])
