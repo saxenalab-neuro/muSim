@@ -303,8 +303,9 @@ class MujocoEnv(gym.Env):
         return self.viewer
 
     def close_viewer(self):
-        self.viewer.close()
-        self.viewer = None
+        if self.viewer != None:
+            self.viewer.close()
+            self.viewer = None
 
     def get_body_com(self, body_name):
         return self.data.get_body_xpos(body_name).copy()
@@ -899,7 +900,7 @@ class DlyCircleClk(Muscle_Env):
         traj_points = th.linspace(np.pi, -np.pi, self.movement_time)
 
         # Compute (x, y) coordinates for each angle
-        points = th.stack([th.tensor([np.cos(angle), np.sin(angle), 0]) for angle in traj_points], dim=0)
+        points = th.stack([th.tensor([np.cos(angle), 0, np.sin(angle)]) for angle in traj_points], dim=0)
         points = (points + th.tensor([[1, 0, 0]])) * 0.5
 
         # Generate 8 equally spaced angles
@@ -922,9 +923,9 @@ class DlyCircleClk(Muscle_Env):
             cos_theta = np.cos(theta)
             sin_theta = np.sin(theta)
             # Create the 2D rotation matrix
-            R = th.tensor([[cos_theta, -sin_theta, 0],
-                           [sin_theta, cos_theta,  0],
-                           [0,         0,          1]])
+            R = th.tensor([[cos_theta, 0, sin_theta],
+                           [0,         1,          0],
+                           [-sin_theta, 0, cos_theta]])
             rotated_traj = (R @ points.T).T
             rotated_points[i] = rotated_traj
 
@@ -945,7 +946,7 @@ class DlyCircleCClk(Muscle_Env):
         traj_points = th.linspace(np.pi, 3 * np.pi, self.movement_time)
 
         # Compute (x, y) coordinates for each angle
-        points = th.stack([th.tensor([np.cos(angle), np.sin(angle), 0]) for angle in traj_points], dim=0)
+        points = th.stack([th.tensor([np.cos(angle), 0, np.sin(angle)]) for angle in traj_points], dim=0)
         points = (points + th.tensor([[1, 0, 0]])) * 0.5
 
         # Generate 8 equally spaced angles
@@ -968,9 +969,9 @@ class DlyCircleCClk(Muscle_Env):
             cos_theta = np.cos(theta)
             sin_theta = np.sin(theta)
             # Create the 2D rotation matrix
-            R = th.tensor([[cos_theta, -sin_theta, 0],
-                           [sin_theta, cos_theta,  0],
-                           [0,         0,          1]])
+            R = th.tensor([[cos_theta, 0, sin_theta],
+                           [0,         1,          0],
+                           [-sin_theta, 0, cos_theta]])
             rotated_traj = (R @ points.T).T
             rotated_points[i] = rotated_traj
 

@@ -469,7 +469,7 @@ class Simulate():
                 print('highest reward: {} | reward: {} | timesteps completed: {}'.format(highest_reward, episode_reward, episode_steps))
                 print('-----------------------------------\n')
 
-            #env.close_viewer()
+            env.close_viewer()
 
     def load_saved_nets_from_checkpoint(self, load_best: bool):
 

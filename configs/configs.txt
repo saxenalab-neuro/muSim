@@ -75,7 +75,7 @@ trajectory_scaling = [13.1578947368] #[26.3157894737]
 
 #Adjusts the starting point of the kinematics trajectory
 #Should be the same as num_markers/targets, num_coords=3
-center = [[0.06, 0, 0]]
+center = [[0.06, 0, 0.083]]
 
 ###-----------------------------------------------------------------------------------
 
