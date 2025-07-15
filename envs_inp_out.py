@@ -162,7 +162,8 @@ def plot_task_input_output(model_name, args):
             ax[2].axvline(movement, color="grey", linestyle="dashed")
             ax[2].axvline(hold, color="grey", linestyle="dashed")
 
-            #ax[3].imshow(obs[78:84], vmin=-1, vmax=1, cmap="seismic", aspect="auto")
+            ax[3].plot(cur_env.static_target_pos[batch, 0].repeat(cur_env._max_episode_steps, 1))
+            ax[3].plot(cur_env.static_target_pos[batch, 1].repeat(cur_env._max_episode_steps, 1))
             ax[3].spines['top'].set_visible(False)
             ax[3].spines['right'].set_visible(False)
             ax[3].spines['bottom'].set_visible(False)
@@ -172,7 +173,7 @@ def plot_task_input_output(model_name, args):
             ax[3].axvline(movement, color="grey", linestyle="dashed")
             ax[3].axvline(hold, color="grey", linestyle="dashed")
 
-            ax[4].plot(cur_env.traj[batch, :, 0]) # , vmin=-1, vmax=1, cmap="seismic", aspect="auto"
+            ax[4].plot(cur_env.traj[batch, :, 0])
             ax[4].plot(cur_env.traj[batch, :, 1])
             ax[4].spines['top'].set_visible(False)
             ax[4].spines['right'].set_visible(False)

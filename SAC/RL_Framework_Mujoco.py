@@ -160,6 +160,9 @@ class MujocoEnv(gym.Env):
         self.rule_input = [0] * 10
         self.go_cue = [0]
         self.speed_scalar = 0
+        self.static_target_pos = [[0, 0, 0]]
+
+        self.current_cond_to_sim = 0
 
         self._set_action_space()
         
@@ -571,6 +574,9 @@ class Muscle_Env(MujocoEnv):
             else:
                 sensory_feedback = [*sensory_feedback, *visual_xyz_distance]
 
+        # adding in the static target position
+        sensory_feedback = [*sensory_feedback, *self.static_target_pos[self.current_cond_to_sim]]
+
         # adding in environment inputs
         sensory_feedback = [*sensory_feedback, *self.rule_input, self.go_cue[self.istep], self.speed_scalar]
         return np.array(sensory_feedback)
@@ -635,6 +641,7 @@ class DlyReach(Muscle_Env):
 
         self.traj = th.stack([x_points, y_points, z_points], dim=-1)
         self.scale_kinematics()
+        self.static_target_pos = self.kin_to_sim[:, 0, :, self.delay_time + self.movement_time]
 
 class DlyCurvedReachClk(Muscle_Env):
     def __init__(self,  model_path, frame_skip, args):
@@ -681,8 +688,8 @@ class DlyCurvedReachClk(Muscle_Env):
 
         # Create full trajectory (center at fingertip)
         self.traj = rotated_points
-
         self.scale_kinematics()
+        self.static_target_pos = self.kin_to_sim[:, 0, :, self.delay_time + self.movement_time]
 
 
 class DlyCurvedReachCClk(Muscle_Env):
@@ -728,8 +735,8 @@ class DlyCurvedReachCClk(Muscle_Env):
             rotated_points[i] = rotated_traj
 
         self.traj = rotated_points
-
         self.scale_kinematics()
+        self.static_target_pos = self.kin_to_sim[:, 0, :, self.delay_time + self.movement_time]
 
 
 class DlySinusoid(Muscle_Env):
@@ -778,8 +785,8 @@ class DlySinusoid(Muscle_Env):
             rotated_points[i] = rotated_traj
 
         self.traj = rotated_points
-
         self.scale_kinematics()
+        self.static_target_pos = self.kin_to_sim[:, 0, :, self.delay_time + self.movement_time]
 
 class DlySinusoidInv(Muscle_Env):
     def __init__(self,  model_path, frame_skip, args):
@@ -824,8 +831,8 @@ class DlySinusoidInv(Muscle_Env):
             rotated_points[i] = rotated_traj
 
         self.traj = rotated_points
-
         self.scale_kinematics()
+        self.static_target_pos = self.kin_to_sim[:, 0, :, self.delay_time + self.movement_time]
 
 
 class DlyFullReach(Muscle_Env):
@@ -876,8 +883,8 @@ class DlyFullReach(Muscle_Env):
         forward_traj = th.stack([x_points_ext, y_points_ext, z_points_ext], dim=-1)
         backward_traj = th.stack([x_points_ret, y_points_ret, z_points_ret], dim=-1)
         self.traj = th.cat([forward_traj, backward_traj], dim=1)
-
         self.scale_kinematics()
+        self.static_target_pos = self.kin_to_sim[:, 0, :, self.delay_time + self.half_movement_time]
 
 
 class DlyCircleClk(Muscle_Env):
@@ -922,8 +929,8 @@ class DlyCircleClk(Muscle_Env):
             rotated_points[i] = rotated_traj
 
         self.traj = rotated_points
-
         self.scale_kinematics()
+        self.static_target_pos = self.kin_to_sim[:, 0, :, self.delay_time + self.half_movement_time]
 
 
 class DlyCircleCClk(Muscle_Env):
@@ -968,8 +975,8 @@ class DlyCircleCClk(Muscle_Env):
             rotated_points[i] = rotated_traj
 
         self.traj = rotated_points
-
         self.scale_kinematics()
+        self.static_target_pos = self.kin_to_sim[:, 0, :, self.delay_time + self.half_movement_time]
 
 
 class DlyFigure8(Muscle_Env):
@@ -1022,8 +1029,8 @@ class DlyFigure8(Muscle_Env):
             rotated_points[i] = rotated_traj
 
         self.traj = rotated_points
-
         self.scale_kinematics()
+        self.static_target_pos = self.kin_to_sim[:, 0, :, self.delay_time + self.half_movement_time]
 
 class DlyFigure8Inv(Muscle_Env):
     def __init__(self,  model_path, frame_skip, args):
@@ -1075,5 +1082,5 @@ class DlyFigure8Inv(Muscle_Env):
             rotated_points[i] = rotated_traj
 
         self.traj = rotated_points
-
         self.scale_kinematics()
+        self.static_target_pos = self.kin_to_sim[:, 0, :, self.delay_time + self.half_movement_time]
