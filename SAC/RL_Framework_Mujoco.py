@@ -321,8 +321,8 @@ class MujocoEnv(gym.Env):
         self.half_movement_time = int(self.movement_time / 2)
 
         # choosing delay and hold times such that total time equals self.movement_time + 50
-        self.delay_time = np.random.randint(15, 35) + 1
-        self.hold_time = 52 - self.delay_time
+        self.delay_time = np.random.randint(15, 35)
+        self.hold_time = 50 - self.delay_time
 
         self.timestep_limit = self.delay_time + self.movement_time + self.hold_time
 
@@ -337,9 +337,9 @@ class MujocoEnv(gym.Env):
 
     def scale_kinematics(self):
         # implementing the delay and hold be repeating those coordinates
-        self.traj = th.concatenate((self.traj[:, 0, :].unsqueeze(1).repeat((1, self.delay_time, 1)),
+        self.traj = th.concatenate((self.traj[:, 0, :].unsqueeze(1).repeat((1, self.delay_time + 1, 1)),
                                     self.traj[:, 1:-1, :],
-                                    self.traj[:, -1, :].unsqueeze(1).repeat((1, self.hold_time, 1))), dim=1)
+                                    self.traj[:, -1, :].unsqueeze(1).repeat((1, self.hold_time + 1, 1))), dim=1)
 
         self.kin_train = self.traj.permute(0, 2, 1).unsqueeze(1)
 
@@ -379,7 +379,7 @@ class Muscle_Env(MujocoEnv):
         
         criteria= hand_position - target_position
 
-        if self.istep < self.timestep_limit:
+        if self.istep < self.timestep_limit - 1:
             if np.abs(criteria[0]) > self.threshold or np.abs(criteria[1]) > self.threshold or np.abs(criteria[2]) > self.threshold:
                 return True
             else:
