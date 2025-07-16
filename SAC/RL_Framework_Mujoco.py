@@ -75,43 +75,6 @@ class MujocoEnv(gym.Env):
         self.sfs_visual_velocity = args.visual_velocity
         self.sfs_sensory_delay_timepoints = args.sensory_delay_timepoints
 
-        """# Load the experimental kinematics x and y coordinates from the data
-        with open(self.kinematics_path + '/kinematics.pkl', 'rb') as f:
-            kin_train_test = pickle.load(f)
-
-        kin_train = kin_train_test['train']     #[num_conds][num_targets, num_coords, timepoints]
-        kin_test = kin_train_test['test']       #[num_conds][num_targets, num_coords, timepoints]"""
-
-        """#Preprocess testing kinematics
-        for i_target in range(self.kin_test[0].shape[0]):
-            for i_cond in range(len(self.kin_test)):
-                for i_coord in range(self.kin_test[i_cond].shape[1]):
-                    self.kin_test[i_cond][i_target, i_coord, :] = self.kin_test[i_cond][i_target, i_coord, :] / self.radius[i_target]
-                    self.kin_test[i_cond][i_target, i_coord, :] = self.kin_test[i_cond][i_target, i_coord, :] + self.center[i_target][i_coord]"""
-
-        #Load the neural activities for nusim if they exist
-        if path.isfile(self.nusim_data_path + '/neural_activity.pkl'):
-            self.nusim_data_exists = True
-            with open(self.nusim_data_path + '/neural_activity.pkl', 'rb') as f:
-                nusim_neural_activity = pickle.load(f)
-
-            na_train = nusim_neural_activity['train']
-            #na_test = nusim_neural_activity['test']
-
-        else:
-            self.nusim_data_exists = False
-            assert args.zeta_nusim == 0, "Neural Activity not provided for nuSim training"
-            #Create a dummy neural activity as it is not being used anywhere
-            #na_train = kin_train_test['train']
-            #na_test = kin_train_test['test']
-
-        #Normalize the neural activity
-        for na_idx, na_item in na_train.items():
-            na_train[na_idx] = na_item/np.max(na_item)
-
-        #for na_idx, na_item in na_test.items():
-         #   na_test[na_idx] = na_item/np.max(na_item)
-
         #Load the stimulus feedback
         if path.isfile(self.stim_data_path + '/stimulus_data.pkl'):
             self.stim_fb_exists = True
@@ -133,13 +96,6 @@ class MujocoEnv(gym.Env):
 
         #The threshold is varied dynamically in the step and reset functions 
         self.threshold_user = 0.064   #Previously it was 0.1
-        
-        #Setup coord_idx for setting the neural activity loss during nusim training
-        self.coord_idx = 0
-        self.na_train = na_train
-        #self.na_test = na_test
-        self.na_to_sim = na_train
-
 
         #Set the stim data
         if self.stim_fb_exists:
@@ -213,18 +169,14 @@ class MujocoEnv(gym.Env):
         if cond_to_select == 0:
             self.generate_kinematics()
 
-        
-        self.neural_activity = self.na_to_sim[0] # change this at some point
-
         #Set the high-level task scalar signal
         self.condition_scalar = (self.kin_to_sim[self.current_cond_to_sim].shape[-1] - 600) / (1319 - 600)
         #Set the max episode steps to reset after one cycle for multiple cycles
         self._max_episode_steps = self.kin_to_sim[self.current_cond_to_sim].shape[-1] + self.n_fixedsteps
 
-        self.istep= 0
-        self.coord_idx = 0
-        self.theta= np.pi
-        self.threshold= self.threshold_user
+        self.istep = 0
+        self.theta = np.pi
+        self.threshold = self.threshold_user
 
         mujoco.mj_resetData(self.model, self.data)
         ob = self.reset_model()
@@ -591,8 +543,6 @@ class Muscle_Env(MujocoEnv):
                 
         else:
             self.tpoint_to_sim = int(((self.kin_to_sim[self.current_cond_to_sim].shape[-1]-1)/(self._max_episode_steps-self.n_fixedsteps)) * ((self.istep - self.n_fixedsteps) % (self._max_episode_steps - self.n_fixedsteps)))
-
-        self.coord_idx = self.tpoint_to_sim
 
         coords_to_sim = self.kin_to_sim[self.current_cond_to_sim]
 

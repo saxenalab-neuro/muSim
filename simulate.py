@@ -117,7 +117,6 @@ class Simulate():
                                args.alpha_usim,
                                args.beta_usim,
                                args.gamma_usim,
-                               args.zeta_nusim,
                                args.cuda)
 
         ### REPLAY MEMORY ###
@@ -205,15 +204,7 @@ class Simulate():
                     time.sleep(.005)
                     ### SELECT ACTION ###
                     with torch.no_grad():
-
-                        if self.mode_to_sim in ["neural_pert"]:
-                            state = torch.FloatTensor(state).to(self.agent.device).unsqueeze(0).unsqueeze(0)
-                            h_prev = h_prev.to(self.agent.device)
-                            neural_pert = perturbation_specs.neural_pert[timestep % perturbation_specs.neural_pert.shape[0], :]
-                            neural_pert = torch.FloatTensor(neural_pert).to(self.agent.device).unsqueeze(0).unsqueeze(0)
-                            action, h_current, rnn_act, rnn_in = self.agent.actor.forward_for_neural_pert(state, h_prev, neural_pert)
-
-                        elif self.mode_to_sim in ["SFE"] and "recurrent_connections" in perturbation_specs.sf_elim:
+                        if self.mode_to_sim in ["SFE"] and "recurrent_connections" in perturbation_specs.sf_elim:
                             h_prev = h_prev*0
                             action, h_current, rnn_act, rnn_in = self.agent.select_action(state, h_prev, evaluate=True)
                         else:
@@ -348,9 +339,6 @@ class Simulate():
                 ### SELECT ACTION ###
                 with torch.no_grad():
                     action, h_current, _, _ = self.agent.select_action(state, h_prev, evaluate=False)
-                    
-                    #Now query the neural activity idx from the simulator
-                    na_idx= env.coord_idx
 
                 ### UPDATE MODEL PARAMETERS ###
                 if len(self.policy_memory.buffer) > self.policy_batch_size:
@@ -381,16 +369,12 @@ class Simulate():
                 mask = 1 if episode_steps == env._max_episode_steps else float(not done) # ensure mask is not 0 if episode ends
 
                 ### STORE CURRENT TIMESTEP TUPLE ###
-                if not env.nusim_data_exists:
-                    env.neural_activity[na_idx] = 0
                 ep_trajectory.append((state, 
                                         action, 
                                         reward, 
                                         next_state, 
                                         mask,
-                                        h_current.squeeze(0).cpu().numpy(),
-                                        env.neural_activity[na_idx],
-                                        np.array([na_idx])))
+                                        h_current.squeeze(0).cpu().numpy()))
 
                 ### MOVE TO NEXT STATE ###
                 state = next_state
@@ -469,7 +453,7 @@ class Simulate():
                 print('highest reward: {} | reward: {} | timesteps completed: {}'.format(highest_reward, episode_reward, episode_steps))
                 print('-----------------------------------\n')
 
-            env.close_viewer()
+            #env.close_viewer()
 
     def load_saved_nets_from_checkpoint(self, load_best: bool):
 

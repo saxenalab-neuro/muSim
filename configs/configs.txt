@@ -110,7 +110,7 @@ visual_feedback_bodies = [hand, target0]
 #Leave blank if the visual distance is not to be included in the feedback
 #Visual distance between the bodies will be included
 #e.g visual_distance_bodies = [[hand;target0], [elbow;target0]] will include the distance between the hand/elbow and first marker in sensory feedback
-visual_distance_bodies = [] #[[hand;target0]]
+visual_distance_bodies = [[hand;target0]]
 
 #Specify the names of the bodies for which the visual velocity should be included in the feedback
 #Leave blank if the visual velocity is not to be included in the feedback
@@ -133,9 +133,6 @@ beta_usim = 0.01
 
 #weighting with loss for minimizing the synaptic weights for uSim/nuSim
 gamma_usim = 0.001
-
-#weighting with loss for nuSim constraining a sub-population of RNN units to experimentally recorded neurons for nuSim
-zeta_nusim = 0
 
 ### --------------------------------------------------------------------------------------
 

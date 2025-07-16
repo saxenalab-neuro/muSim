@@ -24,7 +24,6 @@ class SAC_Agent():
                  alpha_usim:float,
                  beta_usim:float,
                  gamma_usim:float,
-                 zeta_nusim:float,
                  cuda: bool):
 
         if cuda:
@@ -36,7 +35,6 @@ class SAC_Agent():
         self.alpha_usim = alpha_usim
         self.beta_usim = beta_usim
         self.gamma_usim = gamma_usim
-        self.zeta_nusim = zeta_nusim
 
         ### SET CRITIC NETWORKS ###
         self.critic = Critic(num_inputs, action_space.shape[0], hidden_size).to(self.device)
@@ -114,24 +112,6 @@ class SAC_Agent():
 
         return policy_loss_4
 
-    #Define a loss function that constraints a subset of the RNN nodes to the experimental neural data
-    def _policy_loss_exp_neural_constrain(self, policy_state_batch, h0, len_seq, neural_activity_batch, na_idx_batch, mask_seq):
-        #Find the loss for neural activity constrainting
-        lstm_out = self.actor.forward_lstm(policy_state_batch, h0, sampling= False, len_seq= len_seq)
-        lstm_out = lstm_out.reshape(-1, lstm_out.size()[-1])[mask_seq]
-        lstm_activity = lstm_out[:, 0:neural_activity_batch.shape[-1]]
-
-        #Now filter the neural activity batch and lstm activity batch using the na_idx batch
-        with torch.no_grad():
-            na_idx_batch = na_idx_batch.squeeze(-1) > 0
-        
-        lstm_activity = lstm_activity[na_idx_batch]
-        neural_activity_batch = neural_activity_batch[na_idx_batch]
-        policy_loss_exp_c = F.mse_loss(lstm_activity, neural_activity_batch)
-
-        return policy_loss_exp_c
-
-
     def select_action(self, state: np.ndarray, h_prev: torch.Tensor, evaluate=False) -> (np.ndarray, torch.Tensor, np.ndarray):
 
         state = torch.FloatTensor(state).to(self.device).unsqueeze(0).unsqueeze(0)
@@ -151,7 +131,7 @@ class SAC_Agent():
     def update_parameters(self, policy_memory: PolicyReplayMemory, policy_batch_size: int) -> (int, int, int):
 
         ### SAMPLE FROM REPLAY ###
-        state_batch, action_batch, reward_batch, next_state_batch, mask_batch, h_batch, policy_state_batch, neural_activity_batch, na_idx_batch = policy_memory.sample(batch_size=policy_batch_size)
+        state_batch, action_batch, reward_batch, next_state_batch, mask_batch, h_batch, policy_state_batch = policy_memory.sample(batch_size=policy_batch_size)
 
         ### CONVERT DATA TO TENSOR ###
         state_batch = torch.FloatTensor(state_batch).to(self.device)
@@ -160,8 +140,6 @@ class SAC_Agent():
         reward_batch = torch.FloatTensor(reward_batch).to(self.device).unsqueeze(1)
         mask_batch = torch.FloatTensor(mask_batch).to(self.device).unsqueeze(1)
         h_batch = torch.FloatTensor(h_batch).to(self.device).permute(1, 0, 2)
-        neural_activity_batch = torch.FloatTensor(neural_activity_batch).to(self.device)
-        na_idx_batch = torch.FloatTensor(na_idx_batch).to(self.device)
 
         h0 = torch.zeros(size=(1, next_state_batch.shape[0], self.hidden_size)).to(self.device)
         ### SAMPLE NEXT Q VALUE FOR CRITIC LOSS ###
@@ -208,14 +186,12 @@ class SAC_Agent():
             loss_simple_dynamics = self._policy_loss_2(policy_state_batch, h0, len_seq, mask_seq)
             loss_activations_min = self._policy_loss_3(policy_state_batch, h0, len_seq, mask_seq)
             loss_weights_min = self._policy_loss_4()
-            loss_exp_constrain = self._policy_loss_exp_neural_constrain(policy_state_batch, h0, len_seq, neural_activity_batch, na_idx_batch, mask_seq)
 
             ### CALCULATE FINAL POLICY LOSS ###
             #To implement nuSim training use a weighting of 1e+04 with loss_exp_constrain
             policy_loss += (self.alpha_usim*(loss_simple_dynamics))  \
                             + (self.beta_usim*(loss_activations_min))  \
-                            + (self.gamma_usim*(loss_weights_min))  \
-                            + (self.zeta_nusim*(loss_exp_constrain))
+                            + (self.gamma_usim*(loss_weights_min))
 
         ### TAKE GRADIENT STEP ###
         self.actor_optim.zero_grad()
