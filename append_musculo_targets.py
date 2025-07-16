@@ -24,7 +24,6 @@ cond_sampled = np.random.randint(0, num_conds)
 num_targets = kinematics_train[cond_sampled].shape[0]
 
 for child in root:
-
 	if child.tag == 'worldbody':
 		for current_target in range(num_targets):
 			body_to_add = f'<body name="target{current_target}" pos="0.1 0.1 0.85"> \n'

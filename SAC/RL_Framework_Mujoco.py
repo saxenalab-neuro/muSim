@@ -269,13 +269,12 @@ class MujocoEnv(gym.Env):
         ])
 
     def choose_kinematics_settings(self):
-        movement_times = [50, 100, 150]
-        self.movement_time = random.choice(movement_times)
+        self.movement_time = random.randint(500, 1000)
         self.half_movement_time = int(self.movement_time / 2)
 
         # choosing delay and hold times such that total time equals self.movement_time + 50
-        self.delay_time = np.random.randint(15, 35)
-        self.hold_time = 50 - self.delay_time
+        self.delay_time = np.random.randint(100, 250)
+        self.hold_time = 50
 
         self.timestep_limit = self.delay_time + self.movement_time + self.hold_time
 

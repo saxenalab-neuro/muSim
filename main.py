@@ -22,7 +22,7 @@ def main():
     ### TRAINING OBJECT ###
     trainer = Simulate([DlyReach, DlyCurvedReachClk, DlyCurvedReachCClk, DlySinusoid, DlySinusoidInv, \
                 DlyFullReach, DlyCircleClk, DlyCircleCClk, DlyFigure8, DlyFigure8Inv], args)
-    #trainer = Simulate([DlyCircleClk, DlyCircleCClk], args)
+    #trainer = Simulate([DlyReach], args)
 
     # trainer = Simulate(
     #     Muscle_Env,

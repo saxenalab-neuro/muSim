@@ -141,7 +141,7 @@ class Simulate():
         #self.env.update_kinematics_for_test()
 
         ### LOAD SAVED MODEL ###
-        #self.load_saved_nets_from_checkpoint(load_best = True)
+        self.load_saved_nets_from_checkpoint(load_best = True)
 
         #Set the recurrent connections to zero if the mode is SFE
         if self.mode_to_sim in ["SFE"] and "recurrent_connections" in perturbation_specs.sf_elim:
@@ -335,7 +335,6 @@ class Simulate():
 
             ### LOOP THROUGH EPISODE TIMESTEPS ###
             while not(done):
-
                 ### SELECT ACTION ###
                 with torch.no_grad():
                     action, h_current, _, _ = self.agent.select_action(state, h_prev, evaluate=False)
