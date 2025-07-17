@@ -71,11 +71,11 @@ timestep_limit = 150
 
 #Adjusts/scales the length of the trajectory
 #Should be the same as num_markers/targets
-trajectory_scaling = [13.1578947368] #[26.3157894737]
+trajectory_scaling = [26.3157894737] #[13.1578947368]
 
 #Adjusts the starting point of the kinematics trajectory
 #Should be the same as num_markers/targets, num_coords=3
-center = [[0.06, 0, 0.083]]
+center = [[0.06, -0.1, 0.05]]
 
 ###-----------------------------------------------------------------------------------
 

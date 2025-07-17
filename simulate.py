@@ -201,7 +201,6 @@ class Simulate():
 
                 ### STEPS PER EPISODE ###
                 for timestep in range(1, env.timestep_limit):
-                    time.sleep(.005)
                     ### SELECT ACTION ###
                     with torch.no_grad():
                         if self.mode_to_sim in ["SFE"] and "recurrent_connections" in perturbation_specs.sf_elim:
@@ -257,7 +256,7 @@ class Simulate():
                 times_jpca.append(dict(times = np.arange(timestep)))    #the timestep is assumed to be 1ms
                 condition_tpoints_jpca.append(env.kin_to_sim[env.current_cond_to_sim].shape[-1])
                 n_fixedsteps_jpca.append(env.n_fixedsteps)
-            env.close_viewer()
+            #env.close_viewer()
 
         ### SAVE TESTING STATS ###
         Test_Data["emg"] = emg
