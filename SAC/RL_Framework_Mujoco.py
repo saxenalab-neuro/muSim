@@ -269,11 +269,15 @@ class MujocoEnv(gym.Env):
         ])
 
     def choose_kinematics_settings(self):
-        self.movement_time = random.randint(500, 1000)
+        min_movement_time = 500
+        max_movement_time = 1000
+        self.movement_time = random.randint(min_movement_time, max_movement_time)
         self.half_movement_time = int(self.movement_time / 2)
 
-        # choosing delay and hold times such that total time equals self.movement_time + 50
-        self.delay_time = np.random.randint(100, 250)
+        min_delay_time = 100
+        max_delay_time = 250
+        self.delay_time = np.random.randint(min_delay_time, max_delay_time)
+
         self.hold_time = 50
 
         self.timestep_limit = self.delay_time + self.movement_time + self.hold_time
@@ -285,7 +289,8 @@ class MujocoEnv(gym.Env):
         self.go_cue = [0] * self.delay_time + [1] * (self.movement_time + self.hold_time)
 
         # part of the observation conveying the target's speed
-        self.speed_scalar = 1 - (self.movement_time / 150)  #
+        # 1 if movement_time is as high as possible, 0 if it is as low as possible
+        self.speed_scalar = (self.movement_time - min_movement_time) / (max_movement_time - min_movement_time)
 
     def scale_kinematics(self):
         # implementing the delay and hold be repeating those coordinates
@@ -822,11 +827,11 @@ class DlyFullReach(Muscle_Env):
                                                                                1) * (goal[:, None, 2])
 
         # Draw a line from goal to fingertip
-        x_points_ret = goal[:, None, 0] + th.linspace(0, 1, steps=self.half_movement_time).repeat(self.batch_size,
+        x_points_ret = goal[:, None, 0] + th.linspace(0, 1, steps = self.movement_time - self.half_movement_time).repeat(self.batch_size,
                                                                                                   1) * (0 - goal[:, None, 0])
-        y_points_ret = goal[:, None, 1] + th.linspace(0, 1, steps=self.half_movement_time).repeat(self.batch_size,
+        y_points_ret = goal[:, None, 1] + th.linspace(0, 1, steps = self.movement_time - self.half_movement_time).repeat(self.batch_size,
                                                                                                   1) * (0 - goal[:, None, 1])
-        z_points_ret = goal[:, None, 2] + th.linspace(0, 1, steps=self.half_movement_time).repeat(self.batch_size,
+        z_points_ret = goal[:, None, 2] + th.linspace(0, 1, steps = self.movement_time - self.half_movement_time).repeat(self.batch_size,
                                                                                                   1) * (0 - goal[:, None, 2])
 
         # Concatenate reaching forward then backward along time axis
@@ -942,9 +947,9 @@ class DlyFigure8(Muscle_Env):
         y_points_forward = th.sin(th.linspace(0, 2 * np.pi, self.half_movement_time))
         z_points_forward = th.linspace(0, 0, self.half_movement_time)
 
-        x_points_back = th.linspace(1, 0, self.half_movement_time)
-        y_points_back = -th.sin(th.linspace(2 * np.pi, 0, self.half_movement_time))
-        z_points_back = th.linspace(0, 0, self.half_movement_time)
+        x_points_back = th.linspace(1, 0, self.movement_time - self.half_movement_time)
+        y_points_back = -th.sin(th.linspace(2 * np.pi, 0, self.movement_time - self.half_movement_time))
+        z_points_back = th.linspace(0, 0, self.movement_time - self.half_movement_time)
 
         # Compute (x, y) coordinates for each angle
         points_forward = th.stack([x_points_forward, y_points_forward, z_points_forward], dim=1) * th.tensor([1, 0.5, 1])
@@ -995,9 +1000,9 @@ class DlyFigure8Inv(Muscle_Env):
         y_points_forward = -th.sin(th.linspace(0, 2 * np.pi, self.half_movement_time))
         z_points_forward = th.linspace(0, 0, self.half_movement_time)
 
-        x_points_back = th.linspace(1, 0, self.half_movement_time)
-        y_points_back = th.sin(th.linspace(2 * np.pi, 0, self.half_movement_time))
-        z_points_back = th.linspace(0, 0, self.half_movement_time)
+        x_points_back = th.linspace(1, 0, self.movement_time - self.half_movement_time)
+        y_points_back = th.sin(th.linspace(2 * np.pi, 0, self.movement_time - self.half_movement_time))
+        z_points_back = th.linspace(0, 0, self.movement_time - self.half_movement_time)
 
         # Compute (x, y) coordinates for each angle
         points_forward = th.stack([x_points_forward, y_points_forward, z_points_forward], dim=1) * th.tensor([1, 0.5, 1])

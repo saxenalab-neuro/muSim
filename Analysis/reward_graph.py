@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-data = np.load('../training_statistics/Figure8/stats_rewards.npy')
+data = np.load('../training_statistics/Reach/stats_rewards.npy')
 
 
 # Compute moving average
