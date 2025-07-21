@@ -135,7 +135,7 @@ dependencies:
       - marshmallow==3.19.0
       - matplotlib==3.5.3
       - mistune==3.0.2
-      - mujoco-py==2.1.2.14
+      - mujoco==3.3.3
       - multidict==6.0.4
       - nbclassic==1.0.0
       - nbclient==0.7.4
