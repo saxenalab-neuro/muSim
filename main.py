@@ -20,9 +20,9 @@ def main():
     args = parser.parse_args()
 
     ### TRAINING OBJECT ###
-    trainer = Simulate([DlyReach, DlyCurvedReachClk, DlyCurvedReachCClk, DlySinusoid, DlySinusoidInv, \
-                DlyFullReach, DlyCircleClk, DlyCircleCClk, DlyFigure8, DlyFigure8Inv], args)
-    #trainer = Simulate([DlyReach], args)
+    #trainer = Simulate([DlyReach, DlyCurvedReachClk, DlyCurvedReachCClk, DlySinusoid, DlySinusoidInv, \
+     #           DlyFullReach, DlyCircleClk, DlyCircleCClk, DlyFigure8, DlyFigure8Inv], args)
+    trainer = Simulate([DlyReach], args)
 
     # trainer = Simulate(
     #     Muscle_Env,
