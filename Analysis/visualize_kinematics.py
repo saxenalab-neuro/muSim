@@ -87,6 +87,12 @@ for idx, cond_kin in test_data['kinematics_mtargets'].items():
 
 for cond in range(len(kin_agent)):
     figure(figsize=(20, 5), dpi=80)
+
+    all_ranges = []
+    for coord in range(kin_agent[cond].shape[-1]):
+        values = np.concatenate([kin_sim[cond][:, coord], kin_agent[cond][:, coord]])
+        all_ranges.append(np.max(values) - np.min(values))
+    max_range = max(all_ranges)
     
     MSE_cond = 0
     for coord in range(kin_agent[cond].shape[-1]):
@@ -94,6 +100,13 @@ for cond in range(len(kin_agent)):
         plt.subplot(1, kin_agent[cond].shape[-1], coord+1)
         plt.plot(kin_sim[cond][:, coord], '--', label= 'Target')
         plt.plot(kin_agent[cond][:, coord], label= 'Achieved')
+
+        sim_vals = kin_sim[cond][:, coord]
+        agent_vals = kin_agent[cond][:, coord]
+        
+        combined = np.concatenate([sim_vals, agent_vals])
+        mid = (np.max(combined) + np.min(combined)) / 2
+        plt.ylim(mid - max_range / 2, mid + max_range / 2)
         
         MSE_coord = MSE(kin_sim[cond][:, coord], kin_agent[cond][:, coord])
         
