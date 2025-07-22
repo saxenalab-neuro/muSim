@@ -21,7 +21,7 @@ class PolicyReplayMemory:
         batch_list = list(chain(*batch))
         state, action, reward, next_state, done, h_current, neural_activity, na_idx = map(np.stack, zip(*batch_list))
 
-        policy_state_batch = [[list(element)[0] for element in sample]for sample in batch]
+        policy_state_batch = [[list(element)[0] for element in sample] for sample in batch]
         policy_state_batch = list(map(torch.FloatTensor, policy_state_batch))
 
         return state, action, reward, next_state, done, h_current, policy_state_batch, neural_activity, na_idx
