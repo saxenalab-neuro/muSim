@@ -20,9 +20,12 @@ def main():
     args = parser.parse_args()
 
     ### TRAINING OBJECT ###
-    #trainer = Simulate([DlyReach, DlyCurvedReachClk, DlyCurvedReachCClk, DlySinusoid, DlySinusoidInv, \
-     #           DlyFullReach, DlyCircleClk, DlyCircleCClk, DlyFigure8, DlyFigure8Inv], args)
-    trainer = Simulate([DlyReach], args)
+    trainer = Simulate([DlyReach, DlyCurvedReachClk, DlyCurvedReachCClk, DlySinusoid, DlySinusoidInv, \
+                DlyFullReach, DlyCircleClk, DlyCircleCClk, DlyFigure8, DlyFigure8Inv], \
+      ['Reach', 'CurvedReachClk', 'CurvedReachCClk', 'Sinusoid', 'SinusoidInv', \
+                'FullReach', 'CircleClk', 'CircleCClk', 'Figure8', 'Figure8Inv'], args
+           )
+    #trainer = Simulate([DlyReach], args)
 
     # trainer = Simulate(
     #     Muscle_Env,
@@ -66,6 +69,16 @@ def main():
         trainer.train()
     elif args.mode in ["test", "SFE", "sensory_pert", "neural_pert", "musculo_properties"]:
         trainer.test(args.test_data_filename)
+    elif args.mode == "curriculum":
+        # DlyReach, DlyCurvedReachClk, DlyCurvedReachCClk, DlySinusoid, DlySinusoidInv, \
+        # DlyFullReach, DlyCircleClk, DlyCircleCClk, DlyFigure8, DlyFigure8Inv
+        error_thresholds = [5e-5] * 10
+        env_probabilities = [[1] * i + [0] * (10 - i) for i in range(1, 11)]
+        testing_frequency = 500
+
+        print("Probabilities: ", env_probabilities)
+        print("Reward thresholds: ", error_thresholds)
+        trainer.curriculum(error_thresholds, env_probabilities, testing_frequency, highest_env_index = 0)
     else:
         raise NotImplementedError
 

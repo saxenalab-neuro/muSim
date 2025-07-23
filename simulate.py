@@ -16,7 +16,7 @@ os.chdir(os.getcwd())
 
 class Simulate():
 
-    def __init__(self, envs, args):
+    def __init__(self, envs, env_names, args):
 
         """Train a soft actor critic agent to control a musculoskeletal model to follow a kinematic trajectory.
 
@@ -100,6 +100,8 @@ class Simulate():
 
         else:
             self.envs = [env(args.musculoskeletal_model_path[:-len('musculoskeletal_model.xml')] + 'musculo_targets.xml', 1, args) for env in envs]
+
+        self.env_names = env_names
 
         self.observation_shape = self.envs[0].observation_space.shape[0]+len(self.envs[0].sfs_visual_velocity)*3+1
 
@@ -256,7 +258,7 @@ class Simulate():
                 times_jpca.append(dict(times = np.arange(timestep)))    #the timestep is assumed to be 1ms
                 condition_tpoints_jpca.append(env.kin_to_sim[env.current_cond_to_sim].shape[-1])
                 n_fixedsteps_jpca.append(env.n_fixedsteps)
-            #env.close_viewer()
+            env.close_viewer()
 
         ### SAVE TESTING STATS ###
         Test_Data["emg"] = emg
@@ -452,6 +454,326 @@ class Simulate():
                 print('-----------------------------------\n')
 
             #env.close_viewer()
+
+    def curriculum(self, error_thresholds, env_probabilities, testing_frequency, highest_env_index = 0):
+        """ Train an RNN based SAC agent to follow kinematic trajectory
+        """
+
+        weights = env_probabilities[highest_env_index]
+
+        # Load the saved networks from the last training
+        if self.load_saved_nets_for_training:
+            self.load_saved_nets_from_checkpoint(load_best=False)
+
+        ### TRAINING DATA DICTIONARY ###
+        Statistics = {
+            "rewards": [],
+            "steps": [],
+            "policy_loss": [],
+            "critic_loss": []
+        }
+
+        highest_reward = -float("inf")  # used for storing highest reward throughout training
+
+        # Average reward across conditions initialization
+        cond_train_count = np.ones(
+            (self.envs[0].n_exp_conds,))  # Assuming that n_exp_conds is constant across different envs
+        cond_avg_reward = np.zeros((self.envs[0].n_exp_conds,))
+        cond_cum_reward = np.zeros((self.envs[0].n_exp_conds,))
+        cond_cum_count = np.zeros((self.envs[0].n_exp_conds,))
+
+        ### BEGIN TRAINING ###
+        for episode in range(self.episodes):
+            env_index = random.choices(list(range(len(weights))), weights=weights)[0]
+            env = self.envs[env_index]
+
+            ### Gather Episode Data Variables ###
+            episode_reward = 0  # reward for single episode
+            episode_steps = 0  # steps completed for single episode
+            policy_loss_tracker = []  # stores policy loss throughout episode
+            critic1_loss_tracker = []  # stores critic loss throughout episode
+            done = False  # determines if episode is terminated
+
+            ### GET INITAL STATE + RESET MODEL BY POSE
+            if self.condition_selection_strategy != "reward":
+                cond_to_select = episode % env.n_exp_conds
+                state = env.reset(cond_to_select)
+
+            else:
+                cond_indx = np.nonzero(cond_train_count > 0)[0][0]
+                cond_train_count[cond_indx] = cond_train_count[cond_indx] - 1
+                state = env.reset(cond_indx)
+
+            # Append the high-level task scalar signal
+            state = [*state, env.condition_scalar]
+
+            ep_trajectory = []  # used to store (s_t, a_t, r_t, s_t+1) tuple for replay storage
+
+            h_prev = torch.zeros(size=(1, 1, self.hidden_size))  # num_layers specified in the policy model
+
+            ### LOOP THROUGH EPISODE TIMESTEPS ###
+            while not (done):
+                ### SELECT ACTION ###
+                with torch.no_grad():
+                    action, h_current, _, _ = self.agent.select_action(state, h_prev, evaluate=False)
+
+                ### UPDATE MODEL PARAMETERS ###
+                if len(self.policy_memory.buffer) > self.policy_batch_size:
+                    for _ in range(self.batch_iters):
+                        critic_1_loss, critic_2_loss, policy_loss = self.agent.update_parameters(self.policy_memory,
+                                                                                                 self.policy_batch_size)
+                        ### STORE LOSSES ###
+                        policy_loss_tracker.append(policy_loss)
+                        critic1_loss_tracker.append(critic_1_loss)
+
+                ### SIMULATION ###
+                reward = 0
+                for _ in range(env.frame_repeat):
+                    next_state, inter_reward, done, _ = env.step(action)
+                    next_state = [*next_state, env.condition_scalar]
+                    reward += inter_reward
+                    episode_steps += 1
+
+                    ### EARLY TERMINATION OF EPISODE ###
+                    if done:
+                        break
+
+                episode_reward += reward
+
+                ### VISUALIZE MODEL ###
+                if self.visualize == True:
+                    env.render()
+
+                mask = 1 if episode_steps == env._max_episode_steps else float(
+                    not done)  # ensure mask is not 0 if episode ends
+
+                ### STORE CURRENT TIMESTEP TUPLE ###
+                ep_trajectory.append((state,
+                                      action,
+                                      reward,
+                                      next_state,
+                                      mask,
+                                      h_current.squeeze(0).cpu().numpy()))
+
+                ### MOVE TO NEXT STATE ###
+                state = next_state
+                h_prev = h_current
+
+            ### PUSH TO REPLAY ###
+            self.policy_memory.push(ep_trajectory)
+
+            if self.condition_selection_strategy == "reward":
+
+                cond_cum_reward[cond_indx] = cond_cum_reward[cond_indx] + episode_reward
+                cond_cum_count[cond_indx] = cond_cum_count[cond_indx] + 1
+
+                # Check if there are all zeros in the cond_train_count array
+                if np.all((cond_train_count == 0)):
+                    cond_avg_reward = cond_cum_reward / cond_cum_count
+                    cond_train_count = np.ceil(
+                        (np.max(cond_avg_reward) * np.ones((self.envs[0].n_exp_conds,))) / cond_avg_reward)
+
+            ### TRACKING ###
+            episode_reward_array = [np.nan for _ in range(len(self.envs))]
+            episode_reward_array[env_index] = episode_reward
+            Statistics["rewards"].append(episode_reward_array)
+            Statistics["steps"].append(episode_steps)
+            if policy_loss_tracker == [] and critic1_loss_tracker == []:
+                Statistics["policy_loss"].append(np.nan)
+                Statistics["critic_loss"].append(np.nan)
+            else:
+                Statistics["policy_loss"].append(np.mean(np.array(policy_loss_tracker)))
+                Statistics["critic_loss"].append(np.mean(np.array(critic1_loss_tracker)))
+
+            ### SAVE DATA TO FILE (in root project folder) ###
+            if len(self.statistics_folder) != 0:
+                np.save(self.statistics_folder + f'/stats_rewards.npy', Statistics['rewards'])
+                np.save(self.statistics_folder + f'/stats_steps.npy', Statistics['steps'])
+                np.save(self.statistics_folder + f'/stats_policy_loss.npy', Statistics['policy_loss'])
+                np.save(self.statistics_folder + f'/stats_critic_loss.npy', Statistics['critic_loss'])
+
+            ### SAVING STATE DICT OF TRAINING ###
+            if len(self.checkpoint_folder) != 0 and len(self.checkpoint_file) != 0:
+                if episode % self.save_iter == 0 and len(self.policy_memory.buffer) > self.policy_batch_size:
+                    # Save the state dicts
+                    torch.save({
+                        'iteration': episode,
+                        'agent_state_dict': self.agent.actor.state_dict(),
+                        'critic_state_dict': self.agent.critic.state_dict(),
+                        'critic_target_state_dict': self.agent.critic_target.state_dict(),
+                        'agent_optimizer_state_dict': self.agent.actor_optim.state_dict(),
+                        'critic_optimizer_state_dict': self.agent.critic_optim.state_dict(),
+                    }, self.checkpoint_folder + f'/{self.checkpoint_file}.pth')
+
+                    # Save the pickled model for fixedpoint finder analysis
+                    torch.save(self.agent.actor.rnn, self.checkpoint_folder + f'/actor_rnn_fpf.pth')
+
+                if episode_reward > highest_reward:
+                    torch.save({
+                        'iteration': episode,
+                        'agent_state_dict': self.agent.actor.state_dict(),
+                        'critic_state_dict': self.agent.critic.state_dict(),
+                        'critic_target_state_dict': self.agent.critic_target.state_dict(),
+                        'agent_optimizer_state_dict': self.agent.actor_optim.state_dict(),
+                        'critic_optimizer_state_dict': self.agent.critic_optim.state_dict(),
+                    }, self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')
+
+                    # Save the pickled model for fixedpoint finder analysis
+                    torch.save(self.agent.actor.rnn, self.checkpoint_folder + f'/actor_rnn_best_fpf.pth')
+
+            if episode_reward > highest_reward:
+                highest_reward = episode_reward
+
+            if episode % testing_frequency == 0:
+                print("start test")
+                errors = [self.test_curriculum(self.envs[i], self.env_names[i]).item() for i in range(highest_env_index + 1)]
+                if all(errors[i] < error_thresholds[i] for i in range(len(errors))):
+                    highest_env_index += 1
+                    weights = env_probabilities[highest_env_index]
+
+                ### TRAINING OUTPUT ###
+                if self.verbose_training:
+                    print('-----------------------------------')
+                    print('Errors {} | error thresholds: {}'.format(errors[:], error_thresholds[:highest_env_index+1]))
+                    print('-----------------------------------\n')
+
+    def test_curriculum(self, env, env_name):#, save_name, highest_env_index, env_rewards, reward_threshold, reward_window):
+        ### TESTING DATA ###
+        Test_Data = {
+            "emg": {},
+            "rnn_activity": {},
+            "rnn_input": {},
+            "rnn_input_fp": {},
+            "kinematics_mbodies": {},
+            "kinematics_mtargets": {}
+        }
+
+        ###Data jPCA
+        activity_jpca = []
+        times_jpca = []
+        n_fixedsteps_jpca = []
+        condition_tpoints_jpca = []
+
+        # Save the following after testing: EMG, RNN_activity, RNN_input, kin_musculo_bodies, kin_musculo_targets
+        emg = {}
+        rnn_activity = {}
+        rnn_input = {}
+        kin_mb = {}
+        kin_mt = {}
+        rnn_input_fp = {}
+        for i_cond_sim in range(env.n_exp_conds):
+
+            ### TRACKING VARIABLES ###
+            episode_reward = 0
+
+            emg_cond = []
+            kin_mb_cond = []
+            kin_mt_cond = []
+            rnn_activity_cond = []
+            rnn_input_cond = []
+            rnn_input_fp_cond = []
+
+            ### GET INITAL STATE + RESET MODEL BY POSE
+            cond_to_select = i_cond_sim % env.n_exp_conds
+            state = env.reset(cond_to_select)
+
+            if self.mode_to_sim in ["SFE"] and "task_scalar" in perturbation_specs.sf_elim:
+                state = [*state, 0]
+            else:
+                state = [*state, env.condition_scalar]
+
+            # Num_layers specified in the policy model
+            h_prev = torch.zeros(size=(1, 1, self.hidden_size))
+
+            ### STEPS PER EPISODE ###
+            for timestep in range(1, env.timestep_limit):
+                ### SELECT ACTION ###
+                with torch.no_grad():
+                    action, h_current, rnn_act, rnn_in = self.agent.select_action(state, h_prev, evaluate=True)
+
+                    emg_cond.append(action)  # [n_muscles, ]
+                    rnn_activity_cond.append(rnn_act[0, :])  # [1, n_hidden_units] --> [n_hidden_units,]
+                    rnn_input_cond.append(state)  # [n_inputs, ]
+                    rnn_input_fp_cond.append(rnn_in[0, 0, :])  # [1, 1, n_hidden_units] --> [n_hidden_units, ]
+
+                ### TRACKING REWARD + EXPERIENCE TUPLE###
+                next_state, reward, done, _ = env.step(action)
+
+                if self.mode_to_sim in ["SFE"] and "task_scalar" in perturbation_specs.sf_elim:
+                    next_state = [*next_state, 0]
+                else:
+                    next_state = [*next_state, env.condition_scalar]
+
+                episode_reward += reward
+
+                # now append the kinematics of the musculo body and the corresponding target
+                kin_mb_t = []
+                kin_mt_t = []
+                for musculo_body in kinematics_preprocessing_specs.musculo_tracking:
+                    kin_mb_t.append(env.data.xpos[env.model.body(musculo_body[0]).id].copy())  # [3, ]
+                    kin_mt_t.append(env.data.xpos[env.model.body(musculo_body[1]).id].copy())  # [3, ]
+
+                kin_mb_cond.append(kin_mb_t)  # kin_mb_t : [n_targets, 3]
+                kin_mt_cond.append(kin_mt_t)  # kin_mt_t : [n_targets, 3]
+
+                ### VISUALIZE MODEL ###
+                if self.visualize == True:
+                    env.render()
+
+                state = next_state
+                h_prev = h_current
+            # Append the testing data
+            emg[i_cond_sim] = np.array(emg_cond)  # [timepoints, muscles]
+            rnn_activity[i_cond_sim] = np.array(rnn_activity_cond)  # [timepoints, n_hidden_units]
+            rnn_input[i_cond_sim] = np.array(rnn_input_cond)  # [timepoints, n_inputs]
+            rnn_input_fp[i_cond_sim] = np.array(rnn_input_fp_cond)  # [timepoints, n_hidden_units]
+            kin_mb[i_cond_sim] = np.array(kin_mb_cond).transpose(1, 0,
+                                                                 2)  # kin_mb_cond: [timepoints, n_targets, 3] --> [n_targets, timepoints, 3]
+            kin_mt[i_cond_sim] = np.array(kin_mt_cond).transpose(1, 0,
+                                                                 2)  # kin_mt_cond: [timepoints, n_targets, 3] --> [n_targets, timepoints, 3]
+
+            ##Append the jpca data
+            activity_jpca.append(dict(A=rnn_activity_cond))
+            times_jpca.append(dict(times=np.arange(timestep)))  # the timestep is assumed to be 1ms
+            condition_tpoints_jpca.append(env.kin_to_sim[env.current_cond_to_sim].shape[-1])
+            n_fixedsteps_jpca.append(env.n_fixedsteps)
+
+        ### SAVE TESTING STATS ###
+        Test_Data["emg"] = emg
+        Test_Data["rnn_activity"] = rnn_activity
+        Test_Data["rnn_input"] = rnn_input
+        Test_Data["rnn_input_fp"] = rnn_input_fp
+        Test_Data["kinematics_mbodies"] = kin_mb
+        Test_Data["kinematics_mtargets"] = kin_mt
+
+        marker = 0
+
+        kin_agent = []
+
+        for idx, cond_kin in kin_mb.items():
+            kin_agent.append(cond_kin[marker, :, :])
+
+        kin_sim = []
+
+        for idx, cond_kin in kin_mt.items():
+            kin_sim.append(cond_kin[marker, :, :])
+
+        mse = np.mean((np.array(kin_agent) - np.array(kin_sim)) ** 2)
+        return mse
+
+        """### Save the jPCA data
+        Data_jpca = fromarrays([activity_jpca, times_jpca], names=['A', 'times'])
+
+        # save test data
+        with open("test_data/" + env_name + '/test_data.pkl', 'wb') as f:
+            pickle.dump(Test_Data, f)
+
+        # save jpca data
+        savemat("test_data/" + env_name + '/Data_jpca.mat', {'Data': Data_jpca})
+        savemat("test_data/" + env_name + '/n_fixedsteps_jpca.mat', {'n_fsteps': n_fixedsteps_jpca})
+        savemat("test_data/" + env_name + '/condition_tpoints_jpca.mat', {'cond_tpoints': condition_tpoints_jpca})"""
+
+
 
     def load_saved_nets_from_checkpoint(self, load_best: bool):
 
