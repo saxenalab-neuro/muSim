@@ -626,7 +626,7 @@ class TD3_Agent():
         with torch.no_grad():
             next_state_action, next_state_log_pi, _, _, _, _, _ = self.actor.sample(next_state_batch.unsqueeze(1),
                                                                                     h_batch, sampling=True)
-            next_state_action = torch.clip(next_state_action + torch.clip(self.normal.sample(), -self.noise_clip, self.noise_clip), self.lowest_action, self.highest_action)
+            next_state_action = torch.clip(next_state_action + torch.clip(self.normal.sample(next_state_action.shape), -self.noise_clip, self.noise_clip), self.lowest_action, self.highest_action)
             qf1_next_target, qf2_next_target = self.critic_target(next_state_batch, next_state_action)
             min_qf_next_target = torch.min(qf1_next_target, qf2_next_target)
             next_q_value = reward_batch + mask_batch * self.gamma * (min_qf_next_target)
