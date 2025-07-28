@@ -163,4 +163,13 @@ multi_policy_loss = True
 batch_iters = 1
 total_episodes = 1000000
 condition_selection_strategy = "reward"
-cuda = False
+
+# The RL algorithm be [SAC, DDPG, TD3]
+RL_algorithm = 'SAC'
+
+# For the TD3 algorithm, the following parameters must be specified
+target_noise = .2
+target_noise_clip = .5
+policy_delay = 2
+
+cuda = True

@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from SAC.sac import SAC_Agent
+from SAC.sac import SAC_Agent, DDPG_Agent, TD3_Agent
 from SAC.replay_memory import PolicyReplayMemory
 from SAC.RL_Framework_Mujoco import Muscle_Env
 from SAC import sensory_feedback_specs, kinematics_preprocessing_specs, perturbation_specs
@@ -102,22 +102,60 @@ class Simulate():
 
         self.observation_shape = self.env.observation_space.shape[0]+len(self.env.sfs_visual_velocity)*3+1
 
-        ### SAC AGENT ###
-        self.agent = SAC_Agent(self.observation_shape, 
-                               self.env.action_space, 
-                               args.hidden_size, 
-                               args.lr, 
-                               args.gamma, 
-                               args.tau, 
-                               args.alpha, 
-                               args.automatic_entropy_tuning, 
-                               args.model,
-                               args.multi_policy_loss,
-                               args.alpha_usim,
-                               args.beta_usim,
-                               args.gamma_usim,
-                               args.zeta_nusim,
-                               args.cuda)
+        ### INITIATING AGENT ###
+        if args.RL_algorithm == "SAC":
+            self.agent = SAC_Agent(self.observation_shape,
+                                   self.env.action_space,
+                                   args.hidden_size,
+                                   args.lr,
+                                   args.gamma,
+                                   args.tau,
+                                   args.alpha,
+                                   args.automatic_entropy_tuning,
+                                   args.model,
+                                   args.multi_policy_loss,
+                                   args.alpha_usim,
+                                   args.beta_usim,
+                                   args.gamma_usim,
+                                   args.zeta_nusim,
+                                   args.cuda)
+        elif args.RL_algorithm == "DDPG":
+            self.agent = DDPG_Agent(self.observation_shape,
+                                   self.env.action_space,
+                                   args.hidden_size,
+                                   args.lr,
+                                   args.gamma,
+                                   args.tau,
+                                   args.automatic_entropy_tuning,
+                                   args.model,
+                                   args.multi_policy_loss,
+                                   args.alpha_usim,
+                                   args.beta_usim,
+                                   args.gamma_usim,
+                                   args.zeta_nusim,
+                                   args.cuda)
+        elif args.RL_algorithm == "TD3":
+            self.agent = TD3_Agent(self.observation_shape,
+                                    self.env.action_space,
+                                    args.hidden_size,
+                                    args.lr,
+                                    args.gamma,
+                                    args.tau,
+                                    args.automatic_entropy_tuning,
+                                    args.model,
+                                    args.multi_policy_loss,
+                                    args.alpha_usim,
+                                    args.beta_usim,
+                                    args.gamma_usim,
+                                    args.zeta_nusim,
+                                    args.target_noise,
+                                    args.target_noise_clip,
+                                    args.policy_delay,
+                                    args.cuda)
+        else:
+            raise NotImplementedError
+
+
 
         ### REPLAY MEMORY ###
         self.policy_memory = PolicyReplayMemory(args.policy_replay_size, args.seed)

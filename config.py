@@ -277,5 +277,24 @@ def config_parser():
                         default= 0,
                         help='weighting with loss for nuSim constraining a sub-population of RNN units to experimentally recorded neurons for nuSim')
 
+    parser.add_argument('--RL_algorithm',
+                        type=str,
+                        default="SAC",
+                        help='SAC, DDPG, TD3')
+
+    parser.add_argument('--target_noise',
+                        type=float,
+                        default=.2,
+                        help='Standard deviation of noise added to target policy (in TD3)')
+
+    parser.add_argument('--target_noise_clip',
+                        type=float,
+                        default=.5,
+                        help='Maximum absolute value of noise added to target policy in (TD3)')
+
+    parser.add_argument('--policy_delay',
+                        type=int,
+                        default=2,
+                        help='Frequency with which the policy network is trained (in TD3)')
 
     return parser
