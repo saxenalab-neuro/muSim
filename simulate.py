@@ -172,7 +172,8 @@ class Simulate():
         kin_mb = {}
         kin_mt = {}
         rnn_input_fp = {}
-        for env in self.envs:
+        for k in range(len(self.envs)):
+            env = self.envs[k]
             for i_cond_sim in range(env.n_exp_conds):
 
                 ### TRACKING VARIABLES ###
@@ -260,25 +261,25 @@ class Simulate():
                 n_fixedsteps_jpca.append(env.n_fixedsteps)
             env.close_viewer()
 
-        ### SAVE TESTING STATS ###
-        Test_Data["emg"] = emg
-        Test_Data["rnn_activity"] = rnn_activity
-        Test_Data["rnn_input"] = rnn_input
-        Test_Data["rnn_input_fp"] = rnn_input_fp
-        Test_Data["kinematics_mbodies"] = kin_mb
-        Test_Data["kinematics_mtargets"] = kin_mt
+            ### SAVE TESTING STATS ###
+            Test_Data["emg"] = emg
+            Test_Data["rnn_activity"] = rnn_activity
+            Test_Data["rnn_input"] = rnn_input
+            Test_Data["rnn_input_fp"] = rnn_input_fp
+            Test_Data["kinematics_mbodies"] = kin_mb
+            Test_Data["kinematics_mtargets"] = kin_mt
 
-        ### Save the jPCA data
-        Data_jpca = fromarrays([activity_jpca, times_jpca], names=['A', 'times'])
+            ### Save the jPCA data
+            Data_jpca = fromarrays([activity_jpca, times_jpca], names=['A', 'times'])
 
-        #save test data
-        with open(save_name + '/test_data.pkl', 'wb') as f:
-            pickle.dump(Test_Data, f)
+            #save test data
+            with open(save_name + '/' + self.env_names[k] + '/test_data.pkl', 'wb') as f:
+                pickle.dump(Test_Data, f)
 
-        #save jpca data
-        savemat(save_name + '/Data_jpca.mat', {'Data' : Data_jpca})
-        savemat(save_name + '/n_fixedsteps_jpca.mat', {'n_fsteps' : n_fixedsteps_jpca})
-        savemat(save_name + '/condition_tpoints_jpca.mat', {'cond_tpoints': condition_tpoints_jpca})
+            #save jpca data
+            savemat(save_name + '/' + self.env_names[k] + '/Data_jpca.mat', {'Data' : Data_jpca})
+            savemat(save_name + '/' + self.env_names[k] + '/n_fixedsteps_jpca.mat', {'n_fsteps' : n_fixedsteps_jpca})
+            savemat(save_name + '/' + self.env_names[k] + '/condition_tpoints_jpca.mat', {'cond_tpoints': condition_tpoints_jpca})
 
 
     def train(self):
@@ -458,13 +459,7 @@ class Simulate():
     def curriculum(self, error_thresholds, env_probabilities, testing_frequency, highest_env_index = 0):
         """ Train an RNN based SAC agent to follow kinematic trajectory
         """
-
         weights = env_probabilities[highest_env_index]
-
-        # Load the saved networks from the last training
-        if self.load_saved_nets_for_training:
-            self.load_saved_nets_from_checkpoint(load_best=False)
-
         ### TRAINING DATA DICTIONARY ###
         Statistics = {
             "rewards": [],
@@ -472,6 +467,19 @@ class Simulate():
             "policy_loss": [],
             "critic_loss": []
         }
+
+        # Load the saved networks from the last training
+        if self.load_saved_nets_for_training:
+            self.load_saved_nets_from_checkpoint(load_best=False)
+            Statistics['rewards'] = np.load(self.statistics_folder + f'/stats_rewards.npy').tolist()
+            Statistics['steps'] = np.load(self.statistics_folder + f'/stats_steps.npy').tolist()
+            Statistics['policy_loss'] = np.load(self.statistics_folder + f'/stats_policy_loss.npy').tolist()
+            Statistics['critic_loss'] = np.load(self.statistics_folder + f'/stats_critic_loss.npy').tolist()
+            highest_env_index = sum(any(not np.isnan(x[i]) for x in Statistics['rewards']) for i in range(len(Statistics['rewards'][0]))) - 1 # bad way to do this
+            print("Initial Highest Env", highest_env_index)
+            weights = env_probabilities[highest_env_index]
+
+        
 
         highest_reward = -float("inf")  # used for storing highest reward throughout training
 
@@ -625,10 +633,10 @@ class Simulate():
                 highest_reward = episode_reward
 
             if episode % testing_frequency == 0:
-                print("start test")
                 errors = [self.test_curriculum(self.envs[i], self.env_names[i]).item() for i in range(highest_env_index + 1)]
-                if all(errors[i] < error_thresholds[i] for i in range(len(errors))):
+                if all(errors[i] < error_thresholds[i] for i in range(len(errors))) and highest_env_index < len(error_thresholds):
                     highest_env_index += 1
+                    print("New env", highest_env_index)
                     weights = env_probabilities[highest_env_index]
 
                 ### TRAINING OUTPUT ###
@@ -638,6 +646,7 @@ class Simulate():
                     print('-----------------------------------\n')
 
     def test_curriculum(self, env, env_name):#, save_name, highest_env_index, env_rewards, reward_threshold, reward_window):
+        env.testing = True
         ### TESTING DATA ###
         Test_Data = {
             "emg": {},
@@ -759,19 +768,21 @@ class Simulate():
             kin_sim.append(cond_kin[marker, :, :])
 
         mse = np.mean((np.array(kin_agent) - np.array(kin_sim)) ** 2)
-        return mse
 
-        """### Save the jPCA data
+        ### Save the jPCA data
         Data_jpca = fromarrays([activity_jpca, times_jpca], names=['A', 'times'])
 
         # save test data
-        with open("test_data/" + env_name + '/test_data.pkl', 'wb') as f:
+        with open("curriculum_test_data/" + env_name + '/test_data.pkl', 'wb') as f:
             pickle.dump(Test_Data, f)
 
         # save jpca data
-        savemat("test_data/" + env_name + '/Data_jpca.mat', {'Data': Data_jpca})
-        savemat("test_data/" + env_name + '/n_fixedsteps_jpca.mat', {'n_fsteps': n_fixedsteps_jpca})
-        savemat("test_data/" + env_name + '/condition_tpoints_jpca.mat', {'cond_tpoints': condition_tpoints_jpca})"""
+        savemat("curriculum_test_data/" + env_name + '/Data_jpca.mat', {'Data': Data_jpca})
+        savemat("curriculum_test_data/" + env_name + '/n_fixedsteps_jpca.mat', {'n_fsteps': n_fixedsteps_jpca})
+        savemat("curriculum_test_data/" + env_name + '/condition_tpoints_jpca.mat', {'cond_tpoints': condition_tpoints_jpca})
+
+        env.testing = False
+        return mse
 
 
 
