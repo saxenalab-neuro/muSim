@@ -268,9 +268,9 @@ class MujocoEnv(gym.Env):
             self.data.qvel.flat
         ])
 
-    def choose_kinematics_settings(self):
-        min_movement_time = 500
-        max_movement_time = 1000
+    def choose_kinematics_settings(self, single=True):
+        min_movement_time = 500 if single else 1000
+        max_movement_time = 1000 if single else 2000
         self.movement_time = random.randint(min_movement_time, max_movement_time)
         self.half_movement_time = int(self.movement_time / 2)
 
@@ -618,15 +618,6 @@ class DlyCurvedReachClk(Muscle_Env):
         rot_angle = th.linspace(0, 2 * np.pi, 9)[:-1]
         rotated_points = th.zeros(size=(self.batch_size, self.movement_time, 3))
 
-        """# Might be slow because I have to loop through everything
-        if reach_conds is None:
-            point_idx = th.randint(0, rot_angle.size(0), (self.batch_size,))
-        else:
-            if isinstance(reach_conds, (int, float)):
-                point_idx = torch.tensor([reach_conds])
-            elif isinstance(reach_conds, (th.Tensor, np.ndarray)):
-                point_idx = reach_conds"""
-
         point_idx = th.arange(self.batch_size) if self.testing else th.randint(0, rot_angle.size(0), (self.batch_size,))
 
         # Rotate the points based on the chosen angles
@@ -666,15 +657,6 @@ class DlyCurvedReachCClk(Muscle_Env):
         # Generate 8 equally spaced angles
         rot_angle = th.linspace(0, 2 * np.pi, 9)[:-1]
         rotated_points = th.zeros(size=(self.batch_size, self.movement_time, 3))
-
-        """# Might be slow because I have to loop through everything
-        if reach_conds is None:
-            point_idx = th.randint(0, rot_angle.size(0), (batch_size,))
-        else:
-            if isinstance(reach_conds, (int, float)):
-                point_idx = torch.tensor([reach_conds])
-            elif isinstance(reach_conds, (th.Tensor, np.ndarray)):
-                point_idx = reach_conds"""
 
         point_idx = th.arange(self.batch_size) if self.testing else th.randint(0, rot_angle.size(0), (self.batch_size,))
 
@@ -717,15 +699,6 @@ class DlySinusoid(Muscle_Env):
         rot_angle = th.linspace(0, 2 * np.pi, 9)[:-1]
         rotated_points = th.zeros(size=(self.batch_size, self.movement_time, 3))
 
-        """# Might be slow because I have to loop through everything
-        if reach_conds is None:
-            point_idx = th.randint(0, rot_angle.size(0), (batch_size,))
-        else:
-            if isinstance(reach_conds, (int, float)):
-                point_idx = torch.tensor([reach_conds])
-            elif isinstance(reach_conds, (th.Tensor, np.ndarray)):
-                point_idx = reach_conds"""
-
         point_idx = th.arange(self.batch_size) if self.testing else th.randint(0, rot_angle.size(0), (self.batch_size,))
 
         batch_angles = rot_angle[point_idx]
@@ -763,15 +736,6 @@ class DlySinusoidInv(Muscle_Env):
         rot_angle = th.linspace(0, 2 * np.pi, 9)[:-1]
         rotated_points = th.zeros(size=(self.batch_size, self.movement_time, 3))
 
-        """# Might be slow because I have to loop through everything
-        if reach_conds is None:
-            point_idx = th.randint(0, rot_angle.size(0), (batch_size,))
-        else:
-            if isinstance(reach_conds, (int, float)):
-                point_idx = torch.tensor([reach_conds])
-            elif isinstance(reach_conds, (th.Tensor, np.ndarray)):
-                point_idx = reach_conds"""
-
         point_idx = th.arange(self.batch_size) if self.testing else th.randint(0, rot_angle.size(0), (self.batch_size,))
 
         batch_angles = rot_angle[point_idx]
@@ -796,7 +760,7 @@ class DlyFullReach(Muscle_Env):
         self.generate_kinematics()
 
     def generate_kinematics(self):
-        self.choose_kinematics_settings()
+        self.choose_kinematics_settings(single=False)
         self.rule_input[5] = 1
 
         # Generate 8 equally spaced angles
@@ -804,15 +768,6 @@ class DlyFullReach(Muscle_Env):
 
         # Compute (x, y) coordinates for each angle
         points = th.stack([th.tensor([np.cos(angle), np.sin(angle), 0]) for angle in angles], dim=0)
-
-        """# this wont work yet cause everything else has shape batch_size (or I can assert reach_conds and batch_size are same shape)
-        if reach_conds is None:
-            point_idx = th.randint(0, points.size(0), (batch_size,))
-        else:
-            if isinstance(reach_conds, (int, float)):
-                point_idx = torch.tensor([reach_conds])
-            elif isinstance(reach_conds, (th.Tensor, np.ndarray)):
-                point_idx = reach_conds"""
 
         point_idx = th.arange(self.batch_size) if self.testing else th.randint(0, points.size(0), (self.batch_size,))
 
@@ -848,7 +803,7 @@ class DlyCircleClk(Muscle_Env):
         self.generate_kinematics()
 
     def generate_kinematics(self):
-        self.choose_kinematics_settings()
+        self.choose_kinematics_settings(single=False)
         self.rule_input[6] = 1
 
         traj_points = th.linspace(np.pi, -np.pi, self.movement_time)
@@ -860,15 +815,6 @@ class DlyCircleClk(Muscle_Env):
         # Generate 8 equally spaced angles
         rot_angle = th.linspace(0, 2 * np.pi, 9)[:-1]
         rotated_points = th.zeros(size=(self.batch_size, self.movement_time, 3))
-
-        """# Might be slow because I have to loop through everything
-        if reach_conds is None:
-            point_idx = th.randint(0, rot_angle.size(0), (batch_size,))
-        else:
-            if isinstance(reach_conds, (int, float)):
-                point_idx = torch.tensor([reach_conds])
-            elif isinstance(reach_conds, (th.Tensor, np.ndarray)):
-                point_idx = reach_conds"""
 
         point_idx = th.arange(self.batch_size) if self.testing else th.randint(0, rot_angle.size(0), (self.batch_size,))
 
@@ -894,7 +840,7 @@ class DlyCircleCClk(Muscle_Env):
         self.generate_kinematics()
 
     def generate_kinematics(self):
-        self.choose_kinematics_settings()
+        self.choose_kinematics_settings(single=False)
         self.rule_input[7] = 1
 
         traj_points = th.linspace(np.pi, 3 * np.pi, self.movement_time)
@@ -906,15 +852,6 @@ class DlyCircleCClk(Muscle_Env):
         # Generate 8 equally spaced angles
         rot_angle = th.linspace(0, 2 * np.pi, 9)[:-1]
         rotated_points = th.zeros(size=(self.batch_size, self.movement_time, 3))
-
-        """# Might be slow because I have to loop through everything
-        if reach_conds is None:
-            point_idx = th.randint(0, rot_angle.size(0), (batch_size,))
-        else:
-            if isinstance(reach_conds, (int, float)):
-                point_idx = torch.tensor([reach_conds])
-            elif isinstance(reach_conds, (th.Tensor, np.ndarray)):
-                point_idx = reach_conds"""
 
         point_idx = th.arange(self.batch_size) if self.testing else th.randint(0, rot_angle.size(0), (self.batch_size,))
 
@@ -940,7 +877,7 @@ class DlyFigure8(Muscle_Env):
         self.generate_kinematics()
 
     def generate_kinematics(self):
-        self.choose_kinematics_settings()
+        self.choose_kinematics_settings(single=False)
         self.rule_input[8] = 1
 
         x_points_forward = th.linspace(0, 1, self.half_movement_time)
@@ -960,15 +897,6 @@ class DlyFigure8(Muscle_Env):
         # Generate 8 equally spaced angles
         rot_angle = th.linspace(0, 2 * np.pi, 9)[:-1]
         rotated_points = th.zeros(size=(self.batch_size, self.movement_time, 3))
-
-        """# Might be slow because I have to loop through everything
-        if reach_conds is None:
-            point_idx = th.randint(0, rot_angle.size(0), (batch_size,))
-        else:
-            if isinstance(reach_conds, (int, float)):
-                point_idx = torch.tensor([reach_conds])
-            elif isinstance(reach_conds, (th.Tensor, np.ndarray)):
-                point_idx = reach_conds"""
 
         point_idx = th.arange(self.batch_size) if self.testing else th.randint(0, rot_angle.size(0), (self.batch_size,))
 
@@ -993,7 +921,7 @@ class DlyFigure8Inv(Muscle_Env):
         self.generate_kinematics()
 
     def generate_kinematics(self):
-        self.choose_kinematics_settings()
+        self.choose_kinematics_settings(single=False)
         self.rule_input[9] = 1
 
         x_points_forward = th.linspace(0, 1, self.half_movement_time)
@@ -1013,15 +941,6 @@ class DlyFigure8Inv(Muscle_Env):
         # Generate 8 equally spaced angles
         rot_angle = th.linspace(0, 2 * np.pi, 9)[:-1]
         rotated_points = th.zeros(size=(self.batch_size, self.movement_time, 3))
-
-        """# Might be slow because I have to loop through everything
-        if reach_conds is None:
-            point_idx = th.randint(0, rot_angle.size(0), (batch_size,))
-        else:
-            if isinstance(reach_conds, (int, float)):
-                point_idx = torch.tensor([reach_conds])
-            elif isinstance(reach_conds, (th.Tensor, np.ndarray)):
-                point_idx = reach_conds"""
 
         point_idx = th.arange(self.batch_size) if self.testing else th.randint(0, rot_angle.size(0), (self.batch_size,))
 
