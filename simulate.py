@@ -110,15 +110,15 @@ class Simulate():
                                    args.lr,
                                    args.gamma,
                                    args.tau,
-                                   args.alpha,
-                                   args.automatic_entropy_tuning,
                                    args.model,
                                    args.multi_policy_loss,
                                    args.alpha_usim,
                                    args.beta_usim,
                                    args.gamma_usim,
                                    args.zeta_nusim,
-                                   args.cuda)
+                                   args.cuda,
+                                   args.alpha,
+                                   args.automatic_entropy_tuning)
         elif args.RL_algorithm == "DDPG":
             self.agent = DDPG_Agent(self.observation_shape,
                                    self.env.action_space,
@@ -126,7 +126,6 @@ class Simulate():
                                    args.lr,
                                    args.gamma,
                                    args.tau,
-                                   args.automatic_entropy_tuning,
                                    args.model,
                                    args.multi_policy_loss,
                                    args.alpha_usim,
@@ -136,22 +135,21 @@ class Simulate():
                                    args.cuda)
         elif args.RL_algorithm == "TD3":
             self.agent = TD3_Agent(self.observation_shape,
-                                    self.env.action_space,
-                                    args.hidden_size,
-                                    args.lr,
-                                    args.gamma,
-                                    args.tau,
-                                    args.automatic_entropy_tuning,
-                                    args.model,
-                                    args.multi_policy_loss,
-                                    args.alpha_usim,
-                                    args.beta_usim,
-                                    args.gamma_usim,
-                                    args.zeta_nusim,
-                                    args.target_noise,
-                                    args.target_noise_clip,
-                                    args.policy_delay,
-                                    args.cuda)
+                                   self.env.action_space,
+                                   args.hidden_size,
+                                   args.lr,
+                                   args.gamma,
+                                   args.tau,
+                                   args.model,
+                                   args.multi_policy_loss,
+                                   args.alpha_usim,
+                                   args.beta_usim,
+                                   args.gamma_usim,
+                                   args.zeta_nusim,
+                                   args.cuda,
+                                   args.target_noise,
+                                   args.target_noise_clip,
+                                   args.policy_delay)
         else:
             raise NotImplementedError
 
