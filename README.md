@@ -1,5 +1,7 @@
-# 𝜂𝜇Sim
+# muSim 
 ![Fig1_github](https://github.com/saxenalab-neuro/muSim/assets/77393494/aefcb769-7427-4654-be72-08e1d6f59642)
+
+<img width="2600" height="3232" alt="Fig1_github" src="https://github.com/user-attachments/assets/d3e5b1e4-5ffa-4d6f-b68f-e97630bf1c46" />
 
 
 Training LSTMs and ANNs to perform tasks with musculoskeletal models. 
@@ -9,7 +11,7 @@ Please cite the following paper if using uSim/nuSim in your work:
 
 Link to corresponding paper (https://www.biorxiv.org/content/10.1101/2024.02.02.578628v1)
 
-## Installation
+## Installation 
 
 1. Create a new environment using conda:
 
