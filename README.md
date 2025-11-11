@@ -1,12 +1,14 @@
 # muSim 
 <img width="2600" height="3232" alt="Fig1_github" src="https://github.com/user-attachments/assets/d3e5b1e4-5ffa-4d6f-b68f-e97630bf1c46" />
 
-Training LSTMs and ANNs to perform tasks with musculoskeletal models. 
-Environments include monkey model performing cycling.
+Training RNNs to perform sensorimotor tasks with anatomically-accurate musculoskeletal models. 
+
+Environments include monkey cycling task and mouse alternation task.
 
 Please cite the following paper if using uSim/nuSim in your work:
 
-Link to corresponding paper (https://www.biorxiv.org/content/10.1101/2024.02.02.578628v1)
+``https://www.biorxiv.org/content/10.1101/2024.02.02.578628v3``
+
 
 ## Installation 
 
