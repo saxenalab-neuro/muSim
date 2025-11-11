@@ -7,7 +7,7 @@ Environments include monkey cycling task and mouse alternation task.
 
 Please cite the following paper if using uSim/nuSim in your work:
 
-``https://www.biorxiv.org/content/10.1101/2024.02.02.578628v3``
+`https://www.biorxiv.org/content/10.1101/2024.02.02.578628v3`
 
 
 ## Installation 
