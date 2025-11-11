@@ -9,6 +9,11 @@ Please cite the following paper if using uSim/nuSim in your work:
 
 `https://www.biorxiv.org/content/10.1101/2024.02.02.578628v3`
 
+## Documentation
+
+Please refer to the muSim documentation webiste for basic/advanced usage:
+
+https://musim-readthedocs.readthedocs.io/en/latest/
 
 ## Installation 
 
