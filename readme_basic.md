@@ -134,7 +134,7 @@ dict{
 
 **Initial Pose (optional):**
 
-Save the initial pose (containing the qpos and qvel) as numpy arrays in ‘./inital_pose/’ as qpos.npy and qvel.npy with shape [nq, ]. nq is the number of joints in the xml model.
+Save the initial pose (containing the qpos and qvel) as numpy arrays in ‘./initial_pose/’ as qpos.npy and qvel.npy with shape [nq, ]. nq is the number of joints in the xml model.
 
 This step is optional. If omitted, the default initial pose for xml model will be used for CMA-ES and IK.
 
@@ -180,7 +180,7 @@ Otherwise, provide a good inital pose for the xml model that preferably starts n
 
 Run
 
-`python main --config configs/configs.txt --visualize True --mode test`
+`python main.py --config configs/configs.txt --visualize True --mode test`
 
 This will visualize the target trajectories using a randomly initialized uSim controller network. Make sure target trajectories look as desired. Otherwise, change the kinematics preprocessing parameters (e.g. trajectory_scaling, center) in the ./configs/configs.txt file.
 
@@ -277,7 +277,7 @@ Note: jPCA analysis is based on MM Churchland’s original implementation. Pleas
 
 Specify the part of the sensory feedback to be eliminated in ./SAC/perturbation_specs.py using *sf_elim* variable. Run:
 
-`python main --config configs/configs.txt --mode SFE --visualize True`
+`python main.py --config configs/configs.txt --mode SFE --visualize True`
 
 **Sensory Perturbation:**
 
