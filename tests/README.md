@@ -1,6 +1,6 @@
 # muSim tests
 
-Run everything from the repo root (about 1 minute on a laptop CPU):
+Run everything from the repo root (about 2 minutes on a laptop CPU):
 
 ```bash
 python -m pytest
@@ -46,9 +46,20 @@ They are marked `xfail(strict=True)`. A crash only counts as the expected failur
 | Test | What it runs | Compared exactly |
 |---|---|---|
 | `test_append_targets_matches_golden` | `append_musculo_targets.py` | The generated `musculo_targets.xml` |
-| `test_training_stats_match_golden` | 30 seeded training episodes (seed 123456) | Reward, steps, policy loss and critic loss for every episode |
-| `test_trained_weights_match_golden` | Same run | Saved actor, critic and target-critic weights (checkpoint at episode 20 and best checkpoint) |
+| `test_training_stats_match_golden` | 30 seeded training episodes (seed 123456) for each of 4 setups (below) | Reward, steps, policy loss and critic loss for every episode |
+| `test_trained_weights_match_golden` | Same runs | Saved actor, critic and target-critic weights (checkpoint at episode 20 and best checkpoint) |
 | `test_pretrained_*` | The shipped `checkpoint/` in test mode, all 6 conditions | Muscle commands, RNN activity and inputs, hand and target paths, and mean hand–target distance per condition |
+
+The 4 training setups (`TRAIN_VARIANTS` in `musim_runner.py`) cover options the lab's default config leaves off:
+
+| Setup | Switched on | Protects |
+|---|---|---|
+| `default` | Nothing extra (configs/configs.txt) | The standard uSim run |
+| `nusim` | `zeta_nusim = 10000` (the weighting recommended in `SAC/sac.py`) | nuSim: matching RNN units to recorded neurons |
+| `senses` | Joint angles and velocities, muscle forces, body positions | The extra sensory inputs |
+| `velocity_delay` | Hand and target velocity, 3-step sensory delay | Visual velocity and delayed feedback |
+
+Each extra setup catches breaks that the default run misses. That was checked by changing each feature by 0.1% (or the delay by one step): only that setup's test failed. The stimulus input isn't covered, because the repo has no stimulus data.
 
 Everything runs on CPU in a temporary folder, so the repo's own model, checkpoint and statistics files are not touched. `golden/initial_pose/` is a fixed copy of the starting pose found by `find_init_pose.py`, so these tests don't depend on the IK step, which needs a display.
 

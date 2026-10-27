@@ -18,11 +18,12 @@ def main():
         model = mr.build_model(tmp, cfg)
         shutil.copy(model.parent / "musculo_targets.xml", mr.GOLDEN / "musculo_targets.xml")
 
-        run = mr.train(tmp, cfg, model)
-        np.savez(mr.GOLDEN / "train_stats.npz", **mr.load_stats(run))
-        nets = {f: mr.checkpoint_summary(run / "checkpoint" / f"{f}.pth")
-                for f in ["agent_networks", "agent_networks_best"]}
-        (mr.GOLDEN / "train_checkpoints.json").write_text(json.dumps(nets, indent=2) + "\n")
+        for variant in mr.TRAIN_VARIANTS:
+            run = mr.train(tmp, cfg, model, variant)
+            np.savez(mr.GOLDEN / f"train_{variant}_stats.npz", **mr.load_stats(run))
+            nets = {f: mr.checkpoint_summary(run / "checkpoint" / f"{f}.pth")
+                    for f in ["agent_networks", "agent_networks_best"]}
+            (mr.GOLDEN / f"train_{variant}_checkpoints.json").write_text(json.dumps(nets, indent=2) + "\n")
 
         summary = mr.summarize_test(mr.run_pretrained(tmp, cfg, model))
         (mr.GOLDEN / "pretrained_test.json").write_text(json.dumps(summary, indent=2) + "\n")
