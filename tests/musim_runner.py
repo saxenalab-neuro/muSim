@@ -22,6 +22,17 @@ GOLDEN = REPO / "tests" / "golden"
 TRAIN_EPISODES = 30
 SAVE_ITER = 10
 
+# Training setups with golden output: the lab's default config, plus options
+# the default leaves off (extra command-line settings on top of the default)
+TRAIN_VARIANTS = {
+    "default": [],
+    "nusim": ["--zeta_nusim", "10000"],            # match recorded neurons (1e4, per the comment in sac.py)
+    "senses": ["--joint_feedback", "True", "--muscle_forces", "True",
+               "--visual_feedback", "True"],       # joint angles, muscle forces, body positions
+    "velocity_delay": ["--visual_velocity", "hand", "target0",
+                       "--sensory_delay_timepoints", "3"],
+}
+
 STAT_NAMES = ["rewards", "steps", "policy_loss", "critic_loss"]
 NET_NAMES = ["agent_state_dict", "critic_state_dict", "critic_target_state_dict"]
 TEST_ARRAYS = ["emg", "rnn_activity", "rnn_input", "rnn_input_fp",
@@ -60,9 +71,9 @@ def build_model(tmp, cfg):
     return model
 
 
-def train(tmp, cfg, model):
-    """Short seeded training run. Returns the folder it wrote to."""
-    out = Path(tmp) / "train"
+def train(tmp, cfg, model, variant="default"):
+    """Short seeded training run for one of TRAIN_VARIANTS. Returns the folder it wrote to."""
+    out = Path(tmp) / f"train_{variant}"
     (out / "stats").mkdir(parents=True)
     (out / "checkpoint").mkdir()
     run("tests/_cpu_main.py", "--config", cfg,
@@ -71,7 +82,8 @@ def train(tmp, cfg, model):
         "--total_episodes", TRAIN_EPISODES,
         "--save_iter", SAVE_ITER,
         "--statistics_folder", out / "stats",
-        "--checkpoint_folder", out / "checkpoint")
+        "--checkpoint_folder", out / "checkpoint",
+        *TRAIN_VARIANTS[variant])
     return out
 
 

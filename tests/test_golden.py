@@ -25,14 +25,16 @@ def test_append_targets_matches_golden(setup):
     assert made == (mr.GOLDEN / "musculo_targets.xml").read_text()
 
 
-@pytest.fixture(scope="module")
-def train_run(setup):
-    return mr.train(*setup)
+@pytest.fixture(scope="module", params=list(mr.TRAIN_VARIANTS))
+def train_run(setup, request):
+    """One short training run per setup in TRAIN_VARIANTS: (variant, output folder)."""
+    return request.param, mr.train(*setup, request.param)
 
 
 def test_training_stats_match_golden(train_run):
-    golden = np.load(mr.GOLDEN / "train_stats.npz")
-    stats = mr.load_stats(train_run)
+    variant, folder = train_run
+    golden = np.load(mr.GOLDEN / f"train_{variant}_stats.npz")
+    stats = mr.load_stats(folder)
     for name in mr.STAT_NAMES:
         a, b = golden[name], stats[name]
         assert a.shape == b.shape, f"{name}: {b.shape} episodes, golden has {a.shape}"
@@ -44,8 +46,9 @@ def test_training_stats_match_golden(train_run):
 
 @pytest.mark.parametrize("ckpt", ["agent_networks", "agent_networks_best"])
 def test_trained_weights_match_golden(train_run, ckpt):
-    golden = json.loads((mr.GOLDEN / "train_checkpoints.json").read_text())[ckpt]
-    assert mr.checkpoint_summary(train_run / "checkpoint" / f"{ckpt}.pth") == golden
+    variant, folder = train_run
+    golden = json.loads((mr.GOLDEN / f"train_{variant}_checkpoints.json").read_text())[ckpt]
+    assert mr.checkpoint_summary(folder / "checkpoint" / f"{ckpt}.pth") == golden
 
 
 @pytest.fixture(scope="module")
