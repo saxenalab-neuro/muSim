@@ -1,0 +1,14 @@
+{
+  "agent_networks": {
+    "iteration": 20,
+    "agent_state_dict": "e658e2bf3ed98a0570f0ec86fac1fabd79b1100fbf9b93c8073c9c89fb3dc6e0",
+    "critic_state_dict": "4dee0e94aa570c29710350bd1cc6dbdfdaaeb758099ef2acafe137d8c369e2ef",
+    "critic_target_state_dict": "871a02134a4d459448698731496010dcba8c8bd8a3f0b04a566685aff9005d8b"
+  },
+  "agent_networks_best": {
+    "iteration": 10,
+    "agent_state_dict": "b3a6acd6d2733df6fc58c22c82d94321ca1be00133cc41a98ab45de630b8fe9f",
+    "critic_state_dict": "a0a900b550b8f9bb1a57facd5afbb3dc0ff7922ee9c5b4ccf3b04a661c35d8b0",
+    "critic_target_state_dict": "bb780356199b1b3ab70a16b06f3b3d23ffd1fa1e0045685c9820ca9a066db120"
+  }
+}
