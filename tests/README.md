@@ -1,12 +1,12 @@
 # muSim tests
 
-Run everything from the repo root (about 35 s on a laptop CPU):
+Run everything from the repo root (about 1 minute on a laptop CPU):
 
 ```bash
 python -m pytest
 ```
 
-To run just the fast unit tests (under 1 s): `python -m pytest --ignore tests/test_golden.py`
+To run just the fast unit tests (under 1 s): `python -m pytest tests/test_env.py tests/test_actor.py tests/test_config_and_data.py`
 
 ## Unit tests
 
@@ -19,6 +19,25 @@ Small checks on the pieces the refactor will move. They run in-process and pin t
 | `test_config_and_data.py` | Every value in `configs/configs.txt` as `main.py` parses it, constants that are still hardcoded today, data shapes (1 marker, z locked, 4 train and 2 test conditions, 49 neurons), and scaling and centring of the kinematics |
 
 When a setting moves from the code into the config, its test should keep the same expected value.
+
+## Future-feature tests (`test_future.py`)
+
+What the refactor should make possible. Each one builds a small custom setup (dataset, model, config) in a temp folder with `scenarios.py`, and **fails on today's code**:
+
+| Test | What it wants | Fails today because |
+|---|---|---|
+| `test_end_effector_with_any_name` | Train an arm whose tracking body isn't called `hand` | Episode-end check looks up `"hand"` by name (H1) |
+| `test_every_marker_can_end_episode` | With 2 markers, either one leaving its zone ends the episode | Only marker 0 is checked; marker 1 gets the −25 penalty but the episode continues (H1) |
+| `test_dataset_without_neural_data_keeps_kinematics` | A dataset with no neural recordings loads correctly | The kinematics are "normalised" as if they were neural data and become all NaN (B1) |
+| `test_training_without_neural_data` | Training on it behaves normally | Every episode ends after 2 steps (B1) |
+| `test_dataset_with_x_locked` | Track y and z with x locked | The target's y joint gets the NaN x row (B2) |
+| `test_condition_cue_scales_to_dataset` | Condition cue stays in [0, 1] for other trial lengths | Uses the cycling data's 600 and 1319, so shorter trials give negative cues (H2) |
+| `test_config_can_leave_out_optional_feedback` | A config can leave out `visual_velocity` / `visual_distance_bodies` | Their defaults are `None`, and the code calls `len()` on them (B6) |
+| `test_model_file_with_any_name` | A model file not named `musculoskeletal_model.xml` | The path is built by cutting off that name's length (H6) |
+
+They are marked `xfail(strict=True)`. A crash only counts as the expected failure if its error matches the known cause, so a broken test setup still shows up as a real failure. `test_scenario_builder_on_cycling_data` is an ordinary test that checks the builder works on the unchanged cycling setup.
+
+**When a fix makes one pass**, pytest reports `XPASS(strict)` and the run fails. Remove that test's `xfail` marker so it becomes a normal test.
 
 ## Golden-output tests (`test_golden.py`)
 
