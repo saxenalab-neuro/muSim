@@ -28,6 +28,16 @@ from SAC.RL_Framework_Mujoco import Muscle_Env  # noqa: E402
 sys.argv = _argv
 
 
+_MUJOCO_LOG = mr.REPO / "MUJOCO_LOG.TXT"
+_had_mujoco_log = _MUJOCO_LOG.exists()
+
+
+def pytest_sessionfinish(session, exitstatus):
+    # The NaN scenarios in test_future.py make MuJoCo write warnings to this file
+    if not _had_mujoco_log:
+        _MUJOCO_LOG.unlink(missing_ok=True)
+
+
 def parse_args(*extra):
     """The lab's default config, as main.py would parse it."""
     return config.config_parser().parse_args(["--config", str(CONFIG), *map(str, extra)])
