@@ -26,9 +26,11 @@ class Agent():
                  zeta_nusim: float,
                  cuda: bool):
 
-        if cuda:
+        if cuda and torch.cuda.is_available():
             self.device = torch.device("cuda")
         else:
+            if cuda:
+                print("CUDA requested but not available; falling back to CPU.")
             self.device = torch.device("cpu")
 
         # Save the regularization parameters
