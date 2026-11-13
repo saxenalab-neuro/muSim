@@ -111,6 +111,6 @@ class Scenario:
         out = self.tmp / "train"
         (out / "stats").mkdir(parents=True)
         (out / "checkpoint").mkdir()
-        mr.run("tests/_cpu_main.py", *self.args, "--total_episodes", episodes,
+        mr.run("main.py", *self.args, "--total_episodes", episodes,
                "--statistics_folder", out / "stats", "--checkpoint_folder", out / "checkpoint")
         return np.load(out / "stats" / "stats_steps.npy")

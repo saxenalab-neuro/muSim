@@ -73,9 +73,10 @@ def run(script, *args):
 def write_config(tmp):
     """Copy the lab's default config into tmp, minus the `cuda = True` line.
 
-    The tests run on CPU, and `--cuda` is an on-only switch, so once the config
-    says `cuda = True` it can't be turned off from the command line (bug B8).
-    Returns the path to the copy.
+    The tests always run on CPU, even on a machine with a GPU: the golden
+    files were made on a CPU, and the comparison is exact. `--cuda` is an
+    on-only switch, so the only way to leave it off is to drop the line from
+    the config. Returns the path to the copy.
     """
     lines = (REPO / "configs" / "configs.txt").read_text().splitlines()
     cfg = Path(tmp) / "config.txt"
@@ -111,7 +112,7 @@ def train(tmp, cfg, model, variant="default"):
     out = Path(tmp) / f"train_{variant}"
     (out / "stats").mkdir(parents=True)
     (out / "checkpoint").mkdir()
-    run("tests/_cpu_main.py", "--config", cfg,
+    run("main.py", "--config", cfg,
         "--musculoskeletal_model_path", model,
         "--initial_pose_path", GOLDEN / "initial_pose",
         "--total_episodes", TRAIN_EPISODES,
@@ -130,7 +131,7 @@ def run_pretrained(tmp, cfg, model):
     """
     out = Path(tmp) / "test"
     out.mkdir()
-    run("tests/_cpu_main.py", "--config", cfg, "--mode", "test",
+    run("main.py", "--config", cfg, "--mode", "test",
         "--musculoskeletal_model_path", model,
         "--initial_pose_path", GOLDEN / "initial_pose",
         "--checkpoint_folder", REPO / "checkpoint",

@@ -25,9 +25,10 @@ from SAC.RL_Framework_Mujoco import Muscle_Env  # noqa: E402
 # Read the settings from the command line, as main.py does
 args = config.config_parser().parse_args()
 
-# Same model path trick as simulate.py: swap the file name for the model that
-# includes the targets (this is also hardcode H6, which test_future.py checks)
-env = Muscle_Env(args.musculoskeletal_model_path[:-len('musculoskeletal_model.xml')] + 'musculo_targets.xml', 1, args)
+# Load the model that includes the targets, from the same place simulate.py
+# does: config.get_musculo_targets_path (next to the model, unless the config
+# sets musculo_targets_path)
+env = Muscle_Env(config.get_musculo_targets_path(args), 1, args)
 
 # What the environment loaded: the training kinematics after scaling and
 # centring, and the condition cue for every training condition
