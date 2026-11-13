@@ -6,6 +6,7 @@ from SAC.RL_Framework_Mujoco import Muscle_Env
 from SAC import sensory_feedback_specs, kinematics_preprocessing_specs, perturbation_specs
 import pickle
 import os
+import config
 from numpy.core.records import fromarrays
 from scipy.io import savemat
 
@@ -94,11 +95,13 @@ class Simulate():
 
 
         ### LOAD CUSTOM GYM ENVIRONMENT ###
+        # The model with targets: see config.get_musculo_targets_path.
+        # The perturbed version is expected in the same folder.
         if self.mode_to_sim in ["musculo_properties"]:
-            self.env = env(args.musculoskeletal_model_path[:-len('musculoskeletal_model.xml')] + 'musculo_targets_pert.xml', 1, args)
+            self.env = env(os.path.join(os.path.dirname(config.get_musculo_targets_path(args)), 'musculo_targets_pert.xml'), 1, args)
 
         else:
-            self.env = env(args.musculoskeletal_model_path[:-len('musculoskeletal_model.xml')] + 'musculo_targets.xml', 1, args)
+            self.env = env(config.get_musculo_targets_path(args), 1, args)
 
         self.observation_shape = self.env.observation_space.shape[0]+len(self.env.sfs_visual_velocity)*3+1
 
