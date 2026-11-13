@@ -234,22 +234,25 @@ def config_parser():
                         default= False,
                         help='Visual feedback consists of x/y/z coordinates of the specified bodies in the model')
 
-    parser.add_argument('--visual_feedback_bodies', 
+    # The three visual settings below are optional. They default to an empty
+    # list, not None, because the environment counts their items with len().
+    # An empty list means "no extra senses"; None would crash that count.
+    parser.add_argument('--visual_feedback_bodies',
                         type= list_of_string_names,
                         nargs= '*',
-                        default= None,
+                        default= [],
                         help='Append the names musculo bodies from which visual feedback should be included')
 
     parser.add_argument('--visual_distance_bodies', 
                         type= list_of_tuples_of_strings,
                         nargs= '*',
-                        default= None,
+                        default= [],
                         help='Specify the names of the bodies as tuples for which the visual distance should be included in the feedback')
 
-    parser.add_argument('--visual_velocity', 
+    parser.add_argument('--visual_velocity',
                         type= list_of_string_names,
                         nargs= '*',
-                        default= None,
+                        default= [],
                         help='Specify the names of the bodies for which the visual velocity should be included in the feedback')
 
     parser.add_argument('--sensory_delay_timepoints', 
