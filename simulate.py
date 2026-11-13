@@ -509,35 +509,26 @@ class Simulate():
         #Saved networks include policy, critic, critic_target, policy_optimizer and critic_optimizer
 
         if not load_best:
-
-            #Load the policy network
-            self.agent.actor.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['agent_state_dict'])
-
-            #Load the critic network
-            self.agent.critic.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['critic_state_dict'])
-
-            #Load the critic target network
-            self.agent.critic_target.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['critic_target_state_dict'])
-
-            #Load the policy optimizer 
-            self.agent.actor_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['agent_optimizer_state_dict'])
-
-            #Load the critic optimizer
-            self.agent.critic_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['critic_optimizer_state_dict'])
-
+            checkpoint_path = self.checkpoint_folder + f'/{self.checkpoint_file}.pth'
         else:
+            checkpoint_path = self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth'
 
-            #Load the policy network
-            self.agent.actor.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['agent_state_dict'])
+        # Read the file once. map_location puts the saved tensors on this
+        # agent's device (GPU or CPU). Without it, a checkpoint saved on a GPU
+        # machine crashes on a computer that has no GPU.
+        checkpoint = torch.load(checkpoint_path, map_location=self.agent.device)
 
-            #Load the critic network
-            self.agent.critic.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['critic_state_dict'])
+        #Load the policy network
+        self.agent.actor.load_state_dict(checkpoint['agent_state_dict'])
 
-            #Load the critic target network
-            self.agent.critic_target.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['critic_target_state_dict'])
+        #Load the critic network
+        self.agent.critic.load_state_dict(checkpoint['critic_state_dict'])
 
-            #Load the policy optimizer 
-            self.agent.actor_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['agent_optimizer_state_dict'])
+        #Load the critic target network
+        self.agent.critic_target.load_state_dict(checkpoint['critic_target_state_dict'])
 
-            #Load the critic optimizer
-            self.agent.critic_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['critic_optimizer_state_dict'])
+        #Load the policy optimizer 
+        self.agent.actor_optim.load_state_dict(checkpoint['agent_optimizer_state_dict'])
+
+        #Load the critic optimizer
+        self.agent.critic_optim.load_state_dict(checkpoint['critic_optimizer_state_dict'])
