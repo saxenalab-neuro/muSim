@@ -1,0 +1,26 @@
+# Packages needed to run muSim's tests (tests/README.md, "Setting up").
+#
+# Versions are pinned to the ones the golden output in tests/golden/ was made
+# with. The golden tests compare results exactly, so a different torch, numpy
+# or mujoco version can change the last digits and make them fail.
+#
+# Install with (Python 3.10, from the repo root):
+#   python -m pip install -r tests/requirements.txt
+
+# Simulation, neural network and maths
+mujoco==3.3.3
+torch==2.14.1
+numpy==1.26.4
+scipy==1.15.3
+
+# Used by muSim's own scripts (config file reading, plotting, video, etc.)
+configargparse==1.8.0
+gym==0.26.2
+matplotlib==3.10.9
+pandas==2.3.3
+pyquaternion==0.9.9
+scikit-video==1.1.11
+ipdb==0.13.13
+
+# The test runner
+pytest==9.1.1
