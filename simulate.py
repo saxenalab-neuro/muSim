@@ -6,6 +6,7 @@ from SAC.RL_Framework_Mujoco import Muscle_Env
 from SAC import sensory_feedback_specs, kinematics_preprocessing_specs, perturbation_specs
 import pickle
 import os
+import config
 from numpy.core.records import fromarrays
 from scipy.io import savemat
 
@@ -94,11 +95,13 @@ class Simulate():
 
 
         ### LOAD CUSTOM GYM ENVIRONMENT ###
+        # The model with targets: see config.get_musculo_targets_path.
+        # The perturbed version is expected in the same folder.
         if self.mode_to_sim in ["musculo_properties"]:
-            self.env = env(args.musculoskeletal_model_path[:-len('musculoskeletal_model.xml')] + 'musculo_targets_pert.xml', 1, args)
+            self.env = env(os.path.join(os.path.dirname(config.get_musculo_targets_path(args)), 'musculo_targets_pert.xml'), 1, args)
 
         else:
-            self.env = env(args.musculoskeletal_model_path[:-len('musculoskeletal_model.xml')] + 'musculo_targets.xml', 1, args)
+            self.env = env(config.get_musculo_targets_path(args), 1, args)
 
         self.observation_shape = self.env.observation_space.shape[0]+len(self.env.sfs_visual_velocity)*3+1
 
@@ -509,35 +512,26 @@ class Simulate():
         #Saved networks include policy, critic, critic_target, policy_optimizer and critic_optimizer
 
         if not load_best:
-
-            #Load the policy network
-            self.agent.actor.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['agent_state_dict'])
-
-            #Load the critic network
-            self.agent.critic.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['critic_state_dict'])
-
-            #Load the critic target network
-            self.agent.critic_target.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['critic_target_state_dict'])
-
-            #Load the policy optimizer 
-            self.agent.actor_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['agent_optimizer_state_dict'])
-
-            #Load the critic optimizer
-            self.agent.critic_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}.pth')['critic_optimizer_state_dict'])
-
+            checkpoint_path = self.checkpoint_folder + f'/{self.checkpoint_file}.pth'
         else:
+            checkpoint_path = self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth'
 
-            #Load the policy network
-            self.agent.actor.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['agent_state_dict'])
+        # Read the file once. map_location puts the saved tensors on this
+        # agent's device (GPU or CPU). Without it, a checkpoint saved on a GPU
+        # machine crashes on a computer that has no GPU.
+        checkpoint = torch.load(checkpoint_path, map_location=self.agent.device)
 
-            #Load the critic network
-            self.agent.critic.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['critic_state_dict'])
+        #Load the policy network
+        self.agent.actor.load_state_dict(checkpoint['agent_state_dict'])
 
-            #Load the critic target network
-            self.agent.critic_target.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['critic_target_state_dict'])
+        #Load the critic network
+        self.agent.critic.load_state_dict(checkpoint['critic_state_dict'])
 
-            #Load the policy optimizer 
-            self.agent.actor_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['agent_optimizer_state_dict'])
+        #Load the critic target network
+        self.agent.critic_target.load_state_dict(checkpoint['critic_target_state_dict'])
 
-            #Load the critic optimizer
-            self.agent.critic_optim.load_state_dict(torch.load(self.checkpoint_folder + f'/{self.checkpoint_file}_best.pth')['critic_optimizer_state_dict'])
+        #Load the policy optimizer 
+        self.agent.actor_optim.load_state_dict(checkpoint['agent_optimizer_state_dict'])
+
+        #Load the critic optimizer
+        self.agent.critic_optim.load_state_dict(checkpoint['critic_optimizer_state_dict'])
