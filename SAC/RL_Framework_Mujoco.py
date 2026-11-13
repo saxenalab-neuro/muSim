@@ -357,18 +357,24 @@ class Muscle_Env(MujocoEnv):
 
     def is_done(self):
         #Define the distance threshold termination criteria
-        target_position= self.data.xpos[self.model.body("target0").id].copy()
-        hand_position= self.data.xpos[self.model.body("hand").id].copy()
-        
-        criteria= hand_position - target_position
-
-        if self.istep < self.timestep_limit:
-            if np.abs(criteria[0]) > self.threshold or np.abs(criteria[1]) > self.threshold or np.abs(criteria[2]) > self.threshold:
-                return True
-            else:
-                return False
-        else:
+        #The body/target pairs come from the data (marker_names in the kinematics
+        #file), e.g. [("hand", "target0")] for the cycling monkey. They used to be
+        #typed in as "hand" and "target0", so a model whose part had another name
+        #(e.g. "paw") crashed. The reward uses these same pairs, and like the
+        #reward, the episode ends if ANY tracked body leaves its zone.
+        if self.istep >= self.timestep_limit:
             return True
+
+        for musculo_body, target in kinematics_preprocessing_specs.musculo_tracking:
+            body_position= self.data.xpos[self.model.body(musculo_body).id].copy()
+            target_position= self.data.xpos[self.model.body(target).id].copy()
+
+            criteria= body_position - target_position
+
+            if (np.abs(criteria) > self.threshold).any():
+                return True
+
+        return False
 
     def step(self, action):
         self.istep += 1
