@@ -79,6 +79,8 @@
 
 <value: numpy.ndarray> contains the kinematics for the corresponding condition with shape: [num_markers/targets, num_coordinates = 3, timepoints]. 
 
+The 3 coordinates are x, y and z, in that order. By default z is "up", as in MuJoCo. If y is "up" in your data (as in the provided cycling data), set *kinematics_up_axis = y* in the configs.txt file: the y and z coordinates are then swapped when the data is loaded. 
+
 num_markers are the number of experimental markers/bodies that are recorded. The order of the num_markers must correspond to the order in which the marker_names are listed. For example, if ‘marker_names’ = [’hand’, ‘elbow’], num_marker= 0 should contain the experimental kinematics for hand and num_marker=1 should contain the experimental kinematics for elbow.
 
 num_coordinates are the x [-->], y[↑] and z[ out of page] coordinates. Values of NaN for any coordinate will keep that coordinate locked. 

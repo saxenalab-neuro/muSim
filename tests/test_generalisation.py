@@ -81,6 +81,38 @@ def test_dataset_with_x_locked(tmp_path):
     assert r["target_qpos"] == {"box:y0": start[1], "box:z0": start[2]}
 
 
+def test_dataset_with_z_up_needs_no_setting(tmp_path):
+    """The same hand path, saved with z as "up", behaves exactly like the
+    cycling data, with no "up" setting in the config.
+
+    Used to fail (H7): the data's y was always wired to MuJoCo's z (up), so a
+    path saved in x and z moved the target sideways. Fixed by making z-up the
+    default, with kinematics_up_axis = y for data such as the cycling data.
+    """
+    # The cycling setup as it is: y is up, and the config says so
+    kin, neural = cycling_data()
+    (tmp_path / "y_up").mkdir()
+    cycling = Scenario(tmp_path / "y_up", kin, neural).probe()
+
+    # The same path with the y and z rows swapped, so z is up. The config's
+    # "up" setting is left out, and the centre is written the z-up way.
+    kin, neural = cycling_data()
+    for split in ["train", "test"]:
+        for c, k in kin[split].items():
+            kin[split][c] = k[:, [0, 2, 1], :]
+    (tmp_path / "z_up").mkdir()
+    z_up = Scenario(tmp_path / "z_up", kin, neural, drop_settings=("kinematics_up_axis",),
+                    extra_args=["--center", "[0.06,0,0.083]"]).probe()
+
+    # Make sure the setup did what we intended before judging muSim
+    if set(cycling["target_qpos"]) != {"box:x0", "box:z0"}:
+        raise RuntimeError(f"setup: expected the cycling target on x and z, got {cycling}")
+    # Same target position, same reward, same episode-end result
+    assert z_up["target_qpos"] == cycling["target_qpos"]
+    assert z_up["rewards"] == cycling["rewards"]
+    assert z_up["dones"] == cycling["dones"]
+
+
 # --- Settings and models from the config ----------------------------------------
 
 def test_config_can_leave_out_optional_feedback(tmp_path):

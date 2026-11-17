@@ -96,14 +96,18 @@ def test_kinematics_z_locked(kinematics):
 def test_detected_tracking_setup():
     """What muSim works out from the data when it loads.
 
-    - xyz_target [[1, 1, 0]]: x and y tracked, z locked.
+    The cycling file has x and y, with y as "up". The config says so
+    (kinematics_up_axis = y), so muSim swaps y and z when it loads the file.
+    From here on everything is in MuJoCo's directions, where z is up.
+
+    - xyz_target [[1, 0, 1]]: x and z tracked, y locked.
     - musculo_tracking: the model's "hand" body tracks "target0".
-    - musculo_target_joints: the target moves on the x and y joints only.
+    - musculo_target_joints: the target moves on the x and z joints only.
     """
     # Derived from the data at import time
-    assert kinematics_preprocessing_specs.xyz_target == [[1, 1, 0]]
+    assert kinematics_preprocessing_specs.xyz_target == [[1, 0, 1]]
     assert kinematics_preprocessing_specs.musculo_tracking == [("hand", "target0")]
-    assert kinematics_preprocessing_specs.musculo_target_joints == ["box:x0", "box:y0"]
+    assert kinematics_preprocessing_specs.musculo_target_joints == ["box:x0", "box:z0"]
 
 
 def test_neural_data_matches_kinematics(kinematics, neural):
@@ -115,10 +119,14 @@ def test_neural_data_matches_kinematics(kinematics, neural):
 
 def test_kinematics_scaled_and_centred(env, kinematics):
     """When loaded, the hand path is divided by trajectory_scaling (26.3...)
-    and shifted by center ([0.06, 0.083]), both from the config."""
+    and shifted by center ([0.06, 0.083]), both from the config.
+
+    The file's x stays on row 0. The file's y (up) is moved to row 2, MuJoCo's
+    z, because the config sets kinematics_up_axis = y. The centre is written
+    in the file's own directions, so 0.083 moves with y."""
     for c, raw in kinematics["train"].items():
         expected = raw[0, :2] / 26.3157894737 + np.array([[0.06], [0.083]])
-        np.testing.assert_array_equal(env.kin_train[c][0, :2], expected)
+        np.testing.assert_array_equal(env.kin_train[c][0, [0, 2]], expected)
 
 
 def test_neural_activity_normalised(env):

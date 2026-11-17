@@ -17,7 +17,8 @@ There are five groups:
    do the individual pieces (inputs, reward, episode ending, target movement,
    network, settings) still work as they did?
 3. **Fix tests** (`test_config_defaults.py`, `test_checkpoint_loading.py`,
-   `test_model_paths.py`, `test_episode_end.py`, `test_target_rows.py`): one
+   `test_model_paths.py`, `test_episode_end.py`, `test_target_rows.py`,
+   `test_up_axis.py`): one
    small file per bug fix, checking that fix directly.
 4. **Generalisation tests** (`test_generalisation.py`): setups other than
    cycling that muSim now handles, run end to end. They used to fail.
@@ -52,7 +53,7 @@ python -m pytest
 This takes about 3 minutes. A healthy result ends with:
 
 ```
-76 passed, 3 xfailed
+82 passed, 3 xfailed
 ```
 
 "xfailed" means "failed as expected": those are the 3 expected-failure tests
@@ -67,7 +68,7 @@ python -m pytest tests/test_env.py tests/test_actor.py tests/test_config_and_dat
 To run only the fix tests (about 10 seconds):
 
 ```bash
-python -m pytest tests/test_config_defaults.py tests/test_checkpoint_loading.py tests/test_model_paths.py tests/test_episode_end.py tests/test_target_rows.py
+python -m pytest tests/test_config_defaults.py tests/test_checkpoint_loading.py tests/test_model_paths.py tests/test_episode_end.py tests/test_target_rows.py tests/test_up_axis.py
 ```
 
 Add `-v` to see each test's name and result.
@@ -96,7 +97,7 @@ in the original code (commit `961e1cf`), before any fix.
 | H2 | The condition cue is `(T - 600) / (1319 - 600)`; 600 and 1319 are the cycling data's trial lengths | `SAC/RL_Framework_Mujoco.py`, line 253 | Open |
 | H5 | The network's muscle commands are 0 to 1 regardless of the model's control range (0.002 to 1); MuJoCo clamps them | `SAC/sac.py` line 42 passes `action_space=None` to the actor (`SAC/model.py` lines 37–44) | Open (left for later) |
 | H6 | The targets-model path was built by cutting `len("musculoskeletal_model.xml")` characters off the model path, so other file names broke | `simulate.py` lines 98–101, also `find_init_pose.py`, `find_init_pose_ik_cma.py`, `visualize_trajectories_ik.py`, `append_musculo_targets.py` line 48 | **Fixed:** `config.get_musculo_targets_path()` |
-| H7 | The target's start position (0.1, 0.1, 0.85) and the mapping "data y → MuJoCo z (up)" are fixed | `append_musculo_targets.py` lines 30 and 37 | Open |
+| H7 | The target's start position (0.1, 0.1, 0.85) and the mapping "data y → MuJoCo z (up)" were fixed | `append_musculo_targets.py` lines 30 and 37 | **Partly fixed:** z is up by default, and `kinematics_up_axis = y` swaps y and z in the data on load. The start position is still typed in |
 | B1 | With no neural data, the kinematics are used as a placeholder and then normalised **in place**, so the real hand path becomes all NaN and every episode ends after 2 steps, with no error | `SAC/RL_Framework_Mujoco.py`, lines 93–104 | Open |
 | B2 | The data row for each target joint was chosen by counting tracked axes, which only worked when the locked axis was the last one (z) | `SAC/RL_Framework_Mujoco.py`, lines 585–591 | **Fixed:** x, y, z read rows 0, 1, 2 |
 | B6 | `visual_velocity` and `visual_distance_bodies` defaulted to `None`, but the code calls `len()` on them, so leaving them out of a config crashed | `config.py` lines 243–253; `SAC/RL_Framework_Mujoco.py` line 384 | **Fixed:** they default to an empty list |
@@ -125,6 +126,7 @@ One small file per bug fix. Each test fails on the code before that fix and pass
 | `test_model_paths.py` | H6 | The model-with-targets file goes next to the model (e.g. `mouse/arm.xml` → `mouse/musculo_targets.xml`), or where `musculo_targets_path` says |
 | `test_episode_end.py` | H1 | A tracked body with any name works, and any tracked body leaving its zone ends the episode |
 | `test_target_rows.py` | B2 | The target's x, y and z read data rows 0, 1 and 2, also when x is unused |
+| `test_up_axis.py` | H7 | z is "up" by default and the data is left alone; `kinematics_up_axis = y` swaps y and z in the data and in `center`; the lab's config sets it for the cycling data |
 
 ## Generalisation tests (`test_generalisation.py`)
 
@@ -135,6 +137,7 @@ Setups other than cycling that muSim now handles. Each one builds a small custom
 | `test_end_effector_with_any_name` | Train an arm whose tracking body isn't called `hand` | Episode-end check looked up `"hand"` by name (H1) |
 | `test_every_marker_can_end_episode` | With 2 markers, either one leaving its zone ends the episode | Only marker 0 was checked; marker 1 got the −25 penalty but the episode continued (H1) |
 | `test_dataset_with_x_locked` | Track y and z with x locked | The target's y joint got the NaN x row (B2) |
+| `test_dataset_with_z_up_needs_no_setting` | The cycling path saved with z as "up", and no "up" setting, gives the same target position and reward as the cycling setup | The data's y was always sent to MuJoCo's z (H7) |
 | `test_config_can_leave_out_optional_feedback` | A config can leave out `visual_velocity` / `visual_distance_bodies` | Their defaults were `None`, and the code calls `len()` on them (B6) |
 | `test_model_file_with_any_name` | A model file not named `musculoskeletal_model.xml` | The path was built by cutting off that name's length (H6) |
 

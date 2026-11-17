@@ -13,6 +13,7 @@ import numpy as np
 from gym import utils
 from . import sensory_feedback_specs, reward_function_specs, perturbation_specs
 from . import kinematics_preprocessing_specs
+import config
 
 
 import mujoco
@@ -73,8 +74,9 @@ class MujocoEnv(gym.Env):
         self.sfs_sensory_delay_timepoints = args.sensory_delay_timepoints
 
         # Load the experimental kinematics x and y coordinates from the data
-        with open(self.kinematics_path + '/kinematics.pkl', 'rb') as f:
-            kin_train_test = pickle.load(f)
+        #config.load_kinematics also swaps the data's y and z when the config
+        #says the data has y as "up" (kinematics_up_axis = y)
+        kin_train_test = config.load_kinematics(args)
 
         kin_train = kin_train_test['train']     #[num_conds][num_targets, num_coords, timepoints]
         kin_test = kin_train_test['test']       #[num_conds][num_targets, num_coords, timepoints]
@@ -120,7 +122,9 @@ class MujocoEnv(gym.Env):
         self.n_fixedsteps = args.n_fixedsteps
         self.timestep_limit = args.timestep_limit
         self.radius = args.trajectory_scaling
-        self.center = args.center
+        #center is written in the data's own x, y, z, so it gets the same
+        #y/z swap as the data
+        self.center = [config.to_model_axes(center_t, args) for center_t in args.center]
 
         #The threshold is varied dynamically in the step and reset functions 
         self.threshold_user = 0.064   #Previously it was 0.1

@@ -36,7 +36,7 @@ def test_scenario_builder_on_cycling_data(tmp_path):
     # Step 2 earns near-maximum reward and the episode continues
     assert r["rewards"][1] > 14.5 and not any(r["dones"])
     # The target starts where the data says
-    assert r["target_qpos"] == {"box:x0": r["kin_start"][0][0], "box:y0": r["kin_start"][0][1]}
+    assert r["target_qpos"] == {"box:x0": r["kin_start"][0][0], "box:z0": r["kin_start"][0][2]}
     # The condition cues are all between 0 and 1
     assert all(0 <= c <= 1 for c in r["cond_scalars"])
     # Untrained episodes last well over 20 steps (about 86 on average)

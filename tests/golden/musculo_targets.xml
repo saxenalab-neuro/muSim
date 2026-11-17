@@ -197,7 +197,7 @@
   <body name="target0" pos="0.1 0.1 0.85"> 
 <geom size="0.01 0.01 0.01" type="sphere" /> 
 <joint axis="1 0 0" name="box:x0" type="slide" limited="false" range="-6.28319  6.28319" /> 
-<joint axis="0 0 1" name="box:y0" type="slide" limited="false" range="-6.28319  6.28319" /> 
+<joint axis="0 0 1" name="box:z0" type="slide" limited="false" range="-6.28319  6.28319" /> 
 </body></worldbody>
   <asset>
     <mesh name="sternum" file="Geometry/sternum.stl" scale="   0.001    0.001    0.001" />

@@ -1,4 +1,5 @@
 import os
+import pickle
 import configargparse
 
 def get_musculo_targets_path(args):
@@ -19,6 +20,58 @@ def get_musculo_targets_path(args):
         return args.musculo_targets_path
     model_folder = os.path.dirname(args.musculoskeletal_model_path)
     return os.path.join(model_folder, 'musculo_targets.xml')
+
+def to_model_axes(xyz, args):
+    """Put one [x, y, z] triple from the data into MuJoCo's directions.
+
+    MuJoCo's "up" is z. Some datasets (the cycling data, for one) were
+    recorded with y as "up". For those, the config sets
+    kinematics_up_axis = y, and this function swaps the y and z entries so
+    the data's "up" lands on MuJoCo's "up".
+
+    - kinematics_up_axis = z (the default): returned unchanged.
+    - kinematics_up_axis = y: [x, y, z] -> [x, z, y].
+
+    Used for anything written in the data's own directions, e.g. each
+    target's `center` in the config.
+    """
+    if args.kinematics_up_axis == 'y':
+        return [xyz[0], xyz[2], xyz[1]]
+    return list(xyz)
+
+
+def load_kinematics(args, kinematics_folder=None):
+    """Load kinematics.pkl and return it with "up" on row 2 (MuJoCo's z).
+
+    Every script that needs the movements calls this one function, so the
+    y/z swap happens in exactly one place and cannot be forgotten.
+
+    The file holds 'marker_names', 'train' and 'test'. Each movement in
+    'train' / 'test' is an array [targets, 3 (x, y, z), time points].
+
+    - kinematics_up_axis = z (the default): the data is returned as it is.
+    - kinematics_up_axis = y: rows 1 (y) and 2 (z) of every movement are
+      swapped. This used to be done silently for all data, by wiring the
+      data's y to MuJoCo's z axis in append_musculo_targets.py.
+
+    kinematics_folder: only needed when the folder is not args.kinematics_path
+    as seen from the current directory (kinematics_preprocessing_specs.py
+    uses it when it is imported from a notebook one folder down).
+    """
+    if kinematics_folder is None:
+        kinematics_folder = args.kinematics_path
+
+    with open(os.path.join(kinematics_folder, 'kinematics.pkl'), 'rb') as f:
+        kin_train_test = pickle.load(f)
+
+    if args.kinematics_up_axis == 'y':
+        for split in ('train', 'test'):
+            for cond, movement in list(kin_train_test[split].items()):
+                # [targets, (x, y, z), time] -> [targets, (x, z, y), time]
+                kin_train_test[split][cond] = movement[:, [0, 2, 1], :]
+
+    return kin_train_test
+
 
 def list_of_list_of_floats(x):
     temp = x.replace('[', '').replace(']', '').split(',')
@@ -186,6 +239,15 @@ def config_parser():
                         type=str, 
                         default='kinematics_data',
                         help='path to kinematics data')
+
+    # Which direction is "up" in kinematics.pkl. MuJoCo's up is z, so z needs
+    # no change. With y, load_kinematics() (top of this file) swaps the data's
+    # y and z when it loads the file.
+    parser.add_argument('--kinematics_up_axis',
+                        type=str,
+                        default='z',
+                        choices=['z', 'y'],
+                        help="the direction that is 'up' in the kinematics data: z (default, same as MuJoCo) or y (y and z are swapped on load)")
 
     parser.add_argument('--nusim_data_path', 
                         type=str, 
