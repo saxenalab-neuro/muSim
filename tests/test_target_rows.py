@@ -52,6 +52,7 @@ def run_upd_theta(monkeypatch, rows, used):
     env = types.SimpleNamespace(
         istep=0, n_fixedsteps=25, _max_episode_steps=25 + timepoints,
         kin_to_sim={0: data}, current_cond_to_sim=0,
+        cue_to_sim={0: np.zeros(timepoints)},    # upd_theta also reads the cue; not checked here
         data=types.SimpleNamespace(qpos=np.zeros(3), qvel=np.zeros(3)),
         model=types.SimpleNamespace(joint=lambda name: types.SimpleNamespace(qposadr=joints[name])),
         set_state=lambda qpos, qvel: result.update(qpos=qpos.copy()),

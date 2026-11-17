@@ -65,11 +65,15 @@ def test_observation_layout(env):
 def test_condition_cue(env, cond, T):
     """The condition cue tells the network which condition it is in.
 
-    It's (T - 600) / (1319 - 600). The 600 and 1319 are hardcoded and suit
-    the cycling data only (H2; test_future.py shows other lengths give
-    negative cues).
+    It is read from the user's cue file (cue_data/cue.pkl), one value per time
+    point. For the cycling data the file holds (T - 600) / (1319 - 600) at
+    every time point: the numbers the code used to work out by itself (H2).
     """
     env.reset(cond)
+    assert env.condition_scalar == (T - 600) / (1319 - 600)
+    # Still the same number later in the movement
+    env.istep = 124
+    env.step(REST)
     assert env.condition_scalar == (T - 600) / (1319 - 600)
 
 

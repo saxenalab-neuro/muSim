@@ -1,8 +1,7 @@
 """What muSim should handle next. These tests FAIL on today's code, on purpose.
 
-Each test describes one thing muSim can't do yet: a dataset without neural
-recordings, or movements with other lengths. Each builds a small custom setup
-with scenarios.py.
+Each test describes one thing muSim can't do yet: today, a dataset without
+neural recordings. Each builds a small custom setup with scenarios.py.
 
 How "expected to fail" works:
   - Each test is marked @pytest.mark.xfail(strict=True, ...). pytest reports
@@ -13,9 +12,9 @@ How "expected to fail" works:
   - When a fix makes a test pass, pytest reports XPASS(strict) and the run
     FAILS. That's the reminder to delete the test's xfail line and move it to
     test_generalisation.py, where it becomes an ordinary test that protects
-    the fix. Five tests have already moved there.
+    the fix. Seven tests have already moved or been added there.
 
-IDs (H2, B1, ...) refer to the hardcodes and bugs in the codebase guide.
+IDs (B1, ...) refer to the hardcodes and bugs in the codebase guide.
 """
 import numpy as np
 import pytest
@@ -75,22 +74,3 @@ def test_training_without_neural_data(tmp_path):
     steps = Scenario(tmp_path, kin, neural=None).train()
     # With the same data plus neural recordings, untrained episodes last ~86 steps
     assert steps.mean() > 20, f"episodes lasted {steps.tolist()} steps"
-
-
-@pytest.mark.xfail(strict=True, raises=AssertionError,
-                   reason="H2: condition cue uses the cycling data's lengths (600 and 1319)")
-def test_condition_cue_scales_to_dataset(tmp_path):
-    """The condition cue stays between 0 and 1 for a dataset with shorter trials.
-
-    Fails today: the cue is (T - 600) / (1319 - 600), fixed to the cycling
-    data, so trials shorter than 600 samples give negative cues.
-    """
-    kin, neural = cycling_data()
-    # Cut every trial short (300-450 samples, all under 600)
-    lengths = {"train": [300, 350, 400, 450], "test": [320, 420]}
-    for split, ls in lengths.items():
-        for c, n in enumerate(ls):
-            kin[split][c] = kin[split][c][..., :n]
-            neural[split][c] = neural[split][c][:n]
-    cues = Scenario(tmp_path, kin, neural).probe()["cond_scalars"]
-    assert all(0 <= c <= 1 for c in cues), f"cues {cues}"

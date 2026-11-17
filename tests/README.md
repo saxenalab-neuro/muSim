@@ -18,7 +18,7 @@ There are five groups:
    network, settings) still work as they did?
 3. **Fix tests** (`test_config_defaults.py`, `test_checkpoint_loading.py`,
    `test_model_paths.py`, `test_episode_end.py`, `test_target_rows.py`,
-   `test_up_axis.py`): one
+   `test_up_axis.py`, `test_cue.py`): one
    small file per bug fix, checking that fix directly.
 4. **Generalisation tests** (`test_generalisation.py`): setups other than
    cycling that muSim now handles, run end to end. They used to fail.
@@ -53,10 +53,10 @@ python -m pytest
 This takes about 3 minutes. A healthy result ends with:
 
 ```
-82 passed, 3 xfailed
+91 passed, 2 xfailed
 ```
 
-"xfailed" means "failed as expected": those are the 3 expected-failure tests
+"xfailed" means "failed as expected": those are the 2 expected-failure tests
 in group 5, and the run still counts as a pass.
 
 To run only the fast unit tests (under 1 second):
@@ -68,7 +68,7 @@ python -m pytest tests/test_env.py tests/test_actor.py tests/test_config_and_dat
 To run only the fix tests (about 10 seconds):
 
 ```bash
-python -m pytest tests/test_config_defaults.py tests/test_checkpoint_loading.py tests/test_model_paths.py tests/test_episode_end.py tests/test_target_rows.py tests/test_up_axis.py
+python -m pytest tests/test_config_defaults.py tests/test_checkpoint_loading.py tests/test_model_paths.py tests/test_episode_end.py tests/test_target_rows.py tests/test_up_axis.py tests/test_cue.py
 ```
 
 Add `-v` to see each test's name and result.
@@ -94,7 +94,7 @@ in the original code (commit `961e1cf`), before any fix.
 | ID | What it is | Where | Status |
 |---|---|---|---|
 | H1 | The episode-end check looked up bodies literally named `"hand"` and `"target0"`, so only that one pair could end an episode | `SAC/RL_Framework_Mujoco.py`, `is_done()`, lines 360–361 | **Fixed:** `is_done()` uses the body/target pairs from the data |
-| H2 | The condition cue is `(T - 600) / (1319 - 600)`; 600 and 1319 are the cycling data's trial lengths | `SAC/RL_Framework_Mujoco.py`, line 253 | Open |
+| H2 | The condition cue was `(T - 600) / (1319 - 600)`; 600 and 1319 are the cycling data's trial lengths | `SAC/RL_Framework_Mujoco.py`, line 253 | **Fixed:** the cue is read from the user's `cue.pkl`, one value per time point, and checked against the kinematics |
 | H5 | The network's muscle commands are 0 to 1 regardless of the model's control range (0.002 to 1); MuJoCo clamps them | `SAC/sac.py` line 42 passes `action_space=None` to the actor (`SAC/model.py` lines 37–44) | Open (left for later) |
 | H6 | The targets-model path was built by cutting `len("musculoskeletal_model.xml")` characters off the model path, so other file names broke | `simulate.py` lines 98–101, also `find_init_pose.py`, `find_init_pose_ik_cma.py`, `visualize_trajectories_ik.py`, `append_musculo_targets.py` line 48 | **Fixed:** `config.get_musculo_targets_path()` |
 | H7 | The target's start position (0.1, 0.1, 0.85) and the mapping "data y → MuJoCo z (up)" were fixed | `append_musculo_targets.py` lines 30 and 37 | **Partly fixed:** z is up by default, and `kinematics_up_axis = y` swaps y and z in the data on load. The start position is still typed in |
@@ -127,6 +127,7 @@ One small file per bug fix. Each test fails on the code before that fix and pass
 | `test_episode_end.py` | H1 | A tracked body with any name works, and any tracked body leaving its zone ends the episode |
 | `test_target_rows.py` | B2 | The target's x, y and z read data rows 0, 1 and 2, also when x is unused |
 | `test_up_axis.py` | H7 | z is "up" by default and the data is left alone; `kinematics_up_axis = y` swaps y and z in the data and in `center`; the lab's config sets it for the cycling data |
+| `test_cue.py` | H2 | A cue that fits is loaded; a missing file, a wrong length, a single number, a missing movement or a missing `test` entry each stop the run with a clear error; the lab's `cue.pkl` holds the old formula's numbers; a cue that changes during a movement is followed |
 
 ## Generalisation tests (`test_generalisation.py`)
 
@@ -138,6 +139,7 @@ Setups other than cycling that muSim now handles. Each one builds a small custom
 | `test_every_marker_can_end_episode` | With 2 markers, either one leaving its zone ends the episode | Only marker 0 was checked; marker 1 got the −25 penalty but the episode continued (H1) |
 | `test_dataset_with_x_locked` | Track y and z with x locked | The target's y joint got the NaN x row (B2) |
 | `test_dataset_with_z_up_needs_no_setting` | The cycling path saved with z as "up", and no "up" setting, gives the same target position and reward as the cycling setup | The data's y was always sent to MuJoCo's z (H7) |
+| `test_user_cue_for_any_movement_length` | Movements shorter than 600 samples get the cues the user wrote in the cue file | The cue used the cycling data's 600 and 1319, so shorter trials gave negative cues (H2) |
 | `test_config_can_leave_out_optional_feedback` | A config can leave out `visual_velocity` / `visual_distance_bodies` | Their defaults were `None`, and the code calls `len()` on them (B6) |
 | `test_model_file_with_any_name` | A model file not named `musculoskeletal_model.xml` | The path was built by cutting off that name's length (H6) |
 
@@ -149,7 +151,6 @@ What muSim should handle next. Each one builds a small custom setup with `scenar
 |---|---|---|
 | `test_dataset_without_neural_data_keeps_kinematics` | A dataset with no neural recordings loads correctly | The kinematics are "normalised" as if they were neural data and become all NaN (B1) |
 | `test_training_without_neural_data` | Training on it behaves normally | Every episode ends after 2 steps (B1) |
-| `test_condition_cue_scales_to_dataset` | Condition cue stays in [0, 1] for other trial lengths | Uses the cycling data's 600 and 1319, so shorter trials give negative cues (H2) |
 
 They are marked `xfail(strict=True, raises=AssertionError)`: muSim has to run and give the wrong result for it to count as the expected failure, so a broken test setup still shows up as a real failure. `test_scenario_builder_on_cycling_data` is an ordinary test that checks the builder works on the unchanged cycling setup.
 

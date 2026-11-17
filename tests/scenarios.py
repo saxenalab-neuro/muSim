@@ -1,7 +1,7 @@
 """Builds small custom muSim setups, to try things other than the monkey cycling task.
 
 Used by test_future.py. A Scenario puts everything muSim needs into a
-temporary folder (dataset, optional neural data, model, config, starting
+temporary folder (dataset, cue, optional neural data, model, config, starting
 pose), with whatever changes a test wants: a body renamed, a dataset without
 neural recordings, a model file with another name, and so on. The repo's own
 files are never changed.
@@ -29,6 +29,24 @@ def cycling_data():
     return copy.deepcopy(kin), copy.deepcopy(neural)
 
 
+def constant_cue(kinematics, values=None):
+    """A cue file's contents for `kinematics`: for every movement, one number
+    repeated at each of its time points.
+
+    values: {"train": [one number per movement], "test": [...]}. Left out, it
+    uses the cycling formula (T - 600) / (1319 - 600), which is what the
+    lab's own cue_data/cue.pkl holds.
+    """
+    cue = {}
+    for split in ["train", "test"]:
+        cue[split] = {}
+        for c, k in kinematics[split].items():
+            T = k.shape[-1]
+            value = (T - 600) / (1319 - 600) if values is None else values[split][c]
+            cue[split][c] = np.full(T, value)
+    return cue
+
+
 class Scenario:
     """One custom setup in a temporary folder.
 
@@ -36,6 +54,8 @@ class Scenario:
         tmp           the folder to build in (a test's tmp_path)
         kinematics    the dataset to use (usually cycling_data(), changed)
         neural        neural activity, or None for a dataset without recordings
+        cue           the cue file's contents (see constant_cue). Left out, it
+                      is the cycling formula applied to `kinematics`
         rename_hand   give the model's "hand" body a different name
         model_file    file name for the model (default is the lab's usual name)
         model_subdir  put the model in a subfolder with a different name
@@ -46,7 +66,7 @@ class Scenario:
     short training run.
     """
 
-    def __init__(self, tmp, kinematics, neural=None, rename_hand=None,
+    def __init__(self, tmp, kinematics, neural=None, cue=None, rename_hand=None,
                  model_file="musculoskeletal_model.xml", model_subdir=".",
                  drop_settings=(), extra_args=()):
         self.tmp = Path(tmp)
@@ -57,6 +77,11 @@ class Scenario:
         data.mkdir()
         with open(data / "kinematics.pkl", "wb") as f:
             pickle.dump(kinematics, f)
+        # The cue, in its own file, one value per time point of each movement
+        cue_dir = self.tmp / "cue"
+        cue_dir.mkdir()
+        with open(cue_dir / "cue.pkl", "wb") as f:
+            pickle.dump(constant_cue(kinematics) if cue is None else cue, f)
         # The neural data folder. Left empty when neural is None, which is
         # how muSim knows there are no recordings.
         neural_dir = self.tmp / "neural"
@@ -93,7 +118,8 @@ class Scenario:
 
         # Command-line settings that point muSim at everything above
         self.args = ["--config", cfg, "--musculoskeletal_model_path", self.model,
-                     "--kinematics_path", data, "--nusim_data_path", neural_dir,
+                     "--kinematics_path", data, "--cue_data_path", cue_dir,
+                     "--nusim_data_path", neural_dir,
                      "--initial_pose_path", pose_dir, *extra_args]
         # Add the target bodies to the model, as the lab's pipeline does
         mr.run("append_musculo_targets.py", *self.args)

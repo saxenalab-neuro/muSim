@@ -1,6 +1,7 @@
 import os
 import pickle
 import configargparse
+import numpy as np
 
 def get_musculo_targets_path(args):
     """Return the path of the model with the target bodies added.
@@ -71,6 +72,59 @@ def load_kinematics(args, kinematics_folder=None):
                 kin_train_test[split][cond] = movement[:, [0, 2, 1], :]
 
     return kin_train_test
+
+
+def load_cue(args, kin_train_test):
+    """Load cue.pkl and check it against the kinematics. Returns the cue.
+
+    The cue is the number that tells the network which movement (condition)
+    it is doing. The user provides it in its own file, cue.pkl, in the folder
+    args.cue_data_path. It used to be worked out inside the code from the
+    movement's length, with two cycling-data numbers (600 and 1319) typed in.
+
+    Format, the same layout as kinematics.pkl:
+        {'train': {0: cue, 1: cue, ...}, 'test': {0: cue, 1: cue, ...}}
+    Each cue is a 1-D array with one value per time point of that movement.
+    A cue may stay the same for the whole movement or change during it.
+
+    kin_train_test: the loaded kinematics (from load_kinematics), which the
+    cue is checked against.
+
+    The checks, each with an error that says what to fix:
+    - the file exists and has 'train' and 'test';
+    - it has a cue for exactly the movements in the kinematics;
+    - each cue is 1-D and as long as its movement.
+    """
+    cue_file = os.path.join(args.cue_data_path, 'cue.pkl')
+    if not os.path.isfile(cue_file):
+        raise FileNotFoundError(
+            f"Cue file not found: {cue_file}. Provide a cue.pkl with one cue value per "
+            "time point for every movement (see readme_basic.md), or set cue_data_path "
+            "to the folder that holds it.")
+
+    with open(cue_file, 'rb') as f:
+        cue = pickle.load(f)
+
+    for split in ('train', 'test'):
+        if split not in cue:
+            raise ValueError(f"{cue_file} has no '{split}' entry. It needs 'train' and 'test', like kinematics.pkl.")
+
+        kinematics = kin_train_test[split]
+        if set(cue[split]) != set(kinematics):
+            raise ValueError(
+                f"{cue_file} '{split}' has cues for movements {sorted(cue[split])}, "
+                f"but the kinematics has movements {sorted(kinematics)}. They must match.")
+
+        for cond, movement in kinematics.items():
+            cue_shape = np.shape(cue[split][cond])
+            timepoints = movement.shape[-1]     # movement is [targets, 3, time points]
+            if cue_shape != (timepoints,):
+                raise ValueError(
+                    f"{cue_file} '{split}' movement {cond}: the cue has shape {cue_shape}, "
+                    f"but that movement's kinematics has {timepoints} time points. "
+                    f"The cue must be 1-D with {timepoints} values, one per time point.")
+
+    return cue
 
 
 def list_of_list_of_floats(x):
@@ -248,6 +302,14 @@ def config_parser():
                         default='z',
                         choices=['z', 'y'],
                         help="the direction that is 'up' in the kinematics data: z (default, same as MuJoCo) or y (y and z are swapped on load)")
+
+    # The folder that holds cue.pkl: the cue that tells the network which
+    # movement it is doing, one value per time point (see load_cue() at the
+    # top of this file).
+    parser.add_argument('--cue_data_path',
+                        type=str,
+                        default='cue_data',
+                        help='path to the folder with cue.pkl (the condition cue for training and testing)')
 
     parser.add_argument('--nusim_data_path', 
                         type=str, 

@@ -16,7 +16,7 @@ IDs (H1, B2, ...) refer to the hardcodes and bugs in the codebase guide.
 """
 import numpy as np
 
-from scenarios import Scenario, cycling_data
+from scenarios import Scenario, constant_cue, cycling_data
 
 
 def two_targets_args(n):
@@ -111,6 +111,27 @@ def test_dataset_with_z_up_needs_no_setting(tmp_path):
     assert z_up["target_qpos"] == cycling["target_qpos"]
     assert z_up["rewards"] == cycling["rewards"]
     assert z_up["dones"] == cycling["dones"]
+
+
+def test_user_cue_for_any_movement_length(tmp_path):
+    """The network gets the cue the user wrote in the cue file, whatever the
+    movements' lengths.
+
+    Used to fail (H2): the cue was worked out as (T - 600) / (1319 - 600),
+    fixed to the cycling data, so movements shorter than 600 samples got
+    negative cues. Fixed by reading the cue from the user's own cue.pkl.
+    """
+    kin, neural = cycling_data()
+    # Cut every movement short (300-450 samples, all under 600)
+    lengths = {"train": [300, 350, 400, 450], "test": [320, 420]}
+    for split, ls in lengths.items():
+        for c, n in enumerate(ls):
+            kin[split][c] = kin[split][c][..., :n]
+            neural[split][c] = neural[split][c][:n]
+    # The user's own cues: one number per movement, repeated at every time point
+    cue = constant_cue(kin, {"train": [0.2, 0.4, 0.6, 0.8], "test": [0.3, 0.7]})
+    cues = Scenario(tmp_path, kin, neural, cue=cue).probe()["cond_scalars"]
+    assert cues == [0.2, 0.4, 0.6, 0.8]
 
 
 # --- Settings and models from the config ----------------------------------------

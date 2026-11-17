@@ -27,6 +27,10 @@ kinematics_path = kinematics_data
 #The cycling data has y as up, so its y and z are swapped when it is loaded
 kinematics_up_axis = y
 
+#Path to the folder that contains cue.pkl: the cue that tells the network which movement it is doing
+#One cue value per time point for every movement, so each cue is as long as its kinematics
+cue_data_path = cue_data
+
 #Path to the folder that contains the experimental neural data
 nusim_data_path = nusim_neural_data
 
