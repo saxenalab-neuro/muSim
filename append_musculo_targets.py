@@ -45,4 +45,5 @@ for child in root:
 
 
 #Now save the updated musculoskeletal model with target bodies added
-tree.write(args.musculoskeletal_model_path[:-len('musculoskeletal_model.xml')] + 'musculo_targets.xml')
+#The output path comes from the config (see config.get_musculo_targets_path)
+tree.write(config.get_musculo_targets_path(args))

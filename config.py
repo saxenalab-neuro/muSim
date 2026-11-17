@@ -1,4 +1,24 @@
+import os
 import configargparse
+
+def get_musculo_targets_path(args):
+    """Return the path of the model with the target bodies added.
+
+    append_musculo_targets.py writes this file, and every later script
+    (find_init_pose.py, simulate.py, ...) reads it, so they all call this
+    one function to agree on where it is.
+
+    - If the config sets musculo_targets_path, use exactly that.
+    - Otherwise put it next to the model, as musculo_targets.xml.
+      e.g. mouse/arm.xml -> mouse/musculo_targets.xml
+
+    Putting it next to the model by default means that changing only
+    musculoskeletal_model_path can never overwrite another model's file.
+    """
+    if args.musculo_targets_path:
+        return args.musculo_targets_path
+    model_folder = os.path.dirname(args.musculoskeletal_model_path)
+    return os.path.join(model_folder, 'musculo_targets.xml')
 
 def list_of_list_of_floats(x):
     temp = x.replace('[', '').replace(']', '').split(',')
@@ -147,6 +167,16 @@ def config_parser():
                         default='musculoskeletal_model/musculoskeletal_model.xml',
                         help='path of musculoskeletal model')
 
+    # Where append_musculo_targets.py writes the model with the target bodies
+    # added, and where every later script reads it from. Optional: when left
+    # out, get_musculo_targets_path() (top of this file) puts it next to the
+    # model. It used to be worked out by cutting len('musculoskeletal_model.xml')
+    # characters off musculoskeletal_model_path, which broke for other names.
+    parser.add_argument('--musculo_targets_path',
+                        type=str,
+                        default=None,
+                        help='path of the model with the target bodies added (default: musculo_targets.xml next to the model)')
+
     parser.add_argument('--initial_pose_path', 
                         type=str, 
                         default='initial_pose',
@@ -234,22 +264,25 @@ def config_parser():
                         default= False,
                         help='Visual feedback consists of x/y/z coordinates of the specified bodies in the model')
 
-    parser.add_argument('--visual_feedback_bodies', 
+    # The three visual settings below are optional. They default to an empty
+    # list, not None, because the environment counts their items with len().
+    # An empty list means "no extra senses"; None would crash that count.
+    parser.add_argument('--visual_feedback_bodies',
                         type= list_of_string_names,
                         nargs= '*',
-                        default= None,
+                        default= [],
                         help='Append the names musculo bodies from which visual feedback should be included')
 
     parser.add_argument('--visual_distance_bodies', 
                         type= list_of_tuples_of_strings,
                         nargs= '*',
-                        default= None,
+                        default= [],
                         help='Specify the names of the bodies as tuples for which the visual distance should be included in the feedback')
 
-    parser.add_argument('--visual_velocity', 
+    parser.add_argument('--visual_velocity',
                         type= list_of_string_names,
                         nargs= '*',
-                        default= None,
+                        default= [],
                         help='Specify the names of the bodies for which the visual velocity should be included in the feedback')
 
     parser.add_argument('--sensory_delay_timepoints', 

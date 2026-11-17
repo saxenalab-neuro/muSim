@@ -12,6 +12,11 @@ verbose_training = True
 #The path to the folder that contains the musculoskeletal model file
 musculoskeletal_model_path = musculoskeletal_model/musculoskeletal_model.xml
 
+#Optional: the path of the model with the target bodies added
+#append_musculo_targets.py writes this file; the other scripts read it
+#Leave it out to save it next to the model, as musculo_targets.xml
+#musculo_targets_path = musculoskeletal_model/musculo_targets.xml
+
 #Path to the folder that contains intial pose (init_qpos.npy and init_qvel.npy) files
 initial_pose_path = initial_pose
 

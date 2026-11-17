@@ -357,18 +357,24 @@ class Muscle_Env(MujocoEnv):
 
     def is_done(self):
         #Define the distance threshold termination criteria
-        target_position= self.data.xpos[self.model.body("target0").id].copy()
-        hand_position= self.data.xpos[self.model.body("hand").id].copy()
-        
-        criteria= hand_position - target_position
-
-        if self.istep < self.timestep_limit:
-            if np.abs(criteria[0]) > self.threshold or np.abs(criteria[1]) > self.threshold or np.abs(criteria[2]) > self.threshold:
-                return True
-            else:
-                return False
-        else:
+        #The body/target pairs come from the data (marker_names in the kinematics
+        #file), e.g. [("hand", "target0")] for the cycling monkey. They used to be
+        #typed in as "hand" and "target0", so a model whose part had another name
+        #(e.g. "paw") crashed. The reward uses these same pairs, and like the
+        #reward, the episode ends if ANY tracked body leaves its zone.
+        if self.istep >= self.timestep_limit:
             return True
+
+        for musculo_body, target in kinematics_preprocessing_specs.musculo_tracking:
+            body_position= self.data.xpos[self.model.body(musculo_body).id].copy()
+            target_position= self.data.xpos[self.model.body(target).id].copy()
+
+            criteria= body_position - target_position
+
+            if (np.abs(criteria) > self.threshold).any():
+                return True
+
+        return False
 
     def step(self, action):
         self.istep += 1
@@ -576,6 +582,10 @@ class Muscle_Env(MujocoEnv):
         crnt_qpos = self.data.qpos.copy()
         crnt_qvel = self.data.qvel.copy()
 
+        #The data always has 3 rows per target: row 0 = x, row 1 = y, row 2 = z
+        #(an unused direction is left blank, NaN). Each joint reads its own row.
+        #y and z used to pick their row by counting the used directions before
+        #them, which read the wrong row whenever x was unused.
         for i_target in range(self.kin_to_sim[self.current_cond_to_sim].shape[0]):
             if kinematics_preprocessing_specs.xyz_target[i_target][0]:
                 x_joint_idx = self.model.joint(f"box:x{i_target}").qposadr
@@ -584,11 +594,11 @@ class Muscle_Env(MujocoEnv):
 
             if kinematics_preprocessing_specs.xyz_target[i_target][1]:
                 y_joint_idx = self.model.joint(f"box:y{i_target}").qposadr
-                crnt_qpos[y_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0], self.tpoint_to_sim]
+                crnt_qpos[y_joint_idx] = coords_to_sim[i_target, 1, self.tpoint_to_sim]
 
             if kinematics_preprocessing_specs.xyz_target[i_target][2]:
                 z_joint_idx = self.model.joint(f"box:z{i_target}").qposadr
-                crnt_qpos[z_joint_idx] = coords_to_sim[i_target, kinematics_preprocessing_specs.xyz_target[i_target][0] + kinematics_preprocessing_specs.xyz_target[i_target][1], self.tpoint_to_sim]
+                crnt_qpos[z_joint_idx] = coords_to_sim[i_target, 2, self.tpoint_to_sim]
 
         #Now set the state
         self.set_state(crnt_qpos, crnt_qvel)

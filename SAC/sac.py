@@ -1,4 +1,5 @@
 import os
+import warnings
 import torch
 import torch.nn.functional as F
 from torch.optim import Adam
@@ -26,9 +27,14 @@ class Agent():
                  zeta_nusim: float,
                  cuda: bool):
 
-        if cuda:
+        # Use the GPU if the config asks for it (cuda = True) and this computer
+        # has one. Otherwise fall back to the CPU with a warning, so the lab's
+        # config (which sets cuda = True) also runs on a laptop without a GPU.
+        if cuda and torch.cuda.is_available():
             self.device = torch.device("cuda")
         else:
+            if cuda:
+                warnings.warn("cuda = True, but no GPU was found. Using the CPU instead.")
             self.device = torch.device("cpu")
 
         # Save the regularization parameters
