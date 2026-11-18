@@ -58,7 +58,7 @@ If facing errors
     * libglew1.5
     * libglew-dev
     * libosmesa6-dev
-    * libgl1-mesa-glx
+    * libgl1-mesa-glx (or libgl1 on Ubuntu 24.04+)
     * libglfw3
 
 2. Lastly, within the conda environment there are additional packages necessary to ensure the training can run:
