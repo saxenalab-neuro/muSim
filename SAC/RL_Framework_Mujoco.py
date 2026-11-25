@@ -13,6 +13,7 @@ import numpy as np
 from gym import utils
 from . import sensory_feedback_specs, reward_function_specs, perturbation_specs
 from . import kinematics_preprocessing_specs
+import config
 
 
 import mujoco
@@ -73,11 +74,19 @@ class MujocoEnv(gym.Env):
         self.sfs_sensory_delay_timepoints = args.sensory_delay_timepoints
 
         # Load the experimental kinematics x and y coordinates from the data
-        with open(self.kinematics_path + '/kinematics.pkl', 'rb') as f:
-            kin_train_test = pickle.load(f)
+        #config.load_kinematics also swaps the data's y and z when the config
+        #says the data has y as "up" (kinematics_up_axis = y)
+        kin_train_test = config.load_kinematics(args)
 
         kin_train = kin_train_test['train']     #[num_conds][num_targets, num_coords, timepoints]
         kin_test = kin_train_test['test']       #[num_conds][num_targets, num_coords, timepoints]
+
+        #Load the cue (the high-level task scalar signal) from the user's cue.pkl
+        #config.load_cue also checks it has one value per kinematics time point
+        cue_train_test = config.load_cue(args, kin_train_test)
+        self.cue_train = cue_train_test['train']    #[num_conds][timepoints]
+        self.cue_test = cue_train_test['test']      #[num_conds][timepoints]
+        self.cue_to_sim = self.cue_train
 
 
         #Load the neural activities for nusim if they exist
@@ -120,7 +129,9 @@ class MujocoEnv(gym.Env):
         self.n_fixedsteps = args.n_fixedsteps
         self.timestep_limit = args.timestep_limit
         self.radius = args.trajectory_scaling
-        self.center = args.center
+        #center is written in the data's own x, y, z, so it gets the same
+        #y/z swap as the data
+        self.center = [config.to_model_axes(center_t, args) for center_t in args.center]
 
         #The threshold is varied dynamically in the step and reset functions 
         self.threshold_user = 0.064   #Previously it was 0.1
@@ -198,6 +209,14 @@ class MujocoEnv(gym.Env):
         #Update the kinematics to simulate
         self.na_to_sim.update(self.na_test)
 
+        #Repeat for the cue
+        #First update the keys of self.cue_test
+        for cond in range(len(self.cue_test)):
+            self.cue_test[len(self.cue_train) + cond] = self.cue_test.pop(cond)
+
+        #Update the cue to simulate
+        self.cue_to_sim.update(self.cue_test)
+
         #Repeat for the stimulus feedback
         #First update the keys of self.stim_data_test
         if self.stim_fb_exists:
@@ -249,8 +268,11 @@ class MujocoEnv(gym.Env):
         
         self.neural_activity = self.na_to_sim[cond_to_select]
 
-        #Set the high-level task scalar signal
-        self.condition_scalar = (self.kin_to_sim[self.current_cond_to_sim].shape[-1] - 600) / (1319 - 600)
+        #Set the high-level task scalar signal to the cue at the first time point
+        #It is read from the user's cue.pkl. It used to be worked out here as
+        #(timepoints - 600) / (1319 - 600), which only suits the cycling data.
+        #upd_theta moves it along with the kinematics at every step
+        self.condition_scalar = float(self.cue_to_sim[self.current_cond_to_sim][0])
         #Set the max episode steps to reset after one cycle for multiple cycles
         self._max_episode_steps = self.kin_to_sim[self.current_cond_to_sim].shape[-1] + self.n_fixedsteps
 
@@ -576,6 +598,9 @@ class Muscle_Env(MujocoEnv):
             self.tpoint_to_sim = int(((self.kin_to_sim[self.current_cond_to_sim].shape[-1]-1)/(self._max_episode_steps-self.n_fixedsteps)) * ((self.istep - self.n_fixedsteps) % (self._max_episode_steps - self.n_fixedsteps)))
 
         self.coord_idx = self.tpoint_to_sim
+
+        #The cue for the same time point as the kinematics
+        self.condition_scalar = float(self.cue_to_sim[self.current_cond_to_sim][self.tpoint_to_sim])
 
         coords_to_sim = self.kin_to_sim[self.current_cond_to_sim]
 

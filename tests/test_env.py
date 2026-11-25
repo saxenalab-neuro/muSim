@@ -65,11 +65,15 @@ def test_observation_layout(env):
 def test_condition_cue(env, cond, T):
     """The condition cue tells the network which condition it is in.
 
-    It's (T - 600) / (1319 - 600). The 600 and 1319 are hardcoded and suit
-    the cycling data only (H2; test_future.py shows other lengths give
-    negative cues).
+    It is read from the user's cue file (cue_data/cue.pkl), one value per time
+    point. For the cycling data the file holds (T - 600) / (1319 - 600) at
+    every time point: the numbers the code used to work out by itself (H2).
     """
     env.reset(cond)
+    assert env.condition_scalar == (T - 600) / (1319 - 600)
+    # Still the same number later in the movement
+    env.istep = 124
+    env.step(REST)
     assert env.condition_scalar == (T - 600) / (1319 - 600)
 
 
@@ -186,30 +190,31 @@ def test_target_follows_kinematics(env):
     env.reset(cond)
     kin = env.kin_to_sim[cond]          # [marker, x/y/z, time] after scaling and centring
     T = kin.shape[-1]
-    # Where the target's x and y joints are stored in the simulator state
+    # Where the target's x and z (up) joints are stored in the simulator state
     x0 = env.model.joint("box:x0").qposadr[0]
-    y0 = env.model.joint("box:y0").qposadr[0]
+    z0 = env.model.joint("box:z0").qposadr[0]
 
     env.step(REST)                                   # held still for the first 25 steps
     assert env.tpoint_to_sim == 0
-    assert env.data.qpos[x0] == kin[0, 0, 0] and env.data.qpos[y0] == kin[0, 1, 0]
+    assert env.data.qpos[x0] == kin[0, 0, 0] and env.data.qpos[z0] == kin[0, 2, 0]
 
     env.istep = 124
     env.step(REST)                                   # step 125: 100 steps into the path
     t = int((T - 1) / T * 100)
     assert env.tpoint_to_sim == t
-    assert env.data.qpos[x0] == kin[0, 0, t] and env.data.qpos[y0] == kin[0, 1, t]
+    assert env.data.qpos[x0] == kin[0, 0, t] and env.data.qpos[z0] == kin[0, 2, t]
 
 
 def test_target_axis_mapping(env):
     """Where the data puts the target in the simulator.
 
-    The target starts at [0.1, 0.1, 0.85] m. Data x moves it along MuJoCo x,
-    and data y moves it along MuJoCo z (up). Both are hardcoded (H7).
+    The target starts at [0.1, 0.1, 0.85] m (still typed into the code). Row 0
+    of the loaded data moves it along MuJoCo x, and row 2 along MuJoCo z (up).
+    For the cycling file, row 2 is the file's y, swapped on load because the
+    config sets kinematics_up_axis = y.
     """
-    # Data x moves the target along MuJoCo x, data y along MuJoCo z (H7)
     env.reset(0)
     env.step(REST)
     kin = env.kin_to_sim[0]
     np.testing.assert_allclose(body_pos(env, "target0"),
-                               [0.1 + kin[0, 0, 0], 0.1, 0.85 + kin[0, 1, 0]], atol=1e-12)
+                               [0.1 + kin[0, 0, 0], 0.1, 0.85 + kin[0, 2, 0]], atol=1e-12)

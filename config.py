@@ -1,5 +1,7 @@
 import os
+import pickle
 import configargparse
+import numpy as np
 
 def get_musculo_targets_path(args):
     """Return the path of the model with the target bodies added.
@@ -19,6 +21,111 @@ def get_musculo_targets_path(args):
         return args.musculo_targets_path
     model_folder = os.path.dirname(args.musculoskeletal_model_path)
     return os.path.join(model_folder, 'musculo_targets.xml')
+
+def to_model_axes(xyz, args):
+    """Put one [x, y, z] triple from the data into MuJoCo's directions.
+
+    MuJoCo's "up" is z. Some datasets (the cycling data, for one) were
+    recorded with y as "up". For those, the config sets
+    kinematics_up_axis = y, and this function swaps the y and z entries so
+    the data's "up" lands on MuJoCo's "up".
+
+    - kinematics_up_axis = z (the default): returned unchanged.
+    - kinematics_up_axis = y: [x, y, z] -> [x, z, y].
+
+    Used for anything written in the data's own directions, e.g. each
+    target's `center` in the config.
+    """
+    if args.kinematics_up_axis == 'y':
+        return [xyz[0], xyz[2], xyz[1]]
+    return list(xyz)
+
+
+def load_kinematics(args, kinematics_folder=None):
+    """Load kinematics.pkl and return it with "up" on row 2 (MuJoCo's z).
+
+    Every script that needs the movements calls this one function, so the
+    y/z swap happens in exactly one place and cannot be forgotten.
+
+    The file holds 'marker_names', 'train' and 'test'. Each movement in
+    'train' / 'test' is an array [targets, 3 (x, y, z), time points].
+
+    - kinematics_up_axis = z (the default): the data is returned as it is.
+    - kinematics_up_axis = y: rows 1 (y) and 2 (z) of every movement are
+      swapped. This used to be done silently for all data, by wiring the
+      data's y to MuJoCo's z axis in append_musculo_targets.py.
+
+    kinematics_folder: only needed when the folder is not args.kinematics_path
+    as seen from the current directory (kinematics_preprocessing_specs.py
+    uses it when it is imported from a notebook one folder down).
+    """
+    if kinematics_folder is None:
+        kinematics_folder = args.kinematics_path
+
+    with open(os.path.join(kinematics_folder, 'kinematics.pkl'), 'rb') as f:
+        kin_train_test = pickle.load(f)
+
+    if args.kinematics_up_axis == 'y':
+        for split in ('train', 'test'):
+            for cond, movement in list(kin_train_test[split].items()):
+                # [targets, (x, y, z), time] -> [targets, (x, z, y), time]
+                kin_train_test[split][cond] = movement[:, [0, 2, 1], :]
+
+    return kin_train_test
+
+
+def load_cue(args, kin_train_test):
+    """Load cue.pkl and check it against the kinematics. Returns the cue.
+
+    The cue is the number that tells the network which movement (condition)
+    it is doing. The user provides it in its own file, cue.pkl, in the folder
+    args.cue_data_path. It used to be worked out inside the code from the
+    movement's length, with two cycling-data numbers (600 and 1319) typed in.
+
+    Format, the same layout as kinematics.pkl:
+        {'train': {0: cue, 1: cue, ...}, 'test': {0: cue, 1: cue, ...}}
+    Each cue is a 1-D array with one value per time point of that movement.
+    A cue may stay the same for the whole movement or change during it.
+
+    kin_train_test: the loaded kinematics (from load_kinematics), which the
+    cue is checked against.
+
+    The checks, each with an error that says what to fix:
+    - the file exists and has 'train' and 'test';
+    - it has a cue for exactly the movements in the kinematics;
+    - each cue is 1-D and as long as its movement.
+    """
+    cue_file = os.path.join(args.cue_data_path, 'cue.pkl')
+    if not os.path.isfile(cue_file):
+        raise FileNotFoundError(
+            f"Cue file not found: {cue_file}. Provide a cue.pkl with one cue value per "
+            "time point for every movement (see readme_basic.md), or set cue_data_path "
+            "to the folder that holds it.")
+
+    with open(cue_file, 'rb') as f:
+        cue = pickle.load(f)
+
+    for split in ('train', 'test'):
+        if split not in cue:
+            raise ValueError(f"{cue_file} has no '{split}' entry. It needs 'train' and 'test', like kinematics.pkl.")
+
+        kinematics = kin_train_test[split]
+        if set(cue[split]) != set(kinematics):
+            raise ValueError(
+                f"{cue_file} '{split}' has cues for movements {sorted(cue[split])}, "
+                f"but the kinematics has movements {sorted(kinematics)}. They must match.")
+
+        for cond, movement in kinematics.items():
+            cue_shape = np.shape(cue[split][cond])
+            timepoints = movement.shape[-1]     # movement is [targets, 3, time points]
+            if cue_shape != (timepoints,):
+                raise ValueError(
+                    f"{cue_file} '{split}' movement {cond}: the cue has shape {cue_shape}, "
+                    f"but that movement's kinematics has {timepoints} time points. "
+                    f"The cue must be 1-D with {timepoints} values, one per time point.")
+
+    return cue
+
 
 def list_of_list_of_floats(x):
     temp = x.replace('[', '').replace(']', '').split(',')
@@ -186,6 +293,23 @@ def config_parser():
                         type=str, 
                         default='kinematics_data',
                         help='path to kinematics data')
+
+    # Which direction is "up" in kinematics.pkl. MuJoCo's up is z, so z needs
+    # no change. With y, load_kinematics() (top of this file) swaps the data's
+    # y and z when it loads the file.
+    parser.add_argument('--kinematics_up_axis',
+                        type=str,
+                        default='z',
+                        choices=['z', 'y'],
+                        help="the direction that is 'up' in the kinematics data: z (default, same as MuJoCo) or y (y and z are swapped on load)")
+
+    # The folder that holds cue.pkl: the cue that tells the network which
+    # movement it is doing, one value per time point (see load_cue() at the
+    # top of this file).
+    parser.add_argument('--cue_data_path',
+                        type=str,
+                        default='cue_data',
+                        help='path to the folder with cue.pkl (the condition cue for training and testing)')
 
     parser.add_argument('--nusim_data_path', 
                         type=str, 

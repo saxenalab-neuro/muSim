@@ -23,6 +23,14 @@ initial_pose_path = initial_pose
 #Path to the folder that contains the experimental kinematics data
 kinematics_path = kinematics_data
 
+#Which direction is "up" in the kinematics data: z (the default, same as MuJoCo) or y
+#The cycling data has y as up, so its y and z are swapped when it is loaded
+kinematics_up_axis = y
+
+#Path to the folder that contains cue.pkl: the cue that tells the network which movement it is doing
+#One cue value per time point for every movement, so each cue is as long as its kinematics
+cue_data_path = cue_data
+
 #Path to the folder that contains the experimental neural data
 nusim_data_path = nusim_neural_data
 

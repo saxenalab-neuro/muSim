@@ -79,13 +79,37 @@
 
 <value: numpy.ndarray> contains the kinematics for the corresponding condition with shape: [num_markers/targets, num_coordinates = 3, timepoints]. 
 
+The 3 coordinates are x, y and z, in that order. By default z is "up", as in MuJoCo. If y is "up" in your data (as in the provided cycling data), set *kinematics_up_axis = y* in the configs.txt file: the y and z coordinates are then swapped when the data is loaded. 
+
 num_markers are the number of experimental markers/bodies that are recorded. The order of the num_markers must correspond to the order in which the marker_names are listed. For example, if ‘marker_names’ = [’hand’, ‘elbow’], num_marker= 0 should contain the experimental kinematics for hand and num_marker=1 should contain the experimental kinematics for elbow.
 
-num_coordinates are the x [-->], y[↑] and z[ out of page] coordinates. Values of NaN for any coordinate will keep that coordinate locked. 
+num_coordinates are the x, y and z coordinates. Values of NaN for any coordinate will keep that coordinate locked. 
 
 An example for saving the experimental kinematics for the cycling task is given in ./exp_kin_cycling/saving_exp_kin.ipynb
 
 (The path to kinematics.pkl file can also be specified using *kinematics_path* param in configs.txt file) 
+
+**Cue:**
+
+The cue is the number that tells the network which condition (movement) it is doing. Save it in ‘./cue_data/cue.pkl’ as a Python dict object with the same format as the kinematics:
+
+dict{
+
+```
+    <'train'> : <dict_train>,
+
+    <'test'> : <dict_test>
+```
+
+}
+
+<dict_train> and <dict_test> have one <key: int> per condition, the same keys as in kinematics.pkl.
+
+<value: numpy.ndarray> is the cue for the corresponding condition with shape: [timepoints]. It has one value per timepoint, so timepoints must be the same as for that condition's kinematics. The code stops with an error if they differ. The cue can stay the same for the whole condition or change during it.
+
+The provided cue.pkl is for the cycling task: each condition's cue is one number repeated. It was made by ./cue_data/make_cycling_cue.py.
+
+(The path to cue.pkl file can also be specified using *cue_data_path* param in configs.txt file) 
 
 **Neural Data (optional):**
 

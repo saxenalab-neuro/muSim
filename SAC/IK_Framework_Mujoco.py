@@ -13,6 +13,7 @@ import numpy as np
 from gym import utils
 from . import sensory_feedback_specs
 from . import kinematics_preprocessing_specs
+import config
 from mujoco import viewer
 
 import ipdb
@@ -50,8 +51,9 @@ class MujocoEnv(gym.Env):
 
         #Load the kin_train
         # Load the experimental kinematics x and y coordinates from the data
-        with open(self.kinematics_path + '/kinematics.pkl', 'rb') as f:
-            kin_train_test = pickle.load(f)
+        #config.load_kinematics also swaps the data's y and z when the config
+        #says the data has y as "up" (kinematics_up_axis = y)
+        kin_train_test = config.load_kinematics(args)
 
         kin_train = kin_train_test['train'] #[num_conds][num_targets, num_coords, timepoints]
 
@@ -76,7 +78,9 @@ class MujocoEnv(gym.Env):
         self.n_fixedsteps = args.n_fixedsteps
         self.radius = args.trajectory_scaling
 
-        self.center = args.center
+        #center is written in the data's own x, y, z, so it gets the same
+        #y/z swap as the data
+        self.center = [config.to_model_axes(center_t, args) for center_t in args.center]
 
         #Kinematics preprocessing for training and testing kinematics
         #Preprocess training kinematics

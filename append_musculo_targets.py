@@ -13,8 +13,7 @@ tree = ET.parse(args.musculoskeletal_model_path)
 root = tree.getroot()
 
 #Load the kinematics to determine the number of targets
-with open(args.kinematics_path + '/kinematics.pkl', 'rb') as f:
-            kin = pickle.load(f)	#[num_conditions][n_targets, num_coords, timepoints]
+kin = config.load_kinematics(args)	#[num_conditions][n_targets, num_coords, timepoints]
 
 kinematics_train = kin['train']
 num_conds = len(kinematics_train)
@@ -30,14 +29,18 @@ for child in root:
 			body_to_add = f'<body name="target{current_target}" pos="0.1 0.1 0.85"> \n'
 			body_to_add += '<geom size="0.01 0.01 0.01" type="sphere"/> \n'
 
+			#Each target joint slides along the MuJoCo axis of the same name.
+			#y used to be wired to MuJoCo's z (and z to y), because the cycling
+			#data has y as "up". That swap is now done on the data itself, when
+			#it is loaded, and only if the config sets kinematics_up_axis = y.
 			if kinematics_preprocessing_specs.xyz_target[current_target][0]:
 				body_to_add += f'<joint axis="1 0 0" name="box:x{current_target}" type="slide" limited="false" range="-6.28319  6.28319"></joint> \n'
 			
 			if kinematics_preprocessing_specs.xyz_target[current_target][1]:
-				body_to_add += f'<joint axis="0 0 1" name="box:y{current_target}" type="slide" limited="false" range="-6.28319  6.28319"></joint> \n'
+				body_to_add += f'<joint axis="0 1 0" name="box:y{current_target}" type="slide" limited="false" range="-6.28319  6.28319"></joint> \n'
 
 			if kinematics_preprocessing_specs.xyz_target[current_target][2]:
-				body_to_add += f'<joint axis="0 1 0" name="box:z{current_target}" type="slide" limited="false" range="-6.28319  6.28319"></joint> \n'
+				body_to_add += f'<joint axis="0 0 1" name="box:z{current_target}" type="slide" limited="false" range="-6.28319  6.28319"></joint> \n'
 
 			body_to_add += '</body>'
 

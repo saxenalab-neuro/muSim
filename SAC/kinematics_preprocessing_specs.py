@@ -17,13 +17,14 @@ args, unknown = parser.parse_known_args()
 #Get the timepoints of each condition per cycle
 
 #Check if the file is being called from main.py or Jupyter notebooks
+#config.load_kinematics also swaps the data's y and z when the config says the
+#data has y as "up" (kinematics_up_axis = y), so xyz_target below is already in
+#MuJoCo's directions
 if os.path.isfile(args.kinematics_path + '/kinematics.pkl'):
-	with open(args.kinematics_path + '/kinematics.pkl', 'rb') as f:
-		kin_train_test = pickle.load(f)
+	kin_train_test = config.load_kinematics(args)
 
 else:
-	with open('../' + args.kinematics_path + '/kinematics.pkl', 'rb') as f:
-		kin_train_test = pickle.load(f)
+	kin_train_test = config.load_kinematics(args, '../' + args.kinematics_path)
 
 
 kin_train = kin_train_test['train']
@@ -49,7 +50,7 @@ musculo_tracking = kin_train_test['marker_names']
 
 
 #Specify the xyz coordinates of the target movement
-# x: -->, y: ↑, z: out of page
+# x, y, z are MuJoCo's directions (z is up), after any y/z swap on load
 #Set True/False for x, y and z coords respectively
 #Defines the num_coords
 #Should be num_targets, num_coords
